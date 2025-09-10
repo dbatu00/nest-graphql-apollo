@@ -1,5 +1,10 @@
 {
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "scripts": {
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:mobile": "cd mobile && npm run web",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\""
   }
 }
