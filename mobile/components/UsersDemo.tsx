@@ -4,7 +4,7 @@ import { View, Button, Text, TextInput, StyleSheet } from "react-native";
 const GRAPHQL_URL = "http://192.168.1.7:3000/graphql";
 
 export default function UsersDemo() {
-  const [userId, setUserId] = useState("");
+  const [userId, setUserId] = useState(""); // userid type is inferred
   const [userName, setUserName] = useState("");
   const [result, setResult] = useState<string | null>(null);
 
@@ -38,7 +38,7 @@ export default function UsersDemo() {
     const res = await fetch(GRAPHQL_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, variables: { id: Number(userId) } }),
+      body: JSON.stringify({ query, variables: { id: Number(userId) } }), //will be NaN if not convertible to a number and cause undefined propery error on graphql resolver
     });
     const data = await res.json();
     setResult(JSON.stringify(data.data.getUser, null, 2));
