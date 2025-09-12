@@ -4,7 +4,7 @@
   },
   "scripts": {
     "dev:backend": "cd backend && npm run start:dev",
-    "dev:mobile": "cd mobile && npm run web",
+    "dev:mobile": "cd mobile && npx expo start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\""
   }
 }
