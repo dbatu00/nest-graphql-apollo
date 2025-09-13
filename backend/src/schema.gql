@@ -19,4 +19,5 @@ type Query {
 type Mutation {
   addUser(name: String!): User!
   deleteUser(id: Int!): DeleteUserOutput!
+  deleteUserAsync(id: Int!): DeleteUserOutput!
 }

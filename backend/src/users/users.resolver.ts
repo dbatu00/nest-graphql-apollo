@@ -24,10 +24,20 @@ export class UsersResolver {
     return this.usersService.create(name);
   }
 
-  //typeOrm returns a deleteUser promise
-  //nestJS cannot map deleteUser type to a graphQL schema
-  //instead deleteUser result is 'copied' to a custom output
-  //deleteUser function return type is explicitly declared for clarity
+  // FLOW
+  // - TypeORM's `delete` returns a Promise<DeleteResult>.
+  // - GraphQL schema can’t expose DeleteResult directly.
+  // - We map it into our custom `DeleteUserOutput` type.
+  // - Explicit return type (Promise<DeleteUserOutput>) makes this clear.
+  //
+  // SYNTAX
+  // @Args('id', { type: () => Int }) id: number
+  //   → pulls `id` from GraphQL args, casts it to number (like: const id: number = Number(args["id"]))
+  //
+  // foo().then((value) => bar)
+  //   → when foo() resolves, pass the result into `value`
+  //   → run the arrow function (bar) with that value
+
   @Mutation(() => DeleteUserOutput)
   deleteUser(
     @Args('id', { type: () => Int }) id: number,
@@ -35,5 +45,17 @@ export class UsersResolver {
     return this.usersService.delete(id).then((result) => ({
       affected: result.affected ?? 0,
     }));
+  }
+
+  // ALT VERSION (async/await)
+  // - Equivalent to above but uses `await` instead of `.then()`.
+  // - ⚠️ Returned object keys must match DeleteUserOutput.
+  //   Returning `{ mehmet: ... }` compiles, but GraphQL will throw at runtime.
+  @Mutation(() => DeleteUserOutput)
+  async deleteUserAsync(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<DeleteUserOutput> {
+    const result = await this.usersService.delete(id);
+    return { affected: result.affected ?? 0 };
   }
 }
