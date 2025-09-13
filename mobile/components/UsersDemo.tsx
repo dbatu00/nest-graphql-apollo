@@ -5,6 +5,7 @@ const GRAPHQL_URL = "http://192.168.1.7:3000/graphql";
 
 export default function UsersDemo() {
   const [userId, setUserId] = useState(""); // userid type is inferred
+  const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred
   const [userName, setUserName] = useState("");
   const [result, setResult] = useState<string | null>(null);
 
@@ -62,6 +63,26 @@ export default function UsersDemo() {
     setResult(JSON.stringify(data.data.addUser, null, 2));
   };
 
+  const deleteUser = async () => {
+    const mutation = `
+      mutation($id: Int!) {
+        deleteUser(id: $id) {
+          affected
+        }
+      }
+    `;
+    const res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        query: mutation,
+        variables: { id: Number(userIdToDelete) },
+      }),
+    });
+    const data = await res.json();
+    setResult(JSON.stringify(data.data.deleteUser, null, 2));
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Users Demo</Text>
@@ -83,6 +104,16 @@ export default function UsersDemo() {
           keyboardType="numeric"
         />
         <Button title="Get User" onPress={getUser} />
+      </View>
+      <View style={styles.row}>
+        <TextInput
+          style={styles.input}
+          placeholder="User ID"
+          value={userIdToDelete}
+          onChangeText={setUserIdToDelete}
+          keyboardType="numeric"
+        />
+        <Button title="Delete user" onPress={deleteUser} />
       </View>
       <Button title="Get All Users" onPress={getAllUsers} />
       {result && <Text style={styles.result}>{result}</Text>}
