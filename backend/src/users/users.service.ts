@@ -15,7 +15,8 @@ export class UsersService {
   findOne(id: number): Promise<User | null> {
     return this.usersRepo.findOne({ where: { id } });
   }
-  // save() returns user entity  because save<T extends DeepPartial<Entity>>(entity: T): Promise<T & Entity>
+
+  // save() returns user entity because save<T extends DeepPartial<Entity>>(entity: T): Promise<T & Entity>
   create(name: string): Promise<User> {
     const user = this.usersRepo.create({ name }); //entity instance in memory -sync
     return this.usersRepo.save(user); //save instance to memory -async
