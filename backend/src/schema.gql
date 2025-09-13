@@ -7,6 +7,10 @@ type User {
   name: String!
 }
 
+type DeleteUserOutput {
+  affected: Int!
+}
+
 type Query {
   getUsers: [User!]!
   getUser(id: Int!): User
@@ -14,4 +18,5 @@ type Query {
 
 type Mutation {
   addUser(name: String!): User!
+  deleteUser(id: Int!): DeleteUserOutput!
 }
