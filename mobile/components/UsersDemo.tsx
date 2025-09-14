@@ -1,3 +1,9 @@
+/* TODO:
+1-) username only accepts pure strings;
+does accept empty string => shouldnt
+does not accept strings like test5 => should
+*/
+
 import React, { useState } from "react";
 import {
   View,
@@ -14,8 +20,7 @@ export default function UsersDemo() {
   const [userId, setUserId] = useState(""); // userid type is inferred
   const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred
   const [userName, setUserName] = useState("");
-  const [result, setResult] = useState<string | null>(null);
-  const [resultGetAllUsers, setResultGetAllUsers] = useState<any[]>([]);
+  const [result, setResult] = useState<any>(null);
 
   async function graphqlFetch<T>(
     query: string,
@@ -63,7 +68,7 @@ export default function UsersDemo() {
       }
 
       // instead of JSON.stringify, store the array directly
-      setResultGetAllUsers(data.data.getUsers);
+      setResult(data.data.getUsers);
     } catch (err) {
       console.error("getAllUsers failed:", err);
       alert("Error fetching users");
@@ -88,10 +93,10 @@ export default function UsersDemo() {
         { id: Number(userId) } // convert to number
       );
 
-      setResult(JSON.stringify(result.getUser, null, 2));
+      setResult(result.getUser); // store the object directly
     } catch (err) {
       console.error("getUser failed:", err);
-      setResult(`${err}`);
+      setResult({ error: String(err) }); // optional: store as object
     }
   };
 
@@ -109,13 +114,17 @@ export default function UsersDemo() {
         }
       }
     `;
-    const res = await fetch(GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: mutation, variables: { name: userName } }),
-    });
-    const data = await res.json();
-    setResult(JSON.stringify(data.data.addUser, null, 2));
+
+    try {
+      const result = await graphqlFetch<{
+        addUser: { id: number; name: string } | null;
+      }>(mutation, { name: userName });
+
+      setResult(result.addUser); // store the object directly
+    } catch (err) {
+      console.error("addUser failed:", err);
+      setResult({ error: String(err) }); // optional: store as object
+    }
   };
 
   const deleteUser = async () => {
@@ -171,22 +180,32 @@ export default function UsersDemo() {
         <Button title="Delete user" onPress={deleteUser} />
       </View>
       <Button title="Get All Users" onPress={getAllUsers} />
-      <FlatList
-        data={resultGetAllUsers}
-        keyExtractor={(item) => item.id.toString()}
-        numColumns={2} // grid with 2 columns
-        columnWrapperStyle={{
-          justifyContent: "space-between",
-          marginBottom: 10,
-        }}
-        contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.cardName}>{item.name}</Text>
-            <Text style={styles.cardId}>ID: {item.id}</Text>
-          </View>
-        )}
-      />
+      {Array.isArray(result) ? (
+        <FlatList
+          data={result}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2} // grid with 2 columns
+          columnWrapperStyle={{
+            justifyContent: "space-between",
+            marginBottom: 10,
+          }}
+          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardName}>{item.name}</Text>
+              <Text style={styles.cardId}>ID: {item.id}</Text>
+            </View>
+          )}
+        />
+      ) : (
+        result && (
+          <Text style={{ marginTop: 10 }}>
+            ID: {result.id}
+            {"\n"}
+            Name: {result.name}
+          </Text>
+        )
+      )}
     </View>
   );
 }
