@@ -9,6 +9,26 @@ export default function UsersDemo() {
   const [userName, setUserName] = useState("");
   const [result, setResult] = useState<string | null>(null);
 
+  async function graphqlFetch<T>(
+    query: string,
+    variables: Record<string, any> = {}
+  ): Promise<T> {
+    const res = await fetch(GRAPHQL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query, variables }),
+    });
+
+    const data = await res.json();
+
+    if (data.errors) {
+      console.error("GraphQL errors:", data.errors);
+      throw new Error(data.errors[0]?.message || "GraphQL request failed");
+    }
+
+    return data.data as T;
+  }
+
   const getAllUsers = async () => {
     const query = `
       query {
@@ -29,20 +49,27 @@ export default function UsersDemo() {
 
   const getUser = async () => {
     const query = `
-      query($id: Int!) {
-        getUser(id: $id) {
-          id
-          name
-        }
+    query($id: Int!) {
+      getUser(id: $id) {
+        id
+        name
       }
-    `;
-    const res = await fetch(GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, variables: { id: Number(userId) } }), //will be NaN if not convertible to a number and cause undefined propery error on graphql resolver
-    });
-    const data = await res.json();
-    setResult(JSON.stringify(data.data.getUser, null, 2));
+    }
+  `;
+
+    try {
+      const result = await graphqlFetch<{
+        getUser: { id: number; name: string } | null;
+      }>(
+        query,
+        { id: Number(userId) } // convert to number
+      );
+
+      setResult(JSON.stringify(result.getUser, null, 2));
+    } catch (err) {
+      console.error("getUser failed:", err);
+      setResult(`${err}`);
+    }
   };
 
   const addUser = async () => {
