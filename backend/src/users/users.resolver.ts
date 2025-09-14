@@ -50,6 +50,8 @@ export class UsersResolver {
 
     const output: DeleteUserOutput = {
       affected: result.affected ?? 0,
+      name: result.name,
+      id: id,
     };
 
     this.logger.log(`deleteUser returning: ${JSON.stringify(output)}`);
@@ -65,6 +67,6 @@ export class UsersResolver {
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteUserOutput> {
     const result = await this.usersService.delete(id);
-    return { affected: result.affected ?? 0 };
+    return { affected: result.affected ?? 0, name: '', id: id };
   }
 }

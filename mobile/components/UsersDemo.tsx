@@ -2,6 +2,9 @@
 1-) username only accepts pure strings;
 does accept empty string => shouldnt
 does not accept strings like test5 => should
+2-)getAllUsers try catch clean
+3-)deleteUser option to force
+4-) usernotfound visible when page is first opened
 */
 
 import React, { useState } from "react";
@@ -132,6 +135,8 @@ export default function UsersDemo() {
       mutation($id: Int!) {
         deleteUser(id: $id) {
           affected
+          name
+          id
         }
       }
     `;
@@ -144,7 +149,8 @@ export default function UsersDemo() {
       }),
     });
     const data = await res.json();
-    setResult(JSON.stringify(data.data.deleteUser, null, 2));
+    console.log("deleteUser response:", data.data.deleteUser);
+    setResult(data.data.deleteUser);
   };
 
   return (
@@ -181,10 +187,11 @@ export default function UsersDemo() {
       </View>
       <Button title="Get All Users" onPress={getAllUsers} />
       {Array.isArray(result) ? (
+        // ✅ Case 1: List of users (getAllUsers)
         <FlatList
           data={result}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={2} // grid with 2 columns
+          numColumns={2}
           columnWrapperStyle={{
             justifyContent: "space-between",
             marginBottom: 10,
@@ -197,14 +204,34 @@ export default function UsersDemo() {
             </View>
           )}
         />
-      ) : (
-        result && (
+      ) : result ? (
+        // ✅ Case 2: deleteUser response
+        result.affected !== undefined ? (
+          <Text style={{ marginTop: 10, color: "red" }}>
+            Deleted:
+            {"\n"}
+            ID: {result.id}
+            {"\n"}
+            Name: {result.name}
+            {"\n"}
+            Rows affected: {result.affected}
+          </Text>
+        ) : result.id && result.name ? (
+          // ✅ Case 3: Single user (getUser, addUser)
           <Text style={{ marginTop: 10 }}>
             ID: {result.id}
             {"\n"}
             Name: {result.name}
           </Text>
+        ) : (
+          // ✅ Case 4: unexpected object
+          <Text style={{ marginTop: 10, color: "red" }}>
+            Error: User id or name not received from server
+          </Text>
         )
+      ) : (
+        // ✅ Case 5: null / undefined
+        <Text style={{ marginTop: 10, color: "red" }}>User not found</Text>
       )}
     </View>
   );

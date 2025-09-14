@@ -4,4 +4,10 @@ import { ObjectType, Field, Int } from '@nestjs/graphql';
 export class DeleteUserOutput {
   @Field(() => Int)
   affected: number;
+
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => String)
+  name: string;
 }

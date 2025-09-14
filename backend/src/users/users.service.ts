@@ -1,7 +1,10 @@
+/*TODO - error handling*/
+
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeleteResult } from 'typeorm';
 import { User } from './user.entity';
+import { DeleteUserOutput } from './delete-user.output';
 
 @Injectable()
 export class UsersService {
@@ -31,10 +34,19 @@ export class UsersService {
     return result;
   }
 
-  async delete(id: number): Promise<DeleteResult> {
+  async delete(id: number): Promise<DeleteUserOutput> {
     this.logger.log(`delete called with id=${id}`);
-    const result = await this.usersRepo.delete({ id });
-    this.logger.log(`delete result: ${JSON.stringify(result)}`);
-    return result;
+    const user: User | null = await this.findOne(id);
+    const deleteUserOutput: DeleteUserOutput = new DeleteUserOutput();
+    if (user != null) {
+      const deletionResult: DeleteResult = await this.usersRepo.delete({ id });
+      this.logger.log(`delete result: ${JSON.stringify(deletionResult)}`);
+      deleteUserOutput.id = user.id;
+      deleteUserOutput.name = user.name;
+      deleteUserOutput.affected = deletionResult.affected ?? 0;
+    }
+    this.logger.log(`delete returning: ${JSON.stringify(deleteUserOutput)}`);
+
+    return deleteUserOutput;
   }
 }
