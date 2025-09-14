@@ -1,11 +1,13 @@
 import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
+import { Logger } from '@nestjs/common';
 
 import { DeleteUserOutput } from './delete-user.output';
 
 @Resolver(() => User)
 export class UsersResolver {
+  private readonly logger = new Logger(UsersResolver.name);
   constructor(private readonly usersService: UsersService) {}
 
   @Query(() => [User])
@@ -39,12 +41,19 @@ export class UsersResolver {
   //   → run the arrow function (bar) with that value
 
   @Mutation(() => DeleteUserOutput)
-  deleteUser(
+  async deleteUser(
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteUserOutput> {
-    return this.usersService.delete(id).then((result) => ({
+    this.logger.log(`deleteUser called with id=${id}`);
+
+    const result = await this.usersService.delete(id);
+
+    const output: DeleteUserOutput = {
       affected: result.affected ?? 0,
-    }));
+    };
+
+    this.logger.log(`deleteUser returning: ${JSON.stringify(output)}`);
+    return output;
   }
 
   // ALT VERSION (async/await)

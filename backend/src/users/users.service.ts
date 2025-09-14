@@ -1,28 +1,40 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DeleteResult } from 'typeorm';
 import { User } from './user.entity';
-import { DeleteResult } from 'typeorm/browser';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(@InjectRepository(User) private usersRepo: Repository<User>) {}
 
-  findAll(): Promise<User[]> {
-    return this.usersRepo.find();
+  async findAll(): Promise<User[]> {
+    this.logger.log(`findAll called`);
+    const result = await this.usersRepo.find();
+    this.logger.log(`findAll result: ${JSON.stringify(result)}`);
+    return result;
   }
 
-  findOne(id: number): Promise<User | null> {
-    return this.usersRepo.findOne({ where: { id } });
+  async findOne(id: number): Promise<User | null> {
+    this.logger.log(`findOne called with id=${id}`);
+    const result = await this.usersRepo.findOne({ where: { id } });
+    this.logger.log(`findOne result: ${JSON.stringify(result)}`);
+    return result;
   }
 
-  // save() returns user entity because save<T extends DeepPartial<Entity>>(entity: T): Promise<T & Entity>
-  create(name: string): Promise<User> {
-    const user = this.usersRepo.create({ name }); //entity instance in memory -sync
-    return this.usersRepo.save(user); //save instance to memory -async
+  async create(name: string): Promise<User> {
+    this.logger.log(`create called with name=${name}`);
+    const user = this.usersRepo.create({ name });
+    const result = await this.usersRepo.save(user);
+    this.logger.log(`create result: ${JSON.stringify(result)}`);
+    return result;
   }
 
-  delete(id: number): Promise<DeleteResult> {
-    return this.usersRepo.delete({ id });
+  async delete(id: number): Promise<DeleteResult> {
+    this.logger.log(`delete called with id=${id}`);
+    const result = await this.usersRepo.delete({ id });
+    this.logger.log(`delete result: ${JSON.stringify(result)}`);
+    return result;
   }
 }
