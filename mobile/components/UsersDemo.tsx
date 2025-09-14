@@ -73,6 +73,11 @@ export default function UsersDemo() {
   };
 
   const addUser = async () => {
+    if (/\d/.test(userName)) {
+      alert("User name cannot contain digits.");
+      return;
+    }
+
     const mutation = `
       mutation($name: String!) {
         addUser(name: $name) {
