@@ -4,6 +4,8 @@ import { User } from './user.entity';
 import { Logger } from '@nestjs/common';
 
 import { DeleteUserOutput } from './delete-user.output';
+import { AddUserInput } from './add-user.input';
+import { AddUserOutput } from './add-user.output';
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -21,9 +23,20 @@ export class UsersResolver {
     return this.usersService.findOne(id);
   }
 
-  @Mutation(() => User)
-  addUser(@Args('name') name: string) {
-    return this.usersService.create(name);
+  @Mutation(() => AddUserOutput)
+  async addUser(@Args('addUserInput') addUserInput: AddUserInput) {
+    const user = await this.usersService.findOne(addUserInput.id);
+
+    if (!user || addUserInput.force === true) {
+      // User doesn't exist or client requested force → create a new user
+      return this.usersService.create(addUserInput.name);
+    } else if (addUserInput.force === false) {
+      // User exists and client explicitly said not to force → do not create
+      return { userExists: true };
+    } else {
+      // User exists and client did not specify force → ask client if they want to overwrite
+      return { user, userExists: true };
+    }
   }
 
   // FLOW
