@@ -62,6 +62,7 @@ export class UsersResolver {
   // - Equivalent to above but uses `await` instead of `.then()`.
   // - ⚠️ Returned object keys must match DeleteUserOutput.
   //   Returning `{ mehmet: ... }` compiles, but GraphQL will throw at runtime.
+  //⚠️⚠️⚠️ will cause error display on client side since the func above was updated
   @Mutation(() => DeleteUserOutput)
   async deleteUserAsync(
     @Args('id', { type: () => Int }) id: number,
