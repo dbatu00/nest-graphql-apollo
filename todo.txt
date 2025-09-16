@@ -6,6 +6,9 @@ does not accept strings like test5 => should
 3-) usernotfound visible when front page is first opened
 4-) react memo?
 5-) graphql fetch on usersdemo is not used everyhere => func name change?
+6-) comments
+7-) unit tests
+8-) everything async?
 
 
 */
