@@ -14,7 +14,7 @@ export default function UsersDemo() {
   const [userId, setUserId] = useState(""); // userid type is inferred
   const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred
   const [userName, setUserName] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<any>("__INIT__");
 
   async function graphqlFetch<T>(
     query: string,
@@ -225,6 +225,10 @@ export default function UsersDemo() {
           )}
         />
       );
+    }
+
+    if (result === "__INIT__") {
+      return null; // nothing yet
     }
 
     if (!result) {
