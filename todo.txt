@@ -14,6 +14,11 @@ does not accept strings like test5 => should
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
 10-)deleteUser case where id doesnt belong to anyone
 11-)move deleteUser logic from service to resolver
+12-)add user if user exists and user says dont force, it wont go to resolver => no need for force: boolean | undefined, 
+can do force:boolean with default false
+resolver only needs to handle a)user doesnt exists 
+                              b)user exists, force false(covers both, hasnt asked user if he wants to force + no force because client wont say anyting to resolver if force false)
+                              c)user exists, force true
 
 
 */
