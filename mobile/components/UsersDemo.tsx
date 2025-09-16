@@ -111,24 +111,49 @@ export default function UsersDemo() {
       return;
     }
 
+    // GraphQL mutation with optional force flag
     const mutation = `
-      mutation($name: String!) {
-        addUser(name: $name) {
+    mutation($input: AddUserInput!) {
+      addUser(addUserInput: $input) {
+        user {
           id
           name
         }
+        userExists
       }
-    `;
+    }
+  `;
 
     try {
-      const result = await graphqlFetch<{
-        addUser: { id: number; name: string } | null;
-      }>(mutation, { name: userName });
+      // first attempt: no force
 
-      setResult(result.addUser); // store the object directly
+      let result = await graphqlFetch<{
+        addUser: { user?: { id: number; name: string }; userExists?: boolean };
+      }>(mutation, { input: { name: userName } });
+
+      // handle response
+      if (result.addUser.user) {
+        // user created successfully
+        console.log(result.addUser.user!);
+        setResult(result.addUser.user);
+      } else if (result.addUser.userExists) {
+        // user exists, ask client if they want to force
+        const confirmForce = window.confirm("User already exists. Overwrite?");
+        if (confirmForce) {
+          // second attempt with force=true
+
+          result = await graphqlFetch(mutation, {
+            input: { name: userName, force: true },
+          });
+          console.log(result.addUser.user!);
+          setResult(result.addUser.user!);
+        } else {
+          setResult({ error: "User creation cancelled." });
+        }
+      }
     } catch (err) {
       console.error("addUser failed:", err);
-      setResult({ error: String(err) }); // optional: store as object
+      setResult({ error: String(err) });
     }
   };
 
@@ -153,6 +178,83 @@ export default function UsersDemo() {
     const data = await res.json();
     console.log("deleteUser response:", data.data.deleteUser);
     setResult(data.data.deleteUser);
+  };
+
+  const renderResult = () => {
+    if (Array.isArray(result)) {
+      // ✅ Case 1: List of users (getAllUsers)
+      return (
+        <FlatList
+          data={result}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={2}
+          columnWrapperStyle={{
+            justifyContent: "space-between",
+            marginBottom: 10,
+          }}
+          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardName}>{item.name}</Text>
+              <Text style={styles.cardId}>ID: {item.id}</Text>
+            </View>
+          )}
+        />
+      );
+    }
+
+    if (!result) {
+      // ✅ Case 6: null / undefined
+      return (
+        <Text style={{ marginTop: 10, color: "red" }}>User not found</Text>
+      );
+    }
+
+    if (result.error) {
+      // ✅ Case 2: error object
+      return (
+        <Text style={{ marginTop: 10, color: "red" }}>{result.error}</Text>
+      );
+    }
+
+    if (result.affected !== undefined) {
+      // ✅ Case 3: deleteUser response
+      return (
+        <Text style={{ marginTop: 10, color: "red" }}>
+          Deleted:
+          {"\n"}ID: {result.id}
+          {"\n"}Name: {result.name}
+          {"\n"}Rows affected: {result.affected}
+        </Text>
+      );
+    }
+
+    if (result.id && result.name) {
+      // ✅ Case 4: getUser or addUser (no force, user does not exist)
+      return (
+        <Text style={{ marginTop: 10 }}>
+          ID: {result.id}
+          {"\n"}Name: {result.name}
+        </Text>
+      );
+    }
+
+    if (result && result.user) {
+      // ✅ Case: addUser created a new user
+      return (
+        <Text style={{ marginTop: 10 }}>
+          ID: {result.user.id}
+          {"\n"}Name: {result.user.name}
+        </Text>
+      );
+    }
+
+    // ✅ Case 5: unexpected object
+    return (
+      <Text style={{ marginTop: 10, color: "red" }}>
+        Error: Unexpected server response
+      </Text>
+    );
   };
 
   return (
@@ -188,53 +290,7 @@ export default function UsersDemo() {
         <Button title="Delete user" onPress={deleteUser} />
       </View>
       <Button title="Get All Users" onPress={getAllUsers} />
-      {Array.isArray(result) ? (
-        // ✅ Case 1: List of users (getAllUsers)
-        <FlatList
-          data={result}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={{
-            justifyContent: "space-between",
-            marginBottom: 10,
-          }}
-          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <Text style={styles.cardId}>ID: {item.id}</Text>
-            </View>
-          )}
-        />
-      ) : result ? (
-        // ✅ Case 2: deleteUser response
-        result.affected !== undefined ? (
-          <Text style={{ marginTop: 10, color: "red" }}>
-            Deleted:
-            {"\n"}
-            ID: {result.id}
-            {"\n"}
-            Name: {result.name}
-            {"\n"}
-            Rows affected: {result.affected}
-          </Text>
-        ) : result.id && result.name ? (
-          // ✅ Case 3: Single user (getUser, addUser)
-          <Text style={{ marginTop: 10 }}>
-            ID: {result.id}
-            {"\n"}
-            Name: {result.name}
-          </Text>
-        ) : (
-          // ✅ Case 4: unexpected object
-          <Text style={{ marginTop: 10, color: "red" }}>
-            Error: User id or name not received from server
-          </Text>
-        )
-      ) : (
-        // ✅ Case 5: null / undefined
-        <Text style={{ marginTop: 10, color: "red" }}>User not found</Text>
-      )}
+      {renderResult()}
     </View>
   );
 }

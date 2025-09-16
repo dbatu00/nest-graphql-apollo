@@ -1,13 +1,10 @@
-import { InputType, Field, Int } from '@nestjs/graphql';
+import { InputType, Field } from '@nestjs/graphql';
 
 @InputType()
 export class AddUserInput {
-  @Field(() => Int)
-  id!: number;
-
   @Field(() => String)
   name!: string;
 
   @Field(() => Boolean, { nullable: true }) // graphQL type function
-  force?: boolean | undefined; //typescript type annotation
+  force?: boolean; //typescript type annotation
 }

@@ -13,13 +13,23 @@ type DeleteUserOutput {
   name: String!
 }
 
+type AddUserOutput {
+  user: User
+  userExists: Boolean
+}
+
 type Query {
   getUsers: [User!]!
   getUser(id: Int!): User
 }
 
 type Mutation {
-  addUser(name: String!): User!
+  addUser(addUserInput: AddUserInput!): AddUserOutput!
   deleteUser(id: Int!): DeleteUserOutput!
   deleteUserAsync(id: Int!): DeleteUserOutput!
+}
+
+input AddUserInput {
+  name: String!
+  force: Boolean
 }

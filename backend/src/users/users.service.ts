@@ -19,9 +19,20 @@ export class UsersService {
     return result;
   }
 
-  async findOne(id: number): Promise<User | null> {
-    this.logger.log(`findOne called with id=${id}`);
-    const result = await this.usersRepo.findOne({ where: { id } });
+  async findOne(criteria: {
+    id?: number;
+    name?: string;
+  }): Promise<User | null> {
+    this.logger.log(`findOne called with criteria=${JSON.stringify(criteria)}`);
+
+    if (!criteria.id && !criteria.name) {
+      throw new Error('Must provide either id or name to findOne');
+    }
+
+    const result = await this.usersRepo.findOne({
+      where: criteria,
+    });
+
     this.logger.log(`findOne result: ${JSON.stringify(result)}`);
     return result;
   }
@@ -36,7 +47,7 @@ export class UsersService {
 
   async delete(id: number): Promise<DeleteUserOutput> {
     this.logger.log(`delete called with id=${id}`);
-    const user: User | null = await this.findOne(id);
+    const user: User | null = await this.findOne({ id: id });
     const deleteUserOutput: DeleteUserOutput = new DeleteUserOutput();
     if (user != null) {
       const deletionResult: DeleteResult = await this.usersRepo.delete({ id });

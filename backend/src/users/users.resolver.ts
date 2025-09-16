@@ -20,22 +20,33 @@ export class UsersResolver {
   //graphql will default to float if type is not cast
   @Query(() => User, { nullable: true })
   getUser(@Args('id', { type: () => Int }) id: number) {
-    return this.usersService.findOne(id);
+    return this.usersService.findOne({ id: id });
   }
 
   @Mutation(() => AddUserOutput)
   async addUser(@Args('addUserInput') addUserInput: AddUserInput) {
-    const user = await this.usersService.findOne(addUserInput.id);
+    const user = await this.usersService.findOne({ name: addUserInput.name });
+    const addUserOutput = new AddUserOutput();
 
-    if (!user || addUserInput.force === true) {
-      // User doesn't exist or client requested force → create a new user
-      return this.usersService.create(addUserInput.name);
+    if (!user) {
+      // User doesn't exist → create
+      addUserOutput.user = await this.usersService.create(addUserInput.name);
+      return addUserOutput;
+    }
+
+    // User exists
+    if (addUserInput.force === true) {
+      // Force create
+      addUserOutput.user = await this.usersService.create(addUserInput.name);
+      return addUserOutput;
     } else if (addUserInput.force === false) {
-      // User exists and client explicitly said not to force → do not create
-      return { userExists: true };
+      // Explicitly do not create
+      addUserOutput.userExists = true;
+      return addUserOutput;
     } else {
-      // User exists and client did not specify force → ask client if they want to overwrite
-      return { user, userExists: true };
+      // Force not specified → ask client
+      addUserOutput.userExists = true;
+      return addUserOutput;
     }
   }
 
