@@ -57,22 +57,13 @@ export default function UsersDemo() {
     console.log("getAllUsers called");
 
     try {
-      const res = await fetch(GRAPHQL_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
-      });
+      const data = await graphqlFetch<{
+        getUsers: [{ id: number; name: string }];
+      }>(query, {});
 
-      const data = await res.json();
       console.log("getAllUsers response:", data);
 
-      if (data.errors) {
-        console.error("GraphQL errors:", data.errors);
-        alert("Failed to fetch users");
-        return;
-      }
-
-      setResult(data.data.getUsers);
+      setResult(data.getUsers);
     } catch (err) {
       console.error("getAllUsers failed:", err);
       alert("Error fetching users");
