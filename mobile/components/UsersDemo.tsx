@@ -1,13 +1,3 @@
-/* TODO:
-1-) username only accepts pure strings;
-does accept empty string => shouldnt
-does not accept strings like test5 => should
-2-)getAllUsers try catch clean
-4-) usernotfound visible when page is first opened
-
-
-*/
-
 import React, { useState } from "react";
 import {
   View,
