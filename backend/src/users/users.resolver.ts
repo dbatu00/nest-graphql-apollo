@@ -102,6 +102,9 @@ export class UsersResolver {
         return addUserOutput;
       } else {
         // User exists, but client didn’t choose force → return "userExists=true"
+        // this works because adduserinput.force default value is false,
+        // if client hasnt asked user for overwrite confirmation(initial call) -> default value false
+        // if client asked and end user said dont force, client makes no calls
         this.logger.log(
           `addUser: user exists, client did not choose force → returning userExists=true`,
         );
