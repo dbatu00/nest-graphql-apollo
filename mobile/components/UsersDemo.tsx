@@ -30,6 +30,13 @@ export default function UsersDemo() {
     query: string,
     variables: Record<string, any> = {}
   ): Promise<T> {
+    console.log(
+      "graphqlFetch called with query:",
+      query,
+      "variables:",
+      variables
+    );
+
     const res = await fetch(GRAPHQL_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,6 +44,7 @@ export default function UsersDemo() {
     });
 
     const data = await res.json();
+    console.log("graphqlFetch response:", data);
 
     if (data.errors) {
       console.error("GraphQL errors:", data.errors);
@@ -48,13 +56,15 @@ export default function UsersDemo() {
 
   const getAllUsers = async () => {
     const query = `
-    query {
-      getUsers {
-        id
-        name
+      query {
+        getUsers {
+          id
+          name
+        }
       }
-    }
-  `;
+    `;
+
+    console.log("getAllUsers called");
 
     try {
       const res = await fetch(GRAPHQL_URL, {
@@ -64,6 +74,7 @@ export default function UsersDemo() {
       });
 
       const data = await res.json();
+      console.log("getAllUsers response:", data);
 
       if (data.errors) {
         console.error("GraphQL errors:", data.errors);
@@ -71,7 +82,6 @@ export default function UsersDemo() {
         return;
       }
 
-      // instead of JSON.stringify, store the array directly
       setResult(data.data.getUsers);
     } catch (err) {
       console.error("getAllUsers failed:", err);
@@ -81,73 +91,71 @@ export default function UsersDemo() {
 
   const getUser = async () => {
     const query = `
-    query($id: Int!) {
-      getUser(id: $id) {
-        id
-        name
+      query($id: Int!) {
+        getUser(id: $id) {
+          id
+          name
+        }
       }
-    }
-  `;
+    `;
+
+    console.log("getUser called with id:", userId);
 
     try {
       const result = await graphqlFetch<{
         getUser: { id: number; name: string } | null;
-      }>(
-        query,
-        { id: Number(userId) } // convert to number
-      );
+      }>(query, { id: Number(userId) });
 
-      setResult(result.getUser); // store the object directly
+      console.log("getUser response:", result.getUser);
+      setResult(result.getUser);
     } catch (err) {
       console.error("getUser failed:", err);
-      setResult({ error: String(err) }); // optional: store as object
+      setResult({ error: String(err) });
     }
   };
 
   const addUser = async () => {
+    console.log("addUser called with userName:", userName);
+
     if (/\d/.test(userName)) {
       alert("User name cannot contain digits.");
       return;
     }
 
-    // GraphQL mutation with optional force flag
     const mutation = `
-    mutation($input: AddUserInput!) {
-      addUser(addUserInput: $input) {
-        user {
-          id
-          name
+      mutation($input: AddUserInput!) {
+        addUser(addUserInput: $input) {
+          user {
+            id
+            name
+          }
+          userExists
         }
-        userExists
       }
-    }
-  `;
+    `;
 
     try {
-      // first attempt: no force
-
       let result = await graphqlFetch<{
         addUser: { user?: { id: number; name: string }; userExists?: boolean };
       }>(mutation, { input: { name: userName } });
 
-      // handle response
+      console.log("addUser first attempt response:", result);
+
       if (result.addUser.user) {
-        // user created successfully
-        console.log(result.addUser.user!);
+        console.log("User created successfully:", result.addUser.user);
         setResult(result.addUser.user);
       } else if (result.addUser.userExists) {
-        // user exists, ask client if they want to force
+        console.log("User already exists:", result.addUser.userExists);
         const confirmForce = window.confirm("User already exists. Overwrite?");
         if (confirmForce) {
-          // second attempt with force=true
-
           result = await graphqlFetch(mutation, {
             input: { name: userName, force: true },
           });
-          console.log(result.addUser.user!);
+          console.log("addUser second attempt (force=true) response:", result);
           setResult(result.addUser.user!);
         } else {
           setResult({ error: "User creation cancelled." });
+          console.log("User creation cancelled by client");
         }
       }
     } catch (err) {
@@ -166,20 +174,30 @@ export default function UsersDemo() {
         }
       }
     `;
-    const res = await fetch(GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: mutation,
-        variables: { id: Number(userIdToDelete) },
-      }),
-    });
-    const data = await res.json();
-    console.log("deleteUser response:", data.data.deleteUser);
-    setResult(data.data.deleteUser);
+
+    console.log("deleteUser called with id:", userIdToDelete);
+
+    try {
+      const res = await fetch(GRAPHQL_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: mutation,
+          variables: { id: Number(userIdToDelete) },
+        }),
+      });
+
+      const data = await res.json();
+      console.log("deleteUser response:", data.data.deleteUser);
+      setResult(data.data.deleteUser);
+    } catch (err) {
+      console.error("deleteUser failed:", err);
+      setResult({ error: String(err) });
+    }
   };
 
   const renderResult = () => {
+    console.log("rendering");
     if (Array.isArray(result)) {
       // ✅ Case 1: List of users (getAllUsers)
       return (
