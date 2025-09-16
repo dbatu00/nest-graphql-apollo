@@ -31,5 +31,5 @@ type Mutation {
 
 input AddUserInput {
   name: String!
-  force: Boolean
+  force: Boolean! = false
 }
