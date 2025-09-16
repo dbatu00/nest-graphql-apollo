@@ -176,18 +176,12 @@ export default function UsersDemo() {
     console.log("deleteUser called with id:", userIdToDelete);
 
     try {
-      const res = await fetch(GRAPHQL_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: mutation,
-          variables: { id: Number(userIdToDelete) },
-        }),
-      });
+      let data = await graphqlFetch<{
+        deleteUser: { affected: number; name: string; id: number };
+      }>(mutation, { id: Number(userIdToDelete) });
 
-      const data = await res.json();
-      console.log("deleteUser response:", data.data.deleteUser);
-      setResult(data.data.deleteUser);
+      console.log("deleteUser response:", data.deleteUser);
+      setResult(data.deleteUser);
     } catch (err) {
       console.error("deleteUser failed:", err);
       setResult({ error: String(err) });
