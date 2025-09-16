@@ -19,6 +19,9 @@ can do force:boolean with default false
 resolver only needs to handle a)user doesnt exists 
                               b)user exists, force false(covers both, hasnt asked user if he wants to force + no force because client wont say anyting to resolver if force false)
                               c)user exists, force true
+13-) usersdemo  const [userId, setUserId] = useState(""); // userid type is inferred
+  const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred
+  is there a better way?
 
 
 */

@@ -91,6 +91,9 @@ export default function UsersDemo() {
 
     console.log("getUser called with id:", userId);
 
+    //{getUser: { id: number; name: string } | null} this is what graphql will return, hence the  <{type declaration}>
+    //this is so that react client and graphql can shake on data structure
+    //there are ways to avoid typing graphql objects by hand with libraries frameworks etc
     try {
       const result = await graphqlFetch<{
         getUser: { id: number; name: string } | null;
@@ -104,25 +107,33 @@ export default function UsersDemo() {
     }
   };
 
+  // Flow of addUser:
+  // 1. Send request to server to create a user with the given name.
+  // 2. Server either returns the created user, or indicates the user already exists.
+  // 3. If user is created successfully, set result and exit.
+  // 4. If user exists, ask the end user whether to overwrite.
+  // 5. If user confirms, send request again with force=true, then set result.
+  // 6. If user cancels, set result to error message and exit.
   const addUser = async () => {
     console.log("addUser called with userName:", userName);
 
+    // Validate input: user name cannot contain digits
     if (/\d/.test(userName)) {
       alert("User name cannot contain digits.");
       return;
     }
 
     const mutation = `
-      mutation($input: AddUserInput!) {
-        addUser(addUserInput: $input) {
-          user {
-            id
-            name
-          }
-          userExists
+    mutation($input: AddUserInput!) {
+      addUser(addUserInput: $input) {
+        user {
+          id
+          name
         }
+        userExists
       }
-    `;
+    }
+  `;
 
     try {
       let result = await graphqlFetch<{
@@ -132,18 +143,22 @@ export default function UsersDemo() {
       console.log("addUser first attempt response:", result);
 
       if (result.addUser.user) {
+        // User creation successful
         console.log("User created successfully:", result.addUser.user);
         setResult(result.addUser.user);
       } else if (result.addUser.userExists) {
+        // User already exists
         console.log("User already exists:", result.addUser.userExists);
         const confirmForce = window.confirm("User already exists. Overwrite?");
         if (confirmForce) {
+          // Overwrite existing user
           result = await graphqlFetch(mutation, {
             input: { name: userName, force: true },
           });
           console.log("addUser second attempt (force=true) response:", result);
           setResult(result.addUser.user!);
         } else {
+          // User cancelled overwrite
           setResult({ error: "User creation cancelled." });
           console.log("User creation cancelled by client");
         }
@@ -194,7 +209,7 @@ export default function UsersDemo() {
         <FlatList
           data={result}
           keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
+          numColumns={5}
           columnWrapperStyle={{
             justifyContent: "space-between",
             marginBottom: 10,
