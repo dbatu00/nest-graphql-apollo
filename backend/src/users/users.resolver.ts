@@ -100,15 +100,10 @@ export class UsersResolver {
         this.logger.log(`addUser: user exists, force=true → creating`);
         addUserOutput.user = await this.usersService.create(addUserInput.name);
         return addUserOutput;
-      } else if (addUserInput.force === false) {
-        // User exists, client explicitly says not to create
-        this.logger.log(`addUser: user exists, force=false → not creating`);
-        addUserOutput.userExists = true;
-        return addUserOutput;
       } else {
-        // User exists, but client didn’t specify force → return "userExists=true"
+        // User exists, but client didn’t choose force → return "userExists=true"
         this.logger.log(
-          `addUser: user exists, force not specified → returning exists=true`,
+          `addUser: user exists, client did not choose force → returning userExists=true`,
         );
         addUserOutput.userExists = true;
         return addUserOutput;
