@@ -9,6 +9,11 @@ does not accept strings like test5 => should
 6-) comments
 7-) unit tests
 8-) everything async?
+9-) userservice 
+  TODO: You may want to introduce custom error classes 
+  (e.g. UserNotFoundError) and map them to GraphQL errors later.
+10-)deleteUser case where id doesnt belong to anyone
+11-)move deleteUser logic from service to resolver
 
 
 */
