@@ -117,9 +117,11 @@ export default function UsersDemo() {
   const addUser = async () => {
     console.log("addUser called with userName:", userName);
 
-    // Validate input: user name cannot contain digits
-    if (/\d/.test(userName)) {
-      alert("User name cannot contain digits.");
+    // Validate input: must start with a letter, can have with digits, but not only digits
+    if (!/^[A-Za-z][A-Za-z0-9]*$/.test(userName)) {
+      alert(
+        "User name must start with a letter and can only contain letters or digits."
+      );
       return;
     }
 
