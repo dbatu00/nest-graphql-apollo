@@ -158,41 +158,53 @@ export class UsersResolver {
   }
 
   /**
-   * Mutation: deleteUserAsync
-   * -------------------------
-   * Alternative async version of deleteUser.
-   * Args: id: number
-   * Returns: DeleteUserOutput
-   * Error: Throws InternalServerErrorException if deletion fails.
+   * Mutation: deleteUserPromise
+   * ---------------------------
+   * Promise-based (non-async/await) version of deleteUser.
+   * Args:
+   *   - id: number (User ID to delete)
+   * Returns:
+   *   - Promise<DeleteUserOutput>
+   * Error:
+   *   - Rejects with InternalServerErrorException if deletion fails.
    */
   @Mutation(() => DeleteUserOutput)
-  async deleteUserAsync(
+  deleteUserPromise(
     @Args('id', { type: () => Int }) id: number,
   ): Promise<DeleteUserOutput> {
-    this.logger.log(`deleteUserAsync called with id=${id}`);
-    try {
-      // Call service → delete user
-      const result = await this.usersService.delete(id);
+    this.logger.log(`deleteUserPromise called with id=${id}`);
 
-      // Return mapped result
-      const output: DeleteUserOutput = {
-        affected: result.affected ?? 0,
-        name: result.name,
-        id,
-      };
+    // Call service → delete user
+    return this.usersService
+      .delete(id)
+      .then((result) => {
+        // Map result to DeleteUserOutput
+        const output: DeleteUserOutput = {
+          affected: result.affected ?? 0,
+          name: result.name,
+          id,
+        };
 
-      this.logger.log(`deleteUserAsync returning: ${JSON.stringify(output)}`);
-      return output;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `deleteUserAsync failed: ${error.message}`,
-          error.stack,
+        this.logger.log(
+          `deleteUserPromise returning: ${JSON.stringify(output)}`,
         );
-      } else {
-        this.logger.error(`deleteUserAsync failed: ${JSON.stringify(error)}`);
-      }
-      throw new InternalServerErrorException('Failed to delete user (async)');
-    }
+        return output;
+      })
+      .catch((error: unknown) => {
+        // Log error details
+        if (error instanceof Error) {
+          this.logger.error(
+            `deleteUserPromise failed: ${error.message}`,
+            error.stack,
+          );
+        } else {
+          this.logger.error(
+            `deleteUserPromise failed: ${JSON.stringify(error)}`,
+          );
+        }
+        throw new InternalServerErrorException(
+          'Failed to delete user (promise-based)',
+        );
+      });
   }
 }
