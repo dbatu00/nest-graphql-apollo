@@ -10,7 +10,7 @@ type User {
 type DeleteUserOutput {
   affected: Int!
   id: Int!
-  name: String!
+  name: String
 }
 
 type AddUserOutput {

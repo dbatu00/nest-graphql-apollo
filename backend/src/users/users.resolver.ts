@@ -141,7 +141,7 @@ export class UsersResolver {
       // Map service result into DeleteUserOutput
       const output: DeleteUserOutput = {
         affected: result.affected ?? 0,
-        name: result.name,
+        name: result.name ?? null,
         id: id,
       };
 

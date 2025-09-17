@@ -8,6 +8,6 @@ export class DeleteUserOutput {
   @Field(() => Int)
   id: number;
 
-  @Field(() => String)
-  name: string;
+  @Field(() => String, { nullable: true }) // ✅ can be null
+  name?: string | null;
 }

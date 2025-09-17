@@ -181,7 +181,12 @@ export default function UsersDemo() {
       }>(mutation, { id: Number(userIdToDelete) });
 
       console.log("deleteUser response:", data.deleteUser);
-      setResult(data.deleteUser);
+
+      if (data.deleteUser.name === "0") {
+        setResult("User not found");
+      } else {
+        setResult(data.deleteUser);
+      }
     } catch (err) {
       console.error("deleteUser failed:", err);
       setResult({ error: String(err) });
@@ -232,6 +237,11 @@ export default function UsersDemo() {
 
     if (result.affected !== undefined) {
       // ✅ Case 3: deleteUser response
+      if (result.name === null) {
+        return (
+          <Text style={{ marginTop: 10, color: "red" }}>User not found.</Text>
+        );
+      }
       return (
         <Text style={{ marginTop: 10, color: "red" }}>
           Deleted:
