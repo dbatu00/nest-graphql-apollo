@@ -4,7 +4,7 @@ import {
   InternalServerErrorException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DeleteResult } from "typeorm";
+import { Repository, DeleteResult, In } from "typeorm";
 import { User } from "./user.entity";
 import { DeleteUserOutput } from "./delete-user.output";
 
@@ -38,6 +38,35 @@ export class UsersService {
         this.logger.error(`findAll failed: ${error.message}`, error.stack);
       } else {
         this.logger.error(`findAll failed: ${JSON.stringify(error)}`);
+      }
+      throw new InternalServerErrorException("Failed to fetch users");
+    }
+  }
+
+  async findUsers(ids: number[]): Promise<User[]> {
+    this.logger.log(`findUser called with ids=${JSON.stringify(ids)}`);
+
+    try {
+
+      if (ids.length === 0) { // find all
+        const result = await this.usersRepo.find();
+        this.logger.log(`find users result: ${JSON.stringify(result)}`);
+
+        return result;
+      }
+
+      const result = await this.usersRepo.findBy({ id: In(ids) });
+      this.logger.log(`find users result: ${JSON.stringify(result)}`);
+
+      return result;
+    }
+
+
+    catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`findUsers failed: ${error.message}`, error.stack);
+      } else {
+        this.logger.error(`findUsers failed: ${JSON.stringify(error)}`);
       }
       throw new InternalServerErrorException("Failed to fetch users");
     }
