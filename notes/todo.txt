@@ -6,7 +6,7 @@
 9-) userservice 
   TODO: You may want to introduce custom error classes 
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
-10-)deleteUser case where id doesnt belong to anyone
+
 11-)move deleteUser logic from service to resolver
 13-) usersdemo  const [userId, setUserId] = useState(""); // userid type is inferred
   const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred

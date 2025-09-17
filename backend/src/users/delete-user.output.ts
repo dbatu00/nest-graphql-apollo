@@ -3,11 +3,11 @@ import { ObjectType, Field, Int } from '@nestjs/graphql';
 @ObjectType()
 export class DeleteUserOutput {
   @Field(() => Int)
-  affected: number;
+  affected = 0;
 
   @Field(() => Int)
-  id: number;
+  id!: number;
 
-  @Field(() => String, { nullable: true }) // ✅ can be null
-  name?: string | null;
+  @Field(() => String, { nullable: true })
+  name: string | null = null;
 }
