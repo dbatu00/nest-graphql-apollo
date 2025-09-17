@@ -1,24 +1,7 @@
 /* TODO:
-
-4-) react memo?
-
-7-) unit tests
-9-) userservice 
+1-) unit tests
+2-) react memo?
+3-) userservice 
   TODO: You may want to introduce custom error classes 
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
-
-
-
-14-)
-
-is this a good idea?
-this -> string | null } | null }
-  
-  type Result =
-    | { type: "idle" }
-    | { type: "error"; message: string }
-    | { type: "all"; users: { id: number; name: string }[] }
-    | { type: "one"; user: { id: number; name: string | null } | null }
-    | { type: "added"; user: { id: number; name: string } }
-    | { type: "deleted"; user: { id: number; name: string | null } | null };
 */

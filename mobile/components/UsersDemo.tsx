@@ -22,9 +22,9 @@ export default function UsersDemo() {
     | { type: "idle" }
     | { type: "error"; message: string }
     | { type: "all"; users: { id: number; name: string }[] }
-    | { type: "one"; user: { id: number; name: string | null } | null }
+    | { type: "one"; user: { id: number; name: string  } | null }
     | { type: "added"; user: { id: number; name: string } }
-    | { type: "deleted"; user: { id: number; name: string | null } | null };
+    | { type: "deleted"; user: { id: number; name: string | null }  };
 
   const [result, setResult] = useState<Result>({ type: "idle" });
 
@@ -67,7 +67,7 @@ export default function UsersDemo() {
     const query = `query($id: Int!) { getUser(id: $id) { id name } }`;
     try {
       const data = await graphqlFetch<{
-        getUser: { id: number; name: string | null } | null;
+        getUser: { id: number; name: string } | null;
       }>(query, { id: Number(form.userId) });
       setResult({ type: "one", user: data.getUser });
     } catch (err) {
