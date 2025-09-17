@@ -16,13 +16,15 @@ export default function UsersDemo() {
     userId: "",
     userIdToDelete: "",
     userName: "",
+    userIdsString: "", // raw input
   });
 
   type Result =
     | { type: "idle" }
     | { type: "error"; message: string }
-    | { type: "all"; users: { id: number; name: string }[] }
-    | { type: "one"; user: { id: number; name: string  } | null }
+    | { type: "getAll"; users: { id: number; name: string }[] }
+    | { type: "getMultiple"; users: { id: number; name: string  }[] }
+    | { type: "getOne"; user: { id: number; name: string  } | null }
     | { type: "added"; user: { id: number; name: string } }
     | { type: "deleted"; user: { id: number; name: string | null }  };
 
@@ -69,7 +71,42 @@ export default function UsersDemo() {
       const data = await graphqlFetch<{
         getUser: { id: number; name: string } | null;
       }>(query, { id: Number(form.userId) });
-      setResult({ type: "one", user: data.getUser });
+      setResult({ type: "getOne", user: data.getUser });
+    } catch (err) {
+      setResult({ type: "error", message: String(err) });
+    }
+  };
+
+  const getMultipleUsers = async () => {
+
+    const userIdsStrings = form.userIdsString
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0); // remove empty entries
+
+      // Check that every entry is a valid number
+      const allValid = userIdsStrings.every((s) => /^\d+$/.test(s));
+
+    if (!allValid) {
+      alert("User IDs must be numbers.");
+      return;
+    }
+
+    // Convert to number array
+    const userIds: number[] = userIdsStrings.map(Number);
+
+    const query = `query($ids: [Int!]) { getUsersArray(ids: $ids) { id name } }`;
+    const variables = {ids: userIds.map((id) => Number(id))};// ensure Int[]
+
+    try 
+    {
+      const data = await graphqlFetch
+      <{getUsersArray: [{ id: number; name: string }]}>
+      (query, variables);
+
+      //setResult({ type: "getOne", user: data.getUser });
+      console.log(data.getUsersArray);
+
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
@@ -81,7 +118,7 @@ export default function UsersDemo() {
       const data = await graphqlFetch<{
         getUsers: { id: number; name: string }[];
       }>(query);
-      setResult({ type: "all", users: data.getUsers });
+      setResult({ type: "getAll", users: data.getUsers });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
@@ -168,7 +205,7 @@ export default function UsersDemo() {
           <Text style={{ marginTop: 10, color: "red" }}>{result.message}</Text>
         );
 
-      case "all":
+      case "getAll":
         return (
           <FlatList
             data={result.users}
@@ -188,7 +225,7 @@ export default function UsersDemo() {
           />
         );
 
-      case "one":
+      case "getOne":
         return result.user ? (
           <Text style={{ marginTop: 10 }}>
             ID: {result.user.id}
@@ -244,22 +281,36 @@ export default function UsersDemo() {
         <TextInput
           style={styles.input}
           placeholder="User ID"
-          value={form.userId}
-          onChangeText={(text) => setForm({ ...form, userId: text })}
-          keyboardType="numeric"
-        />
-        <Button title="Get User" onPress={getUser} />
-      </View>
-      <View style={styles.row}>
-        <TextInput
-          style={styles.input}
-          placeholder="User ID"
           value={form.userIdToDelete}
           onChangeText={(text) => setForm({ ...form, userIdToDelete: text })}
           keyboardType="numeric"
         />
         <Button title="Delete user" onPress={deleteUser} />
       </View>
+      
+      
+      <View style={styles.row}>
+        <TextInput
+          style={styles.input}
+          placeholder="User ID"
+          value={form.userId}
+          onChangeText={(text) => setForm({ ...form, userId: text })}
+          keyboardType="numeric"
+        />
+        <Button title="Get User" onPress={getUser} />
+      </View>
+
+      <View style={styles.row}>
+        <TextInput
+          style={styles.input}
+          placeholder="User IDs (comma separated)"
+          value={form.userIdsString}
+          onChangeText={(text) => setForm({ ...form, userIdsString: text })}
+        />
+        <Button title="Get Users" onPress={getMultipleUsers} />
+  
+      </View>
+      
       <Button title="Get All Users" onPress={getAllUsers} />
       {renderResult()}
     </View>
