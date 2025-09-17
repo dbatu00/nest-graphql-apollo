@@ -140,7 +140,6 @@ export class UsersResolver {
 
       // Map service result into DeleteUserOutput
       const output: DeleteUserOutput = {
-        affected: result.affected ?? 0,
         name: result.name ?? null,
         id: id,
       };
@@ -180,7 +179,6 @@ export class UsersResolver {
       .then((result) => {
         // Map result to DeleteUserOutput
         const output: DeleteUserOutput = {
-          affected: result.affected ?? 0,
           name: result.name,
           id,
         };

@@ -139,7 +139,6 @@ export class UsersService {
         // Step 3: Build output DTO
         deleteUserOutput.id = user.id;
         deleteUserOutput.name = user.name;
-        deleteUserOutput.affected = deletionResult.affected ?? 0;
       }
 
       this.logger.log(`delete returning: ${JSON.stringify(deleteUserOutput)}`);

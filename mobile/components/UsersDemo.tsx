@@ -11,10 +11,22 @@ import {
 const GRAPHQL_URL = "http://192.168.1.7:3000/graphql";
 
 export default function UsersDemo() {
-  const [userId, setUserId] = useState(""); // userid type is inferred
-  const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred
-  const [userName, setUserName] = useState("");
-  const [result, setResult] = useState<any>("__INIT__");
+  // Single form state object
+  const [form, setForm] = useState({
+    userId: "",
+    userIdToDelete: "",
+    userName: "",
+  });
+
+  type Result =
+    | { type: "idle" }
+    | { type: "error"; message: string }
+    | { type: "all"; users: { id: number; name: string }[] }
+    | { type: "one"; user: { id: number; name: string | null } | null }
+    | { type: "added"; user: { id: number; name: string } }
+    | { type: "deleted"; user: { id: number; name: string | null } | null };
+
+  const [result, setResult] = useState<Result>({ type: "idle" });
 
   async function graphqlFetch<T>(
     query: string,
@@ -44,57 +56,34 @@ export default function UsersDemo() {
     return data.data as T;
   }
 
-  const getAllUsers = async () => {
-    const query = `
-      query {
-        getUsers {
-          id
-          name
-        }
-      }
-    `;
-
-    console.log("getAllUsers called");
-
+  //{getUser: { id: number; name: string } | null} this is what graphql will return, hence the  <{type declaration}>
+  //this is so that react client and graphql can handshake on data structure
+  //there are ways to avoid typing graphql objects by hand with libraries frameworks etc
+  const getUser = async () => {
+    if (!/^\d+$/.test(form.userId)) {
+      alert("User ID must be a number.");
+      return;
+    }
+    const query = `query($id: Int!) { getUser(id: $id) { id name } }`;
     try {
       const data = await graphqlFetch<{
-        getUsers: [{ id: number; name: string }];
-      }>(query, {});
-
-      console.log("getAllUsers response:", data);
-
-      setResult(data.getUsers);
+        getUser: { id: number; name: string | null } | null;
+      }>(query, { id: Number(form.userId) });
+      setResult({ type: "one", user: data.getUser });
     } catch (err) {
-      console.error("getAllUsers failed:", err);
-      alert("Error fetching users");
+      setResult({ type: "error", message: String(err) });
     }
   };
 
-  const getUser = async () => {
-    const query = `
-      query($id: Int!) {
-        getUser(id: $id) {
-          id
-          name
-        }
-      }
-    `;
-
-    console.log("getUser called with id:", userId);
-
-    //{getUser: { id: number; name: string } | null} this is what graphql will return, hence the  <{type declaration}>
-    //this is so that react client and graphql can shake on data structure
-    //there are ways to avoid typing graphql objects by hand with libraries frameworks etc
+  const getAllUsers = async () => {
+    const query = `query { getUsers { id name } }`;
     try {
-      const result = await graphqlFetch<{
-        getUser: { id: number; name: string } | null;
-      }>(query, { id: Number(userId) });
-
-      console.log("getUser response:", result.getUser);
-      setResult(result.getUser);
+      const data = await graphqlFetch<{
+        getUsers: { id: number; name: string }[];
+      }>(query);
+      setResult({ type: "all", users: data.getUsers });
     } catch (err) {
-      console.error("getUser failed:", err);
-      setResult({ error: String(err) });
+      setResult({ type: "error", message: String(err) });
     }
   };
 
@@ -106,10 +95,9 @@ export default function UsersDemo() {
   // 5. If user confirms, send request again with force=true, then set result.
   // 6. If user cancels, set result to error message and exit.
   const addUser = async () => {
-    console.log("addUser called with userName:", userName);
-
-    // Validate input: must start with a letter, can have with digits, but not only digits
-    if (!/^[A-Za-z][A-Za-z0-9]*$/.test(userName)) {
+    // Validate input: must start with a letter,
+    // can have with digits, but not only digits
+    if (!/^[A-Za-z][A-Za-z0-9]*$/.test(form.userName)) {
       alert(
         "User name must start with a letter and can only contain letters or digits."
       );
@@ -119,165 +107,125 @@ export default function UsersDemo() {
     const mutation = `
     mutation($input: AddUserInput!) {
       addUser(addUserInput: $input) {
-        user {
-          id
-          name
-        }
+        user { id name }
         userExists
       }
-    }
-  `;
+    }`;
 
     try {
-      let result = await graphqlFetch<{
+      let data = await graphqlFetch<{
         addUser: { user?: { id: number; name: string }; userExists?: boolean };
-      }>(mutation, { input: { name: userName } });
+      }>(mutation, { input: { name: form.userName } });
 
-      console.log("addUser first attempt response:", result);
-
-      if (result.addUser.user) {
-        // User creation successful
-        console.log("User created successfully:", result.addUser.user);
-        setResult(result.addUser.user);
-      } else if (result.addUser.userExists) {
-        // User already exists
-        console.log("User already exists:", result.addUser.userExists);
+      if (data.addUser.user) {
+        setResult({ type: "added", user: data.addUser.user });
+      } else if (data.addUser.userExists) {
         const confirmForce = window.confirm("User already exists. Overwrite?");
         if (confirmForce) {
-          // Overwrite existing user
-          result = await graphqlFetch(mutation, {
-            input: { name: userName, force: true },
+          data = await graphqlFetch(mutation, {
+            input: { name: form.userName, force: true },
           });
-          console.log("addUser second attempt (force=true) response:", result);
-          setResult(result.addUser.user!);
+          setResult({ type: "added", user: data.addUser.user! });
         } else {
-          // User cancelled overwrite
-          setResult({ error: "User creation cancelled." });
-          console.log("User creation cancelled by client");
+          setResult({ type: "error", message: "User creation cancelled." });
         }
       }
     } catch (err) {
-      console.error("addUser failed:", err);
-      setResult({ error: String(err) });
+      setResult({ type: "error", message: String(err) });
     }
   };
 
   const deleteUser = async () => {
+    if (!/^\d+$/.test(form.userIdToDelete)) {
+      alert("User ID must be a number.");
+      return;
+    }
+
     const mutation = `
-      mutation($id: Int!) {
-        deleteUser(id: $id) {
-          affected
-          name
-          id
-        }
+    mutation($id: Int!) {
+      deleteUser(id: $id) {
+        id
+        name
       }
-    `;
-
-    console.log("deleteUser called with id:", userIdToDelete);
-
+    }`;
     try {
-      let data = await graphqlFetch<{
-        deleteUser: { affected: number; name: string; id: number };
-      }>(mutation, { id: Number(userIdToDelete) });
-
-      console.log("deleteUser response:", data.deleteUser);
-
-      if (data.deleteUser.name === "0") {
-        setResult("User not found");
-      } else {
-        setResult(data.deleteUser);
-      }
+      const data = await graphqlFetch<{
+        deleteUser: { id: number; name: string | null };
+      }>(mutation, { id: Number(form.userIdToDelete) });
+      setResult({ type: "deleted", user: data.deleteUser });
     } catch (err) {
-      console.error("deleteUser failed:", err);
-      setResult({ error: String(err) });
+      setResult({ type: "error", message: String(err) });
     }
   };
 
   const renderResult = () => {
-    console.log("rendering");
-    if (Array.isArray(result)) {
-      // ✅ Case 1: List of users (getAllUsers)
-      return (
-        <FlatList
-          data={result}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={5}
-          columnWrapperStyle={{
-            justifyContent: "space-between",
-            marginBottom: 10,
-          }}
-          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <Text style={styles.cardId}>ID: {item.id}</Text>
-            </View>
-          )}
-        />
-      );
-    }
+    switch (result.type) {
+      case "idle":
+        return null;
 
-    if (result === "__INIT__") {
-      return null; // nothing yet
-    }
-
-    if (!result) {
-      // ✅ Case 6: null / undefined
-      return (
-        <Text style={{ marginTop: 10, color: "red" }}>User not found</Text>
-      );
-    }
-
-    if (result.error) {
-      // ✅ Case 2: error object
-      return (
-        <Text style={{ marginTop: 10, color: "red" }}>{result.error}</Text>
-      );
-    }
-
-    if (result.affected !== undefined) {
-      // ✅ Case 3: deleteUser response
-      if (result.name === null) {
+      case "error":
         return (
-          <Text style={{ marginTop: 10, color: "red" }}>User not found.</Text>
+          <Text style={{ marginTop: 10, color: "red" }}>{result.message}</Text>
         );
-      }
-      return (
-        <Text style={{ marginTop: 10, color: "red" }}>
-          Deleted:
-          {"\n"}ID: {result.id}
-          {"\n"}Name: {result.name}
-          {"\n"}Rows affected: {result.affected}
-        </Text>
-      );
-    }
 
-    if (result.id && result.name) {
-      // ✅ Case 4: getUser or addUser (no force, user does not exist)
-      return (
-        <Text style={{ marginTop: 10 }}>
-          ID: {result.id}
-          {"\n"}Name: {result.name}
-        </Text>
-      );
-    }
+      case "all":
+        return (
+          <FlatList
+            data={result.users}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={5}
+            columnWrapperStyle={{
+              justifyContent: "space-between",
+              marginBottom: 10,
+            }}
+            contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
+            renderItem={({ item }) => (
+              <View style={styles.card}>
+                <Text style={styles.cardName}>{item.name}</Text>
+                <Text style={styles.cardId}>ID: {item.id}</Text>
+              </View>
+            )}
+          />
+        );
 
-    if (result && result.user) {
-      // ✅ Case: addUser created a new user
-      return (
-        <Text style={{ marginTop: 10 }}>
-          ID: {result.user.id}
-          {"\n"}Name: {result.user.name}
-        </Text>
-      );
-    }
+      case "one":
+        return result.user ? (
+          <Text style={{ marginTop: 10 }}>
+            ID: {result.user.id}
+            {"\n"}Name: {result.user.name}
+          </Text>
+        ) : (
+          <Text style={{ marginTop: 10, color: "red" }}>User not found</Text>
+        );
 
-    // ✅ Case 5: unexpected object
-    return (
-      <Text style={{ marginTop: 10, color: "red" }}>
-        Error: Unexpected server response
-      </Text>
-    );
+      case "added":
+      case "deleted":
+        if (!result.user || (result.type === "deleted" && !result.user.name)) {
+          return (
+            <Text style={{ marginTop: 10, color: "red" }}>User not found.</Text>
+          );
+        }
+
+        const label = result.type === "added" ? "Added" : "Deleted";
+        return (
+          <Text
+            style={{
+              marginTop: 10,
+              color: result.type === "deleted" ? "red" : "black",
+            }}
+          >
+            {label}:{"\n"}ID: {result.user.id}
+            {"\n"}Name: {result.user.name}
+          </Text>
+        );
+
+      default:
+        return (
+          <Text style={{ marginTop: 10, color: "red" }}>
+            Error: Unexpected server response
+          </Text>
+        );
+    }
   };
 
   return (
@@ -287,8 +235,8 @@ export default function UsersDemo() {
         <TextInput
           style={styles.input}
           placeholder="User name"
-          value={userName}
-          onChangeText={setUserName}
+          value={form.userName}
+          onChangeText={(text) => setForm({ ...form, userName: text })}
         />
         <Button title="Add User" onPress={addUser} />
       </View>
@@ -296,8 +244,8 @@ export default function UsersDemo() {
         <TextInput
           style={styles.input}
           placeholder="User ID"
-          value={userId}
-          onChangeText={setUserId}
+          value={form.userId}
+          onChangeText={(text) => setForm({ ...form, userId: text })}
           keyboardType="numeric"
         />
         <Button title="Get User" onPress={getUser} />
@@ -306,8 +254,8 @@ export default function UsersDemo() {
         <TextInput
           style={styles.input}
           placeholder="User ID"
-          value={userIdToDelete}
-          onChangeText={setUserIdToDelete}
+          value={form.userIdToDelete}
+          onChangeText={(text) => setForm({ ...form, userIdToDelete: text })}
           keyboardType="numeric"
         />
         <Button title="Delete user" onPress={deleteUser} />

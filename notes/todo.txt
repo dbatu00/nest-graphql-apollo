@@ -8,9 +8,17 @@
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
 
 11-)move deleteUser logic from service to resolver
-13-) usersdemo  const [userId, setUserId] = useState(""); // userid type is inferred
-  const [userIdToDelete, setUserIdToDelete] = useState(""); // userid type is inferred
-  is there a better way?
 
+14-)
 
+is this a good idea?
+this -> string | null } | null }
+  
+  type Result =
+    | { type: "idle" }
+    | { type: "error"; message: string }
+    | { type: "all"; users: { id: number; name: string }[] }
+    | { type: "one"; user: { id: number; name: string | null } | null }
+    | { type: "added"; user: { id: number; name: string } }
+    | { type: "deleted"; user: { id: number; name: string | null } | null };
 */
