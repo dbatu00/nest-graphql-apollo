@@ -2,11 +2,11 @@ import {
   Injectable,
   Logger,
   InternalServerErrorException,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DeleteResult } from 'typeorm';
-import { User } from './user.entity';
-import { DeleteUserOutput } from './delete-user.output';
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, DeleteResult } from "typeorm";
+import { User } from "./user.entity";
+import { DeleteUserOutput } from "./delete-user.output";
 
 @Injectable()
 export class UsersService {
@@ -15,7 +15,7 @@ export class UsersService {
 
   // TypeORM will inject a repository that is scoped to the User entity.
   // This is only possible because UsersModule imported TypeOrmModule.forFeature([User]).
-  constructor(@InjectRepository(User) private usersRepo: Repository<User>) {}
+  constructor(@InjectRepository(User) private usersRepo: Repository<User>) { }
 
   /**
    * Fetch all users from the database.
@@ -32,13 +32,14 @@ export class UsersService {
       const result = await this.usersRepo.find();
       this.logger.log(`findAll result: ${JSON.stringify(result)}`);
       return result;
+
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.logger.error(`findAll failed: ${error.message}`, error.stack);
       } else {
         this.logger.error(`findAll failed: ${JSON.stringify(error)}`);
       }
-      throw new InternalServerErrorException('Failed to fetch users');
+      throw new InternalServerErrorException("Failed to fetch users");
     }
   }
 
@@ -59,7 +60,7 @@ export class UsersService {
   }): Promise<User | null> {
     this.logger.log(`findOne called with criteria=${JSON.stringify(criteria)}`);
     if (!criteria.id && !criteria.name) {
-      throw new Error('Must provide either id or name to findOne');
+      throw new Error("Must provide either id or name to findOne");
     }
     try {
       const result = await this.usersRepo.findOne({ where: criteria });
@@ -71,7 +72,7 @@ export class UsersService {
       } else {
         this.logger.error(`findOne failed: ${JSON.stringify(error)}`);
       }
-      throw new InternalServerErrorException('Failed to fetch user');
+      throw new InternalServerErrorException("Failed to fetch user");
     }
   }
 
@@ -88,18 +89,21 @@ export class UsersService {
    */
   async create(name: string): Promise<User> {
     this.logger.log(`create called with name=${name}`);
+
     try {
       const user = this.usersRepo.create({ name });
       const result = await this.usersRepo.save(user);
       this.logger.log(`create result: ${JSON.stringify(result)}`);
+
       return result;
+
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.logger.error(`create failed: ${error.message}`, error.stack);
       } else {
         this.logger.error(`create failed: ${JSON.stringify(error)}`);
       }
-      throw new InternalServerErrorException('Failed to create user');
+      throw new InternalServerErrorException("Failed to create user");
     }
   }
 
@@ -123,33 +127,36 @@ export class UsersService {
    * - Gracefully logs and wraps all errors in InternalServerErrorException.
    */
   async delete(id: number): Promise<DeleteUserOutput> {
+
     this.logger.log(`delete called with id=${id}`);
     const deleteUserOutput: DeleteUserOutput = new DeleteUserOutput();
+    deleteUserOutput.id = id;
 
     try {
       // Step 1: Find the user to delete (to record name/id in the output)
       const user: User | null = await this.findOne({ id });
+
       if (user != null) {
+
         // Step 2: Execute the delete
-        const deletionResult: DeleteResult = await this.usersRepo.delete({
-          id,
-        });
+        const deletionResult: DeleteResult = await this.usersRepo.delete({ id });
         this.logger.log(`delete result: ${JSON.stringify(deletionResult)}`);
 
         // Step 3: Build output DTO
-        deleteUserOutput.id = user.id;
         deleteUserOutput.name = user.name;
       }
 
       this.logger.log(`delete returning: ${JSON.stringify(deleteUserOutput)}`);
+
       return deleteUserOutput;
+
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.logger.error(`delete failed: ${error.message}`, error.stack);
       } else {
         this.logger.error(`delete failed: ${JSON.stringify(error)}`);
       }
-      throw new InternalServerErrorException('Failed to delete user');
+      throw new InternalServerErrorException("Failed to delete user");
     }
   }
 }

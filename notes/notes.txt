@@ -3,7 +3,7 @@
 @Field(() => String, { nullable: true })        // GraphQL → API allows null
 nickname?: string | null;                       // TS → property optional, can be null
 
-
+///////////////////////////////////////////
 2. Why not allow types at field level?
 
 Several reasons:
@@ -31,3 +31,18 @@ Cleaner API contract
 The operation signature (query ($id: Int!)) tells clients exactly what they must provide.
 
 Field arguments just use those variables — no type ambiguity.
+
+
+///////////////////////////////////////////
+
+user.entity and deleteuserOutput are almost the same. why two of the same objects? 
+
+
+
+Entities are DB-centric: They can have sensitive fields (passwords, roles, internal flags) that you don’t want to expose over GraphQL.
+
+Outputs/DTOs are API-centric: You can control exactly what GraphQL clients see.
+
+Different operations might need different shapes (e.g., User for fetch, DeleteUserOutput for deletion).
+
+It avoids accidental coupling between your DB schema and API responses.

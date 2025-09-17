@@ -136,13 +136,7 @@ export class UsersResolver {
     this.logger.log(`deleteUser called with id=${id}`);
     try {
       // Call service → delete user
-      const result = await this.usersService.delete(id);
-
-      // Map service result into DeleteUserOutput
-      const output: DeleteUserOutput = {
-        name: result.name ?? null,
-        id: id,
-      };
+      const output = await this.usersService.delete(id);
 
       this.logger.log(`deleteUser returning: ${JSON.stringify(output)}`);
       return output;

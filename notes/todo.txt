@@ -7,7 +7,7 @@
   TODO: You may want to introduce custom error classes 
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
 
-11-)move deleteUser logic from service to resolver
+
 
 14-)
 
