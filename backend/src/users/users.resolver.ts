@@ -12,7 +12,32 @@ export class UsersResolver {
   // NestJS logger instance
   private readonly logger = new Logger(UsersResolver.name);
 
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
+
+  //pass an empty number[] to get all users
+  //pass number[] to get the users for ids given in the array
+  @Query(() => [User])
+  async findUsers(@Args('ids', { type: () => [Int] }) ids: number[]) {
+    this.logger.log(`findUsers called with ids: ${JSON.stringify(ids)}`);
+
+    try {
+      // Call service → fetch users
+      const result = await this.usersService.findUsers(ids);
+      this.logger.log(`findUsers result: ${JSON.stringify(result)}`);
+
+      return result;
+
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`findUsers failed: ${error.message}`, error.stack);
+      } else {
+        this.logger.error(`findUsers failed: ${JSON.stringify(error)}`);
+      }
+      throw new InternalServerErrorException('Failed to fetch users');
+    }
+  }
+
+
 
   /**
    * Query: getUsers

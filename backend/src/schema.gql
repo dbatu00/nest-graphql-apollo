@@ -18,6 +18,7 @@ type AddUserOutput {
 }
 
 type Query {
+  findUsers(ids: [Int!]!): [User!]!
   getUsers: [User!]!
   getUser(id: Int!): User
 }
