@@ -5,8 +5,5 @@
   TODO: You may want to introduce custom error classes 
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
 
-  4-)userresolver
-  finduserbyName
-   //will return the first id if there are multiple users with the same name
-  //might want to return "user not found: {username}" instead of "user not found"
+ 
 */

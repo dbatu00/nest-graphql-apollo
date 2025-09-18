@@ -128,32 +128,38 @@ export default function UsersDemo() {
   };
 
   const deleteUser = async () => {
-    const userIdsStringForDeletion = form.userIdsStringForDeletion
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+  const userIdsStringForDeletion = form.userIdsStringForDeletion
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
-    const allValid = userIdsStringForDeletion.every((s) => /^\d+$/.test(s));
-    if (!allValid) {
-      alert("User IDs must be numbers.");
-      return;
-    }
+  if (userIdsStringForDeletion.length === 0) {
+    alert("Please enter at least one user ID to delete.");
+    return;
+  }
 
-    const userIds: number[] = userIdsStringForDeletion.map(Number);
+  const allValid = userIdsStringForDeletion.every((s) => /^\d+$/.test(s));
+  if (!allValid) {
+    alert("User IDs must be numbers.");
+    return;
+  }
 
-    const mutation = `mutation($ids: [Int!]!) { deleteUser(ids: $ids) { id name } }`;
-    const variables = { ids: userIds };
+  const userIds: number[] = userIdsStringForDeletion.map(Number);
 
-    try {
-      const data = await graphqlFetch<{ deleteUser: { id: number; name: string }[] }>(
-        mutation,
-        variables
-      );
-      setResult({ type: "deletedUsers", users: data.deleteUser });
-    } catch (err) {
-      setResult({ type: "error", message: String(err) });
-    }
-  };
+  const mutation = `mutation($ids: [Int!]!) { deleteUser(ids: $ids) { id name } }`;
+  const variables = { ids: userIds };
+
+  try {
+    const data = await graphqlFetch<{ deleteUser: { id: number; name: string }[] }>(
+      mutation,
+      variables
+    );
+    setResult({ type: "deletedUsers", users: data.deleteUser });
+  } catch (err) {
+    setResult({ type: "error", message: String(err) });
+  }
+};
+
 
   const renderResult = () => {
     if (result.type === "idle") return null;

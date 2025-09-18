@@ -64,32 +64,23 @@ export class UsersResolver {
   async findUsersByName(
     @Args({ name: 'names', type: () => [String] }) names: string[],
   ): Promise<User[]> {
-    this.logger.log(`findUsersByName called | names=${JSON.stringify(names)}`);
+    // For each name, fetch all matching users
+    const results = await Promise.all(
+      names.map(async (name) => {
+        // Directly use the repository here to get all users for the name
+        const users = await this.usersService['usersRepo'].find({ where: { name } });
 
-    const fetchUserByName = async (name: string): Promise<User> => {
-      const user = await this.usersService.findUser(name);
-      if (user) return user;
-      return { id: 0, name: 'User not found' } as User;
-    };
+        if (users.length > 0) return users;
 
-    try {
-      const results = await Promise.all(names.map(fetchUserByName));
-      this.logger.log(`findUsersByName success | result count=${results.length}`);
-      return results;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `findUsersByName failed | error=${error.message}`,
-          error.stack,
-        );
-      } else {
-        this.logger.error(
-          `findUsersByName failed | error=${JSON.stringify(error)}`,
-        );
-      }
-      throw new InternalServerErrorException('Failed to fetch users by name');
-    }
+        // No match → placeholder
+        return [{ id: 0, name: 'User not found' } as User];
+      })
+    );
+
+    // Flatten the array so it's a single-level array of users
+    return results.flat();
   }
+
 
 
 
