@@ -13,7 +13,7 @@ const GRAPHQL_URL = "http://192.168.1.7:3000/graphql";
 export default function UsersDemo() {
   // Single form state object
   const [form, setForm] = useState({
-    userIdToDelete: "",
+    userIdsStringForDeletion: "",
     userName: "",
     userIdsString: "", // raw input
   });
@@ -21,9 +21,9 @@ export default function UsersDemo() {
   type Result =
     | { type: "idle" }
     | { type: "error"; message: string }
-    | { type: "findUsers"; users: { id: number; name: string }[] }
+    | { type: "findUsers"; users: { id: number; name: string}[] }
     | { type: "added"; user: { id: number; name: string } }
-    | { type: "deleted"; user: { id: number; name: string} []  };
+    | { type: "deletedUsers"; users: { id: number; name: string}[] };
 
   const [result, setResult] = useState<Result>({ type: "idle" });
 
@@ -144,23 +144,33 @@ export default function UsersDemo() {
   };
 
   const deleteUser = async () => {
-    if (!/^\d+$/.test(form.userIdToDelete)) {
-      alert("User ID must be a number.");
+   const userIdsStringForDeletion = form.userIdsStringForDeletion
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0); // remove empty entries
+
+      // Check that every entry is a valid number
+      const allValid = userIdsStringForDeletion.every((s) => /^\d+$/.test(s));
+
+    if (!allValid) {
+      alert("User IDs must be numbers.");
       return;
     }
 
-    const mutation = `
-    mutation($id: Int!) {
-      deleteUser(id: $id) {
-        id
-        name
-      }
-    }`;
-    try {
-      const data = await graphqlFetch<{
-        deleteUser: { id: number; name: string | null };
-      }>(mutation, { id: Number(form.userIdToDelete) });
-      setResult({ type: "deleted", user: data.deleteUser });
+    // Convert to number array
+    const userIds: number[] = userIdsStringForDeletion.map(Number);
+
+    const mutation = `mutation($ids: [Int!]!) { deleteUsers(ids: $ids) { id name } }`;
+    const variables = {ids: userIds.map((id) => Number(id))};// ensure Int[]
+    
+    try 
+    {   
+      const data = await graphqlFetch
+      <{ deleteUsers: {id: number; name: string }[]}>
+      (mutation, variables);
+    
+      setResult({ type: "deletedUsers", users: data.deleteUsers });
+
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
@@ -221,19 +231,24 @@ export default function UsersDemo() {
         </Text>
       );
 
-    case "deleted":
-      if (!result.user || !result.user.name) {
-        return (
-          <Text style={{ marginTop: 10, color: "red" }}>
-            User not found.
-          </Text>
-        );
-      }
-
+    case "deletedUsers":
       return (
-        <Text style={{ marginTop: 10, color: "red" }}>
-          Deleted:{"\n"}ID: {result.user.id}{"\n"}Name: {result.user.name}
-        </Text>
+        <FlatList
+          data={result.users}
+          keyExtractor={(item) => item.id.toString()}
+          numColumns={5}
+          columnWrapperStyle={{
+            justifyContent: "space-between",
+            marginBottom: 10,
+          }}
+          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <Text style={styles.cardName}>{item.name}</Text>
+              <Text style={styles.cardId}>ID: {item.id}</Text>
+            </View>
+          )}
+        />
       );
 
     default:
@@ -266,12 +281,12 @@ export default function UsersDemo() {
       <View style={styles.row}>
         <TextInput
           style={styles.input}
-          placeholder="User ID"
-          value={form.userIdToDelete}
-          onChangeText={(text) => setForm({ ...form, userIdToDelete: text })}
-          keyboardType="numeric"
+          placeholder="User IDs (comma separated)"
+          value={form.userIdsStringForDeletion}
+          onChangeText={(text) => setForm({ ...form, userIdsStringForDeletion: text })}
         />
-        <Button title="Delete user" onPress={deleteUser} />
+        <Button title="Delete Users" onPress={deleteUser} />
+  
       </View>
       
       
