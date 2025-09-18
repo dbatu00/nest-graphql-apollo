@@ -19,9 +19,9 @@ export default function UsersDemo() {
 
   type Result =
     | { type: "idle" }
-    | { type: "error"; message: string }
-    | { type: "findUsers"; users: { id: number; name: string }[] }
-    | { type: "added"; user: { id: number; name: string } }
+    | { type: "error"; message: string }    
+    | { type: "addedUser"; user: { id: number; name: string } }
+    | { type: "getUsers"; users: { id: number; name: string }[] }
     | { type: "deletedUsers"; users: { id: number; name: string }[] };
 
   const [result, setResult] = useState<Result>({ type: "idle" });
@@ -56,7 +56,7 @@ export default function UsersDemo() {
     const query = `query { getAllUsers { id name } }`;
     try {
       const data = await graphqlFetch<{ getAllUsers: { id: number; name: string }[] }>(query);
-      setResult({ type: "findUsers", users: data.getAllUsers });
+      setResult({ type: "getUsers", users: data.getAllUsers });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
@@ -82,7 +82,7 @@ export default function UsersDemo() {
         query,
         variables
       );
-      setResult({ type: "findUsers", users: data.findUsersById });
+      setResult({ type: "getUsers", users: data.findUsersById });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
@@ -96,7 +96,7 @@ export default function UsersDemo() {
         query,
         variables
       );
-      setResult({ type: "findUsers", users: data.findUsersByName });
+      setResult({ type: "getUsers", users: data.findUsersByName });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
@@ -127,14 +127,14 @@ export default function UsersDemo() {
       }>(mutation, { input: { name: form.userName } });
 
       if (data.addUser.user) {
-        setResult({ type: "added", user: data.addUser.user });
+        setResult({ type: "addedUser", user: data.addUser.user });
       } else if (data.addUser.userExists) {
         const confirmForce = window.confirm("User already exists. Overwrite?");
         if (confirmForce) {
           data = await graphqlFetch(mutation, {
             input: { name: form.userName, force: true },
           });
-          setResult({ type: "added", user: data.addUser.user! });
+          setResult({ type: "addedUser", user: data.addUser.user! });
         } else {
           setResult({ type: "error", message: "User creation cancelled." });
         }
@@ -189,14 +189,14 @@ export default function UsersDemo() {
           <Text style={{ marginTop: 10, color: "red" }}>{result.message}</Text>
         );
 
-      case "findUsers":
+      case "getUsers":
         usersToRender = result.users.map((u) => ({
           ...u,
           hue: u.name === "User not found" ? "red" : "#f0f0f0",
         }));
         break;
 
-      case "added":
+      case "addedUser":
         usersToRender = [{ ...result.user, hue: "green" }];
         break;
 
@@ -265,7 +265,7 @@ export default function UsersDemo() {
       <View style={styles.row}>
         <TextInput
           style={styles.input}
-          placeholder="User IDs (comma separated or empty for all users)"
+          placeholder="User IDs or names (comma separated or empty for all users)"
           value={form.userIdsString}
           onChangeText={(text) => setForm({ ...form, userIdsString: text })}
         />

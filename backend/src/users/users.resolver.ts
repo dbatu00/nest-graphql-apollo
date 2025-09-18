@@ -13,8 +13,8 @@ export class UsersResolver {
   constructor(private readonly usersService: UsersService) { }
 
 
-  @Query(() => [User])
-  async getAllUsers(): Promise<User[]> {
+  @Query(() => [User]) //gql 
+  async getAllUsers(): Promise<User[]> { //ts
     this.logger.log(`getAllUsers called`);
 
     try {
@@ -36,7 +36,7 @@ export class UsersResolver {
     }
   }
 
-
+  //1,2,3,4,5
   @Query(() => [User])
   async findUsersById(
     @Args({ name: 'ids', type: () => [Int] }) ids: number[],
