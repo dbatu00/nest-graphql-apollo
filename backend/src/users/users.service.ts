@@ -17,31 +17,7 @@ export class UsersService {
   // This is only possible because UsersModule imported TypeOrmModule.forFeature([User]).
   constructor(@InjectRepository(User) private usersRepo: Repository<User>) { }
 
-  /**
-   * Fetch all users from the database.
-   *
-   * @returns Promise<User[]>
-   *
-   * Notes:
-   * - Wraps TypeORM's `find()` with logging + error handling.
-   * - Even if there are no users, TypeORM resolves to an empty array [].
-   */
-  async findAll(): Promise<User[]> {
-    this.logger.log(`findAll called`);
-    try {
-      const result = await this.usersRepo.find();
-      this.logger.log(`findAll result: ${JSON.stringify(result)}`);
-      return result;
 
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(`findAll failed: ${error.message}`, error.stack);
-      } else {
-        this.logger.error(`findAll failed: ${JSON.stringify(error)}`);
-      }
-      throw new InternalServerErrorException("Failed to fetch users");
-    }
-  }
 
   async findUsers(ids: number[]): Promise<User[]> {
     this.logger.log(`findUser called with ids=${JSON.stringify(ids)}`);
@@ -72,38 +48,7 @@ export class UsersService {
     }
   }
 
-  /**
-   * Find a single user by ID or by name.
-   *
-   * @param criteria Either { id } or { name }
-   * @returns Promise<User | null>
-   *
-   * Notes:
-   * - Throws if neither ID nor name is provided.
-   * - Returns null if no user matches criteria.
-   * - This leverages TypeORM's `findOne({ where })`.
-   */
-  async findOne(criteria: {
-    id?: number;
-    name?: string;
-  }): Promise<User | null> {
-    this.logger.log(`findOne called with criteria=${JSON.stringify(criteria)}`);
-    if (!criteria.id && !criteria.name) {
-      throw new Error("Must provide either id or name to findOne");
-    }
-    try {
-      const result = await this.usersRepo.findOne({ where: criteria });
-      this.logger.log(`findOne result: ${JSON.stringify(result)}`);
-      return result;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(`findOne failed: ${error.message}`, error.stack);
-      } else {
-        this.logger.error(`findOne failed: ${JSON.stringify(error)}`);
-      }
-      throw new InternalServerErrorException("Failed to fetch user");
-    }
-  }
+
 
   /**
    * Create and persist a new user.
