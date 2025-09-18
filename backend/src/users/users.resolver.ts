@@ -64,22 +64,21 @@ export class UsersResolver {
   async findUsersByName(
     @Args({ name: 'names', type: () => [String] }) names: string[],
   ): Promise<User[]> {
-    // For each name, fetch all matching users
     const results = await Promise.all(
       names.map(async (name) => {
-        // Directly use the repository here to get all users for the name
+        // Direct repository query to get all users for this name
         const users = await this.usersService['usersRepo'].find({ where: { name } });
 
         if (users.length > 0) return users;
 
-        // No match → placeholder
-        return [{ id: 0, name: 'User not found' } as User];
+        // No match → custom placeholder including the name
+        return [{ id: 0, name: `User not found: ${name}` } as User];
       })
     );
 
-    // Flatten the array so it's a single-level array of users
     return results.flat();
   }
+
 
 
 
