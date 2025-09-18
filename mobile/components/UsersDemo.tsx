@@ -46,15 +46,14 @@ export default function UsersDemo() {
   }
 
  const getUsers = async () => {
-  const userIdsStrings = form.userIdsString
+  const entries = form.userIdsString
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  // If no IDs are provided, fetch all users
-  if (userIdsStrings.length === 0) {
+  if (entries.length === 0) {
+    // No input → fetch all users
     const query = `query { getAllUsers { id name } }`;
-
     try {
       const data = await graphqlFetch<{ getAllUsers: { id: number; name: string }[] }>(query);
       setResult({ type: "findUsers", users: data.getAllUsers });
@@ -64,28 +63,46 @@ export default function UsersDemo() {
     return;
   }
 
-  // Otherwise, validate IDs
-  const allValid = userIdsStrings.every((s) => /^\d+$/.test(s));
-  if (!allValid) {
-    alert("User IDs must be numbers.");
+  const allNumbers = entries.every((s) => /^\d+$/.test(s));
+  const allStrings = entries.every((s) => /^[A-Za-z][A-Za-z0-9]*$/.test(s));
+
+  if (!allNumbers && !allStrings) {
+    alert("Enter either all numbers (IDs) or all valid names, separated by commas.");
     return;
   }
 
-  const userIds: number[] = userIdsStrings.map(Number);
+  if (allNumbers) {
+    // Query by IDs
+    const userIds: number[] = entries.map(Number);
+    const query = `query($ids: [Int!]!) { findUsersById(ids: $ids) { id name } }`;
+    const variables = { ids: userIds };
 
-  const query = `query($ids: [Int!]!) { findUsersById(ids: $ids) { id name } }`;
-  const variables = { ids: userIds };
+    try {
+      const data = await graphqlFetch<{ findUsersById: { id: number; name: string }[] }>(
+        query,
+        variables
+      );
+      setResult({ type: "findUsers", users: data.findUsersById });
+    } catch (err) {
+      setResult({ type: "error", message: String(err) });
+    }
+  } else if (allStrings) {
+    // Query by Names
+    const query = `query($names: [String!]!) { findUsersByName(names: $names) { id name } }`;
+    const variables = { names: entries };
 
-  try {
-    const data = await graphqlFetch<{ findUsersById: { id: number; name: string }[] }>(
-      query,
-      variables
-    );
-    setResult({ type: "findUsers", users: data.findUsersById });
-  } catch (err) {
-    setResult({ type: "error", message: String(err) });
+    try {
+      const data = await graphqlFetch<{ findUsersByName: { id: number; name: string }[] }>(
+        query,
+        variables
+      );
+      setResult({ type: "findUsers", users: data.findUsersByName });
+    } catch (err) {
+      setResult({ type: "error", message: String(err) });
+    }
   }
 };
+
 
 
   const addUser = async () => {
