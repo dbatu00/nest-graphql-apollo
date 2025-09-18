@@ -23,7 +23,7 @@ export default function UsersDemo() {
     | { type: "error"; message: string }
     | { type: "findUsers"; users: { id: number; name: string }[] }
     | { type: "added"; user: { id: number; name: string } }
-    | { type: "deleted"; user: { id: number; name: string | null }  };
+    | { type: "deleted"; user: { id: number; name: string} []  };
 
   const [result, setResult] = useState<Result>({ type: "idle" });
 
@@ -59,7 +59,7 @@ export default function UsersDemo() {
 
 
   //if no input is given, sends an empty number array which returns all users
-  const getMultipleUsers = async () => {
+  const getUsers = async () => {
 
     const userIdsStrings = form.userIdsString
       .split(",")
@@ -282,7 +282,7 @@ export default function UsersDemo() {
           value={form.userIdsString}
           onChangeText={(text) => setForm({ ...form, userIdsString: text })}
         />
-        <Button title="Get Users" onPress={getMultipleUsers} />
+        <Button title="Get Users" onPress={getUsers} />
   
       </View>
       
