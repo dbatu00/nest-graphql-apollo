@@ -11,19 +11,18 @@ import {
 const GRAPHQL_URL = "http://192.168.1.7:3000/graphql";
 
 export default function UsersDemo() {
-  // Single form state object
   const [form, setForm] = useState({
     userIdsStringForDeletion: "",
     userName: "",
-    userIdsString: "", // raw input
+    userIdsString: "",
   });
 
   type Result =
     | { type: "idle" }
     | { type: "error"; message: string }
-    | { type: "findUsers"; users: { id: number; name: string}[] }
+    | { type: "findUsers"; users: { id: number; name: string }[] }
     | { type: "added"; user: { id: number; name: string } }
-    | { type: "deletedUsers"; users: { id: number; name: string}[] };
+    | { type: "deletedUsers"; users: { id: number; name: string }[] };
 
   const [result, setResult] = useState<Result>({ type: "idle" });
 
@@ -31,13 +30,6 @@ export default function UsersDemo() {
     query: string,
     variables: Record<string, any> = {}
   ): Promise<T> {
-    console.log(
-      "graphqlFetch called with query:",
-      query,
-      "variables:",
-      variables
-    );
-
     const res = await fetch(GRAPHQL_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,66 +37,58 @@ export default function UsersDemo() {
     });
 
     const data = await res.json();
-    console.log("graphqlFetch response:", data);
 
     if (data.errors) {
-      console.error("GraphQL errors:", data.errors);
       throw new Error(data.errors[0]?.message || "GraphQL request failed");
     }
 
     return data.data as T;
   }
 
+ const getUsers = async () => {
+  const userIdsStrings = form.userIdsString
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
 
+  // If no IDs are provided, fetch all users
+  if (userIdsStrings.length === 0) {
+    const query = `query { getAllUsers { id name } }`;
 
-
-  //if no input is given, sends an empty number array which returns all users
-  const getUsers = async () => {
-
-    const userIdsStrings = form.userIdsString
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0); // remove empty entries
-
-      // Check that every entry is a valid number
-      const allValid = userIdsStrings.every((s) => /^\d+$/.test(s));
-
-    if (!allValid) {
-      alert("User IDs must be numbers.");
-      return;
-    }
-
-    // Convert to number array
-    const userIds: number[] = userIdsStrings.map(Number);
-
-    const query = `query($ids: [Int!]!) { findUsers(ids: $ids) { id name } }`;
-    const variables = {ids: userIds.map((id) => Number(id))};// ensure Int[]
-
-    try 
-    {
-      const data = await graphqlFetch
-      <{findUsers: { id: number; name: string }[]}>
-      (query, variables);
-
-      setResult({ type: "findUsers", users: data.findUsers });
-
+    try {
+      const data = await graphqlFetch<{ getAllUsers: { id: number; name: string }[] }>(query);
+      setResult({ type: "findUsers", users: data.getAllUsers });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
-  };
+    return;
+  }
+
+  // Otherwise, validate IDs
+  const allValid = userIdsStrings.every((s) => /^\d+$/.test(s));
+  if (!allValid) {
+    alert("User IDs must be numbers.");
+    return;
+  }
+
+  const userIds: number[] = userIdsStrings.map(Number);
+
+  const query = `query($ids: [Int!]!) { findUsersById(ids: $ids) { id name } }`;
+  const variables = { ids: userIds };
+
+  try {
+    const data = await graphqlFetch<{ findUsersById: { id: number; name: string }[] }>(
+      query,
+      variables
+    );
+    setResult({ type: "findUsers", users: data.findUsersById });
+  } catch (err) {
+    setResult({ type: "error", message: String(err) });
+  }
+};
 
 
-
-  // Flow of addUser:
-  // 1. Send request to server to create a user with the given name.
-  // 2. Server either returns the created user, or indicates the user already exists.
-  // 3. If user is created successfully, set result and exit.
-  // 4. If user exists, ask the end user whether to overwrite.
-  // 5. If user confirms, send request again with force=true, then set result.
-  // 6. If user cancels, set result to error message and exit.
   const addUser = async () => {
-    // Validate input: must start with a letter,
-    // can have with digits, but not only digits
     if (!/^[A-Za-z][A-Za-z0-9]*$/.test(form.userName)) {
       alert(
         "User name must start with a letter and can only contain letters or digits."
@@ -113,12 +97,12 @@ export default function UsersDemo() {
     }
 
     const mutation = `
-    mutation($input: AddUserInput!) {
-      addUser(addUserInput: $input) {
-        user { id name }
-        userExists
-      }
-    }`;
+      mutation($input: AddUserInput!) {
+        addUser(addUserInput: $input) {
+          user { id name }
+          userExists
+        }
+      }`;
 
     try {
       let data = await graphqlFetch<{
@@ -144,128 +128,94 @@ export default function UsersDemo() {
   };
 
   const deleteUser = async () => {
-   const userIdsStringForDeletion = form.userIdsStringForDeletion
+    const userIdsStringForDeletion = form.userIdsStringForDeletion
       .split(",")
       .map((s) => s.trim())
-      .filter((s) => s.length > 0); // remove empty entries
+      .filter((s) => s.length > 0);
 
-      // Check that every entry is a valid number
-      const allValid = userIdsStringForDeletion.every((s) => /^\d+$/.test(s));
-
+    const allValid = userIdsStringForDeletion.every((s) => /^\d+$/.test(s));
     if (!allValid) {
       alert("User IDs must be numbers.");
       return;
     }
 
-    // Convert to number array
     const userIds: number[] = userIdsStringForDeletion.map(Number);
 
-    const mutation = `mutation($ids: [Int!]!) { deleteUsers(ids: $ids) { id name } }`;
-    const variables = {ids: userIds.map((id) => Number(id))};// ensure Int[]
-    
-    try 
-    {   
-      const data = await graphqlFetch
-      <{ deleteUsers: {id: number; name: string }[]}>
-      (mutation, variables);
-    
-      setResult({ type: "deletedUsers", users: data.deleteUsers });
+    const mutation = `mutation($ids: [Int!]!) { deleteUser(ids: $ids) { id name } }`;
+    const variables = { ids: userIds };
 
+    try {
+      const data = await graphqlFetch<{ deleteUser: { id: number; name: string }[] }>(
+        mutation,
+        variables
+      );
+      setResult({ type: "deletedUsers", users: data.deleteUser });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
   };
 
   const renderResult = () => {
-  switch (result.type) {
-    case "idle":
-      return null;
+    if (result.type === "idle") return null;
 
-    case "error":
-      return (
-        <Text style={{ marginTop: 10, color: "red" }}>
-          {result.message}
-        </Text>
-      );
+    let usersToRender: { id: number; name: string; hue: string }[] = [];
 
-    case "findUsers":
-      if (result.users.length === 0) {
+    switch (result.type) {
+      case "error":
+        return (
+          <Text style={{ marginTop: 10, color: "red" }}>{result.message}</Text>
+        );
+
+      case "findUsers":
+        usersToRender = result.users.map((u) => ({
+          ...u,
+          hue: u.name === "User not found" ? "red" : "#f0f0f0",
+        }));
+        break;
+
+      case "added":
+        usersToRender = [{ ...result.user, hue: "green" }];
+        break;
+
+      case "deletedUsers":
+        usersToRender = result.users.map((u) => ({
+          ...u,
+          hue: u.name.startsWith("Deleted")
+            ? "orange"
+            : u.name === "User not found"
+            ? "red"
+            : "#f0f0f0",
+        }));
+        break;
+
+      default:
         return (
           <Text style={{ marginTop: 10, color: "red" }}>
-            User not found.
+            Unexpected server response
           </Text>
         );
-      }
+    }
 
-      return (
-        <FlatList
-          data={result.users}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={5}
-          columnWrapperStyle={{
-            justifyContent: "space-between",
-            marginBottom: 10,
-          }}
-          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <Text style={styles.cardId}>ID: {item.id}</Text>
-            </View>
-          )}
-        />
-      );
-
-    case "added":
-      if (!result.user) {
-        return (
-          <Text style={{ marginTop: 10, color: "red" }}>
-            User not found.
-          </Text>
-        );
-      }
-
-      return (
-        <Text style={{ marginTop: 10, color: "black" }}>
-          Added:{"\n"}ID: {result.user.id}{"\n"}Name: {result.user.name}
-        </Text>
-      );
-
-    case "deletedUsers":
-      return (
-        <FlatList
-          data={result.users}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={5}
-          columnWrapperStyle={{
-            justifyContent: "space-between",
-            marginBottom: 10,
-          }}
-          contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardName}>{item.name}</Text>
-              <Text style={styles.cardId}>ID: {item.id}</Text>
-            </View>
-          )}
-        />
-      );
-
-    default:
-      return (
-        <Text style={{ marginTop: 10, color: "red" }}>
-          Error: Unexpected server response
-        </Text>
-      );
-  }
-};
-
+    return (
+      <FlatList
+        data={usersToRender}
+        keyExtractor={(item) => item.id.toString()}
+        numColumns={5}
+        columnWrapperStyle={{ justifyContent: "space-between", marginBottom: 10 }}
+        contentContainerStyle={{ paddingHorizontal: 10, paddingTop: 10 }}
+        renderItem={({ item }) => (
+          <View style={[styles.card, { backgroundColor: item.hue }]}>
+            <Text style={styles.cardName}>{item.name}</Text>
+            <Text style={styles.cardId}>ID: {item.id}</Text>
+          </View>
+        )}
+      />
+    );
+  };
 
   return (
     <View style={styles.container}>
-
       <Text style={styles.title}>Users Demo</Text>
-
 
       <View style={styles.row}>
         <TextInput
@@ -277,19 +227,18 @@ export default function UsersDemo() {
         <Button title="Add User" onPress={addUser} />
       </View>
 
-
       <View style={styles.row}>
         <TextInput
           style={styles.input}
           placeholder="User IDs (comma separated)"
           value={form.userIdsStringForDeletion}
-          onChangeText={(text) => setForm({ ...form, userIdsStringForDeletion: text })}
+          onChangeText={(text) =>
+            setForm({ ...form, userIdsStringForDeletion: text })
+          }
         />
         <Button title="Delete Users" onPress={deleteUser} />
-  
       </View>
-      
-      
+
       <View style={styles.row}>
         <TextInput
           style={styles.input}
@@ -298,11 +247,9 @@ export default function UsersDemo() {
           onChangeText={(text) => setForm({ ...form, userIdsString: text })}
         />
         <Button title="Get Users" onPress={getUsers} />
-  
       </View>
-      
-      {renderResult()}
 
+      {renderResult()}
     </View>
   );
 }
@@ -320,7 +267,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   card: {
-    backgroundColor: "#f9f9f9",
     borderRadius: 12,
     padding: 15,
     flex: 1,

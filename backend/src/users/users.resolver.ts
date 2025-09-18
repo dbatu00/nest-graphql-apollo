@@ -2,8 +2,6 @@ import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { Logger, InternalServerErrorException } from '@nestjs/common';
-
-import { DeleteUserOutput } from './delete-user.output';
 import { AddUserInput } from './add-user.input';
 import { AddUserOutput } from './add-user.output';
 
@@ -14,81 +12,87 @@ export class UsersResolver {
 
   constructor(private readonly usersService: UsersService) { }
 
-  //pass an empty number[] to get all users
-  //pass number[] to get the users for ids given in the array
+
   @Query(() => [User])
-  async findUsers(@Args('ids', { type: () => [Int] }) ids: number[]) {
-    this.logger.log(`findUsers called with ids: ${JSON.stringify(ids)}`);
+  async getAllUsers(): Promise<User[]> {
+    this.logger.log(`getAllUsers called`);
 
     try {
-      // Call service → fetch users
-      const result = await this.usersService.findUsers(ids);
-      this.logger.log(`findUsers result: ${JSON.stringify(result)}`);
-
+      const result = await this.usersService.getAllUsers();
+      this.logger.log(`getAllUsers success | result count: ${result.length}`);
       return result;
-
     } catch (error: unknown) {
       if (error instanceof Error) {
-        this.logger.error(`findUsers failed: ${error.message}`, error.stack);
+        this.logger.error(
+          `getAllUsers failed | error: ${error.message}`,
+          error.stack,
+        );
       } else {
-        this.logger.error(`findUsers failed: ${JSON.stringify(error)}`);
+        this.logger.error(
+          `getAllUsers failed | error: ${JSON.stringify(error)}`,
+        );
       }
       throw new InternalServerErrorException('Failed to fetch users');
     }
   }
 
 
-
-  /**
-   * Query: getUsers
-   * ----------------
-   * Fetch all users from the database.
-   * Returns: User[]
-   * Error: Throws InternalServerErrorException if fetch fails.
-   */
   @Query(() => [User])
-  async getUsers() {
-    this.logger.log(`getUsers called`);
+  async findUsersById(
+    @Args({ name: 'ids', type: () => [Int] }) ids: number[],
+  ): Promise<User[]> {
+    const results = await Promise.all(
+      ids.map(async (id) => {
+        const user = await this.usersService.findUser(id);
+        if (user) {
+          return user;
+        }
+
+        // Return placeholder User entity if not found
+        return {
+          id,
+          name: 'User not found',
+        } as User;
+      }),
+    );
+
+    return results;
+  }
+
+
+  @Query(() => [User])
+  async findUsersByName(
+    @Args({ name: 'names', type: () => [String] }) names: string[],
+  ): Promise<User[]> {
+    this.logger.log(`findUsersByName called | names=${JSON.stringify(names)}`);
+
+    const fetchUserByName = async (name: string): Promise<User> => {
+      const user = await this.usersService.findUser(name);
+      if (user) return user;
+      return { id: 0, name: 'User not found' } as User;
+    };
+
     try {
-      // Call service → fetch all users
-      const result = await this.usersService.findAll();
-      this.logger.log(`getUsers result: ${JSON.stringify(result)}`);
-      return result;
+      const results = await Promise.all(names.map(fetchUserByName));
+      this.logger.log(`findUsersByName success | result count=${results.length}`);
+      return results;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        this.logger.error(`getUsers failed: ${error.message}`, error.stack);
+        this.logger.error(
+          `findUsersByName failed | error=${error.message}`,
+          error.stack,
+        );
       } else {
-        this.logger.error(`getUsers failed: ${JSON.stringify(error)}`);
+        this.logger.error(
+          `findUsersByName failed | error=${JSON.stringify(error)}`,
+        );
       }
-      throw new InternalServerErrorException('Failed to fetch users');
+      throw new InternalServerErrorException('Failed to fetch users by name');
     }
   }
 
-  /**
-   * Query: getUser
-   * ----------------
-   * Fetch a single user by ID.
-   * Args: id: number
-   * Returns: User | null
-   * Error: Throws InternalServerErrorException if fetch fails.
-   */
-  @Query(() => User, { nullable: true })
-  async getUser(@Args('id', { type: () => Int }) id: number) {
-    this.logger.log(`getUser called with id=${id}`);
-    try {
-      // Call service → fetch user by id
-      const result = await this.usersService.findOne({ id });
-      this.logger.log(`getUser result: ${JSON.stringify(result)}`);
-      return result;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(`getUser failed: ${error.message}`, error.stack);
-      } else {
-        this.logger.error(`getUser failed: ${JSON.stringify(error)}`);
-      }
-      throw new InternalServerErrorException('Failed to fetch user');
-    }
-  }
+
+
 
   /**
    * Mutation: addUser
@@ -111,7 +115,7 @@ export class UsersResolver {
 
     try {
       // Check if user with this name already exists
-      const user = await this.usersService.findOne({ name: addUserInput.name });
+      const user = await this.usersService.findUser(addUserInput.name);
 
       if (!user) {
         // User does not exist → create new
@@ -146,82 +150,48 @@ export class UsersResolver {
     }
   }
 
-  /**
-   * Mutation: deleteUser
-   * --------------------
-   * Delete a user by ID.
-   * Args: id: number
-   * Returns: DeleteUserOutput
-   * Error: Throws InternalServerErrorException if deletion fails.
-   */
-  @Mutation(() => DeleteUserOutput)
+  @Mutation(() => [User])
   async deleteUser(
-    @Args('id', { type: () => Int }) id: number,
-  ): Promise<DeleteUserOutput> {
-    this.logger.log(`deleteUser called with id=${id}`);
-    try {
-      // Call service → delete user
-      const output = await this.usersService.delete(id);
+    @Args('ids', { type: () => [Int] }) ids: number[],
+  ): Promise<User[]> {
+    this.logger.log(`deleteUser called with ids=${JSON.stringify(ids)}`);
 
-      this.logger.log(`deleteUser returning: ${JSON.stringify(output)}`);
-      return output;
+    try {
+      // Step 1: Find users by ID (returns placeholders if not found)
+      const findResults = await this.findUsersById(ids);
+
+      const deletePromises = findResults.map(async (user) => {
+        if (user.name === 'User not found') {
+          // skip delete for non-existent users
+          return user;
+        }
+
+        // Step 2: Delete the user
+        const deleted = await this.usersService.delete(user.id);
+        if (deleted) {
+          return {
+            ...user,
+            name: `Deleted user. Username: ${user.name}`,
+          };
+        } else {
+          return {
+            ...user,
+            name: `Failed to delete user. Username: ${user.name}`,
+          };
+        }
+      });
+
+      const results = await Promise.all(deletePromises);
+
+      this.logger.log(`deleteUser completed | results=${JSON.stringify(results)}`);
+      return results;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.logger.error(`deleteUser failed: ${error.message}`, error.stack);
       } else {
         this.logger.error(`deleteUser failed: ${JSON.stringify(error)}`);
       }
-      throw new InternalServerErrorException('Failed to delete user');
+      throw new InternalServerErrorException('Failed to delete users');
     }
-  }
-
-  /**
-   * Mutation: deleteUserPromise
-   * ---------------------------
-   * Promise-based (non-async/await) version of deleteUser.
-   * Args:
-   *   - id: number (User ID to delete)
-   * Returns:
-   *   - Promise<DeleteUserOutput>
-   * Error:
-   *   - Rejects with InternalServerErrorException if deletion fails.
-   */
-  @Mutation(() => DeleteUserOutput)
-  deleteUserPromise(
-    @Args('id', { type: () => Int }) id: number,
-  ): Promise<DeleteUserOutput> {
-    this.logger.log(`deleteUserPromise called with id=${id}`);
-
-    // Call service → delete user
-    return this.usersService
-      .delete(id)
-      .then((result) => {
-        // Map result to DeleteUserOutput
-        const output: DeleteUserOutput = {
-          name: result.name,
-          id,
-        };
-
-        this.logger.log(
-          `deleteUserPromise returning: ${JSON.stringify(output)}`,
-        );
-        return output;
-      })
-      .catch((error: unknown) => {
-        // Log error details
-        if (error instanceof Error) {
-          this.logger.error(
-            `deleteUserPromise failed: ${error.message}`,
-            error.stack,
-          );
-        } else {
-          this.logger.error(
-            `deleteUserPromise failed: ${JSON.stringify(error)}`,
-          );
-        }
-        throw new InternalServerErrorException(
-          'Failed to delete user (promise-based)',
-        );
-      });
   }
 }

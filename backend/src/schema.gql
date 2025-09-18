@@ -7,26 +7,20 @@ type User {
   name: String!
 }
 
-type DeleteUserOutput {
-  id: Int!
-  name: String
-}
-
 type AddUserOutput {
   user: User
   userExists: Boolean
 }
 
 type Query {
-  findUsers(ids: [Int!]!): [User!]!
-  getUsers: [User!]!
-  getUser(id: Int!): User
+  getAllUsers: [User!]!
+  findUsersById(ids: [Int!]!): [User!]!
+  findUsersByName(names: [String!]!): [User!]!
 }
 
 type Mutation {
   addUser(addUserInput: AddUserInput!): AddUserOutput!
-  deleteUser(id: Int!): DeleteUserOutput!
-  deleteUserPromise(id: Int!): DeleteUserOutput!
+  deleteUser(ids: [Int!]!): [User!]!
 }
 
 input AddUserInput {

@@ -4,131 +4,115 @@ import {
   InternalServerErrorException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DeleteResult, In } from "typeorm";
+import { Repository, DeleteResult } from "typeorm";
 import { User } from "./user.entity";
-import { DeleteUserOutput } from "./delete-user.output";
 
 @Injectable()
 export class UsersService {
   // Dedicated logger for this service, namespace = "UsersService"
   private readonly logger = new Logger(UsersService.name);
 
-  // TypeORM will inject a repository that is scoped to the User entity.
-  // This is only possible because UsersModule imported TypeOrmModule.forFeature([User]).
   constructor(@InjectRepository(User) private usersRepo: Repository<User>) { }
 
-
-
-  async findUsers(ids: number[]): Promise<User[]> {
-    this.logger.log(`findUser called with ids=${JSON.stringify(ids)}`);
+  async getAllUsers(): Promise<User[]> {
+    this.logger.log(`getAllUsers called`);
 
     try {
-
-      if (ids.length === 0) { // find all
-        const result = await this.usersRepo.find();
-        this.logger.log(`find users result: ${JSON.stringify(result)}`);
-
-        return result;
-      }
-
-      const result = await this.usersRepo.findBy({ id: In(ids) });
-      this.logger.log(`find users result: ${JSON.stringify(result)}`);
-
+      const result = await this.usersRepo.find();
+      this.logger.log(`getAllUsers success | count=${result.length}`);
       return result;
-    }
-
-
-    catch (error: unknown) {
+    } catch (error: unknown) {
       if (error instanceof Error) {
-        this.logger.error(`findUsers failed: ${error.message}`, error.stack);
+        this.logger.error(`getAllUsers failed | error=${error.message}`, error.stack);
       } else {
-        this.logger.error(`findUsers failed: ${JSON.stringify(error)}`);
+        this.logger.error(`getAllUsers failed | error=${JSON.stringify(error)}`);
       }
-      throw new InternalServerErrorException("Failed to fetch users");
+      throw new InternalServerErrorException('getAllUsers failed to fetch all users');
     }
   }
 
-
-
-  /**
-   * Create and persist a new user.
-   *
-   * @param name string
-   * @returns Promise<User>
-   *
-   * Notes:
-   * - `this.usersRepo.create()` instantiates a User entity without persisting.
-   * - `this.usersRepo.save()` persists and returns the saved entity.
-   * - TypeORM handles both INSERT and UPDATE under the hood depending on primary key presence.
-   */
-  async create(name: string): Promise<User> {
-    this.logger.log(`create called with name=${name}`);
+  async findUser(idOrName: number | string): Promise<User | null> {
+    this.logger.log(`findUser called | param=${JSON.stringify(idOrName)}`);
 
     try {
-      const user = this.usersRepo.create({ name });
-      const result = await this.usersRepo.save(user);
-      this.logger.log(`create result: ${JSON.stringify(result)}`);
+      const whereClause =
+        typeof idOrName === "number"
+          ? { id: idOrName }
+          : { name: idOrName };
+
+      const result = await this.usersRepo.findOne({ where: whereClause });
+      this.logger.log(
+        `findUser success | param=${JSON.stringify(idOrName)} | result=${JSON.stringify(result)}`
+      );
 
       return result;
-
     } catch (error: unknown) {
       if (error instanceof Error) {
-        this.logger.error(`create failed: ${error.message}`, error.stack);
+        this.logger.error(
+          `findUser failed | param=${JSON.stringify(idOrName)} | error=${error.message}`,
+          error.stack
+        );
       } else {
-        this.logger.error(`create failed: ${JSON.stringify(error)}`);
+        this.logger.error(
+          `findUser failed | param=${JSON.stringify(idOrName)} | error=${JSON.stringify(error)}`
+        );
+      }
+      throw new InternalServerErrorException("Failed to fetch user");
+    }
+  }
+
+  async create(name: string): Promise<User> {
+    this.logger.log(`create called | name=${name}`);
+
+    try {
+      const user = this.usersRepo.create({ name }); //optional: use in case you want to manipulate the instance first
+      const result = await this.usersRepo.save(user);
+      this.logger.log(
+        `create success | name=${name} | result=${JSON.stringify(result)}`
+      );
+
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `create failed | name=${name} | error=${error.message}`,
+          error.stack
+        );
+      } else {
+        this.logger.error(
+          `create failed | name=${name} | error=${JSON.stringify(error)}`
+        );
       }
       throw new InternalServerErrorException("Failed to create user");
     }
   }
 
-  /**
-   * Delete a user by ID.
-   *
-   * @param id number
-   * @returns Promise<DeleteUserOutput>
-   *
-   * Flow:
-   * 1. First lookup the user (to capture name & id for the output).
-   * 2. If found, attempt deletion via TypeORM's `delete({ id })`.
-   * 3. Build a DeleteUserOutput object that includes:
-   *    - id & name (from before deletion)
-   *    - affected (rows deleted, usually 1 or 0)
-   * 4. Return the DeleteUserOutput.
-   *
-   * Notes:
-   * - If no user exists, output will be empty except for default values.
-   * - `DeleteResult.affected` indicates how many rows were removed.
-   * - Gracefully logs and wraps all errors in InternalServerErrorException.
-   */
-  async delete(id: number): Promise<DeleteUserOutput> {
-
-    this.logger.log(`delete called with id=${id}`);
-    const deleteUserOutput: DeleteUserOutput = new DeleteUserOutput();
-    deleteUserOutput.id = id;
+  async delete(id: number): Promise<boolean> {
+    this.logger.log(`delete called | id=${id}`);
 
     try {
-      // Step 1: Find the user to delete (to record name/id in the output)
-      const user: User | null = await this.findOne({ id });
+      const deletionResult: DeleteResult = await this.usersRepo.delete({ id });
+      this.logger.log(
+        `delete executed | id=${id} | result=${JSON.stringify(deletionResult)}`
+      );
 
-      if (user != null) {
-
-        // Step 2: Execute the delete
-        const deletionResult: DeleteResult = await this.usersRepo.delete({ id });
-        this.logger.log(`delete result: ${JSON.stringify(deletionResult)}`);
-
-        // Step 3: Build output DTO
-        deleteUserOutput.name = user.name;
+      if (deletionResult.affected === 1) {
+        this.logger.log(`delete success | id=${id}`);
+        return true;
       }
 
-      this.logger.log(`delete returning: ${JSON.stringify(deleteUserOutput)}`);
-
-      return deleteUserOutput;
-
+      this.logger.warn(`delete no rows affected | id=${id}`);
+      return false;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        this.logger.error(`delete failed: ${error.message}`, error.stack);
+        this.logger.error(
+          `delete failed | id=${id} | error=${error.message}`,
+          error.stack
+        );
       } else {
-        this.logger.error(`delete failed: ${JSON.stringify(error)}`);
+        this.logger.error(
+          `delete failed | id=${id} | error=${JSON.stringify(error)}`
+        );
       }
       throw new InternalServerErrorException("Failed to delete user");
     }
