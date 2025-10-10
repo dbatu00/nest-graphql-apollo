@@ -62,7 +62,10 @@ export class UsersResolver {
 
   @Query(() => [User])
   async findUsersByName(
-    @Args({ name: 'names', type: () => [String] }) names: string[],
+    @Args({
+      name: 'names', type: () => [String] //gql
+
+    }) names: string[], //ts
   ): Promise<User[]> {
     const results = await Promise.all(
       names.map(async (name) => {
