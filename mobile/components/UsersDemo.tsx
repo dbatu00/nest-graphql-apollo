@@ -8,13 +8,13 @@ import {
   FlatList,
 } from "react-native";
 
-const GRAPHQL_URL = "http://192.168.1.6:3000/graphql";
+const GRAPHQL_URL = "http://192.168.1.2:3000/graphql";
 
 export default function UsersDemo() {
   const [form, setForm] = useState({
-    userIdsStringForDeletion: "",
+    userIdsStringForDeleteUsers: "",
     userName: "",
-    userIdsString: "",
+    userIdsStringForGetUsers: "",
   });
 
   type Result =
@@ -45,22 +45,23 @@ export default function UsersDemo() {
     return data.data as T;
   }
 
- const getUsers = async () => {
-  const entries = form.userIdsString
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+ const getUsers = async () => 
+  {
+    const entries = form.userIdsStringForGetUsers
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
 
-  if (entries.length === 0) {
-    // No input → fetch all users
-    const query = `query { getAllUsers { id name } }`;
-    try {
-      const data = await graphqlFetch<{ getAllUsers: { id: number; name: string }[] }>(query);
-      setResult({ type: "getUsers", users: data.getAllUsers });
-    } catch (err) {
-      setResult({ type: "error", message: String(err) });
-    }
-    return;
+    if (entries.length === 0) {
+      // No input → fetch all users
+      const query = `query { getAllUsers { id name } }`;
+      try {
+        const data = await graphqlFetch<{ getAllUsers: { id: number; name: string }[] }>(query);
+        setResult({ type: "getUsers", users: data.getAllUsers });
+      } catch (err) {
+        setResult({ type: "error", message: String(err) });
+      }
+      return;
   }
 
   const allNumbers = entries.every((s) => /^\d+$/.test(s));
@@ -145,23 +146,23 @@ export default function UsersDemo() {
   };
 
   const deleteUser = async () => {
-  const userIdsStringForDeletion = form.userIdsStringForDeletion
+  const userIdsStringForDeleteUsers = form.userIdsStringForDeleteUsers
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  if (userIdsStringForDeletion.length === 0) {
+  if (userIdsStringForDeleteUsers.length === 0) {
     alert("Please enter at least one user ID to delete.");
     return;
   }
 
-  const allValid = userIdsStringForDeletion.every((s) => /^\d+$/.test(s));
+  const allValid = userIdsStringForDeleteUsers.every((s) => /^\d+$/.test(s));
   if (!allValid) {
     alert("User IDs must be numbers.");
     return;
   }
 
-  const userIds: number[] = userIdsStringForDeletion.map(Number);
+  const userIds: number[] = userIdsStringForDeleteUsers.map(Number);
 
   const mutation = `mutation($ids: [Int!]!) { deleteUser(ids: $ids) { id name } }`;
   const variables = { ids: userIds };
@@ -254,9 +255,9 @@ export default function UsersDemo() {
         <TextInput
           style={styles.input}
           placeholder="User IDs (comma separated)"
-          value={form.userIdsStringForDeletion}
+          value={form.userIdsStringForDeleteUsers}
           onChangeText={(text) =>
-            setForm({ ...form, userIdsStringForDeletion: text })
+            setForm({ ...form, userIdsStringForDeleteUsers: text })
           }
         />
         <Button title="Delete Users" onPress={deleteUser} />
@@ -266,8 +267,8 @@ export default function UsersDemo() {
         <TextInput
           style={styles.input}
           placeholder="User IDs or names (comma separated or empty for all users)"
-          value={form.userIdsString}
-          onChangeText={(text) => setForm({ ...form, userIdsString: text })}
+          value={form.userIdsStringForGetUsers}
+          onChangeText={(text) => setForm({ ...form, userIdsStringForGetUsers: text })}
         />
         <Button title="Get Users" onPress={getUsers} />
       </View>
