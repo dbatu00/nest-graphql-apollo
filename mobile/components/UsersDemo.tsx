@@ -8,7 +8,7 @@ import {
   FlatList,
 } from "react-native";
 
-const GRAPHQL_URL = "http://192.168.1.2:3000/graphql";
+const GRAPHQL_URL = "http://192.168.1.4:3000/graphql";
 
 export default function UsersDemo() {
   const [form, setForm] = useState({
