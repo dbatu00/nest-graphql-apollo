@@ -9,9 +9,5 @@
     "dev:backend": "cd backend && npm run start:dev",
     "dev:mobile": "cd mobile && npx expo start",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\""
-  },
-  "dependencies": {
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.2"
   }
 }
