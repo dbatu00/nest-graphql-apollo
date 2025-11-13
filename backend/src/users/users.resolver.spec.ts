@@ -63,7 +63,7 @@ describe('UsersResolver', () => {
 
             const result = await resolver.addUser(input);
             expect(result.user).toEqual(user);
-            expect(result.userExists).toBe(false);
+            expect(result.userExists).toBe(undefined);
             expect(service.findUser).toHaveBeenCalledWith('Alice');
             expect(service.create).toHaveBeenCalledWith('Alice');
         });
