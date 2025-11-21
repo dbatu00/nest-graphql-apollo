@@ -50,6 +50,28 @@ describe('UsersResolver', () => {
         });
     });
 
+
+    // ----------------------------
+    // findUsersById
+    // ----------------------------
+    describe('findUsersById', () => {
+        it('finds one by Id', async () => {
+            const user: User = { id: 1, name: 'Alice' };
+
+            service.findUser.mockResolvedValue(user);
+
+            const result = await resolver.findUsersById([user.id]);
+
+            expect(result[0]).toEqual(user);
+            expect(service.findUser).toHaveBeenCalledWith(user.id);
+        });
+
+        it('throws InternalServerErrorException on error', async () => {
+            service.findUser.mockRejectedValue(new Error('DB error'));
+            await expect(resolver.findUsersById([1])).rejects.toThrow(Error);
+        });
+    });
+
     // ----------------------------
     // addUser
     // ----------------------------

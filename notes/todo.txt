@@ -1,13 +1,17 @@
 /* TODO:
 1-) unit tests
+  a-)resolver
+    x) branch and refactor resolver to have consistent findUser funcs
 2-) react memo?
 3-) userservice 
-  TODO: You may want to introduce custom error classes 
+  may want to introduce custom error classes 
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
-  4-) get rid of app controller and app service
-  5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) sdfsdf
-      a)use global db access module in app module
-  6-) re structure folders to have users/test users/dto
+4-) get rid of app controller and app service
+5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) 
+    a)use global db access module in app module
+6-) re structure folders to have users/test users/dto
+7-) user.service.spec.ts deleteResult is meaningless
+8-) user.service.spec.ts is it necessary to have the argument tuples argument(interface<T,Y,C> the Y here)
+9-) Use try/catch only for meaningful error conversion
 
- 
 */
