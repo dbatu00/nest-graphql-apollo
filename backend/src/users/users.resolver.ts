@@ -38,8 +38,7 @@ export class UsersResolver {
 
   @Query(() => [User])
   async findUsersByIds(
-    @Args({ name: 'ids', type: () => [Int] }) ids: number[],
-  ): Promise<User[]> {
+    @Args({ name: 'ids', type: () => [Int] }) ids: number[]): Promise<User[]> {
     this.logger.log(`findUsersByIds called | ids=${ids.join(",")}`);
 
     try {
@@ -56,7 +55,7 @@ export class UsersResolver {
             id,
             name: 'User not found',
           } as User;
-        }),
+        })
       );
 
       this.logger.log(`findUsersByIds success | count=${results.length}`);
@@ -78,7 +77,6 @@ export class UsersResolver {
       throw new InternalServerErrorException('Failed to fetch users');
     }
   }
-
 
   //results is a user[][] because 
   //findUsersByName returns an array because
@@ -110,11 +108,6 @@ export class UsersResolver {
       throw new InternalServerErrorException('Failed to fetch users');
     }
   }
-
-
-
-
-
 
 
   /**
