@@ -80,28 +80,37 @@ export class UsersResolver {
   }
 
 
-
+  //results is a user[][] because 
+  //findUsersByName returns an array because
+  //in db there could be duplicate names 
   @Query(() => [User])
   async findUsersByNames(
-    @Args({
-      name: 'names', type: () => [String] //gql
-
-    }) names: string[], //ts
+    @Args({ name: 'names', type: () => [String] }) names: string[],
   ): Promise<User[]> {
-    const results = await Promise.all(
-      names.map(async (name) => {
-        // Direct repository query to get all users for this name
-        const users = await this.usersService['usersRepo'].find({ where: { name } });
+    this.logger.log(`findUsersByNames called | names=${names.join(",")}`);
+    try {
+      const results: User[][] = await Promise.all(
+        names.map(async requestedName => {
+          const users = await this.usersService.findUsersByName(requestedName);
 
-        if (users.length > 0) return users;
+          // If no users found, return placeholder
+          return users ?? [{ id: 0, name: `User not found: ${requestedName}` } as User];
+        })
+      );
 
-        // No match → custom placeholder including the name
-        return [{ id: 0, name: `User not found: ${name}` } as User];
-      })
-    );
+      // Flatten one level: User[][] -> User[]
+      return results.flat();
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(`findUsersByNames failed | params=${names} | error=${error.message}`, error.stack);
+      } else {
+        this.logger.error(`findUsersByNames failed | params=${names} | error=${JSON.stringify(error)}`);
+      }
 
-    return results.flat();
+      throw new InternalServerErrorException('Failed to fetch users');
+    }
   }
+
 
 
 

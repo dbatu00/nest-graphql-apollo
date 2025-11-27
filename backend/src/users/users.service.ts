@@ -61,27 +61,26 @@ export class UsersService {
     }
   }
 
-  async findUserByName(name: string): Promise<User | null> {
-    this.logger.log(`findUserByName called | param=${name}`);
+  async findUsersByName(name: string): Promise<User[] | null> {
+
+    this.logger.log(`findUsersByName called | params=${name}`);
 
     try {
 
+      const users = await this.usersRepo.find({ where: { name } });
+      this.logger.log(`findUsersByName success | param=${name}}`);
+      if (users.length > 0) return users;
+      return null;
 
-      const result = await this.usersRepo.findOne({ where: { name } });
-      this.logger.log(
-        `findUserByName success | param=${name} | result=${JSON.stringify(result)}`
-      );
-
-      return result;
     } catch (error: unknown) {
       if (error instanceof Error) {
         this.logger.error(
-          `findUserByName failed | param=${name} | error=${error.message}`,
+          `findUsersByName failed | param=${name} | error=${error.message}`,
           error.stack
         );
       } else {
         this.logger.error(
-          `findUserByName failed | param=${name} | error=${JSON.stringify(error)}`
+          `findUsersByName failed | param=${name} | error=${JSON.stringify(error)}`
         );
       }
       throw new InternalServerErrorException("Failed to fetch user");
