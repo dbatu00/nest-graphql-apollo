@@ -82,7 +82,7 @@ export class UsersResolver {
 
 
   @Query(() => [User])
-  async findUsersByName(
+  async findUsersByNames(
     @Args({
       name: 'names', type: () => [String] //gql
 

@@ -15,7 +15,7 @@ type AddUserOutput {
 type Query {
   getAllUsers: [User!]!
   findUsersByIds(ids: [Int!]!): [User!]!
-  findUsersByName(names: [String!]!): [User!]!
+  findUsersByNames(names: [String!]!): [User!]!
 }
 
 type Mutation {

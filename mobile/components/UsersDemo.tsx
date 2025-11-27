@@ -89,15 +89,15 @@ export default function UsersDemo() {
     }
   } else if (allStrings) {
     // Query by Names
-    const query = `query($names: [String!]!) { findUsersByName(names: $names) { id name } }`;
+    const query = `query($names: [String!]!) { findUsersByNames(names: $names) { id name } }`;
     const variables = { names: entries };
 
     try {
-      const data = await graphqlFetch<{ findUsersByName: { id: number; name: string }[] }>(
+      const data = await graphqlFetch<{ findUsersByNames: { id: number; name: string }[] }>(
         query,
         variables
       );
-      setResult({ type: "getUsers", users: data.findUsersByName });
+      setResult({ type: "getUsers", users: data.findUsersByNames });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
