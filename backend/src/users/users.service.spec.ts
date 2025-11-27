@@ -98,7 +98,7 @@ describe('UsersService', () => {
     // ----------------------------
     describe('findUserById', () => {
 
-        it('finds user by ID (no result)', async () => {
+        it('finds no user by Id', async () => {
 
             repo.findOne.mockResolvedValue(null);
 
@@ -107,7 +107,7 @@ describe('UsersService', () => {
             expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
         });
 
-        it('finds user by ID (single result)', async () => {
+        it('finds user by Id', async () => {
             const user = { id: 1, name: 'Alice' } as User;
             repo.findOne.mockResolvedValue(user);
 
@@ -129,7 +129,7 @@ describe('UsersService', () => {
     // ----------------------------
     describe('findUsersByName', () => {
 
-        it('finds user by name(single name, no users)', async () => {
+        it('finds no users by name', async () => {
 
             repo.find.mockResolvedValue([]);
 
@@ -138,7 +138,7 @@ describe('UsersService', () => {
             expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
         });
 
-        it('finds user by name(single name, single user)', async () => {
+        it('finds one user by name', async () => {
             const user = [{ id: 1, name: 'Alice' } as User];
             repo.find.mockResolvedValue(user);
 
@@ -147,7 +147,7 @@ describe('UsersService', () => {
             expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
         });
 
-        it('finds users by name(single name, multiple users)', async () => {
+        it('finds multiple users by name', async () => {
             const users = [{ id: 1, name: 'Alice' } as User,
             { id: 2, name: 'Alice' } as User
             ];

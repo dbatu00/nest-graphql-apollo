@@ -56,15 +56,86 @@ describe('UsersResolver', () => {
     // findUsersByIds
     // ----------------------------
     describe('findUsersByIds', () => {
-        it('finds one by Id', async () => {
+        it('finds no users by id', async () => {
+
+
+            service.findUserById.mockResolvedValue(null);
+
+            const result = await resolver.findUsersByIds([1]);
+
+            const expectedResult = [{
+                id: 1,
+                name: 'User not found',
+            } as User]
+
+            expect(result).toEqual(expectedResult);
+            expect(service.findUserById).toHaveBeenCalledWith(1);
+        });
+
+        it('finds user by id', async () => {
             const user: User = { id: 1, name: 'Alice' };
 
             service.findUserById.mockResolvedValue(user);
 
             const result = await resolver.findUsersByIds([user.id]);
 
-            expect(result[0]).toEqual(user);
+            expect(result).toEqual([user]);
             expect(service.findUserById).toHaveBeenCalledWith(user.id);
+        });
+
+        it('finds no user by ids', async () => {
+
+            service.findUserById.mockResolvedValue(null);
+
+            const result = await resolver.findUsersByIds([1, 2]);
+
+            const expectedResult = [{
+                id: 1,
+                name: 'User not found',
+            } as User, {
+                id: 2,
+                name: 'User not found',
+            } as User]
+
+            expect(result).toEqual(expectedResult);
+            expect(service.findUserById).toHaveBeenCalledTimes(2);
+            expect(service.findUserById).toHaveBeenCalledWith(1);
+            expect(service.findUserById).toHaveBeenCalledWith(2);
+        });
+
+        it('finds one user by ids', async () => {
+            const user: User = { id: 1, name: 'Alice' };
+
+            service.findUserById
+                .mockResolvedValueOnce({ id: 1, name: 'Alice' } as User)
+                .mockResolvedValueOnce(null);
+
+            const result = await resolver.findUsersByIds([1, 2]);
+
+            const expectedResult = [user, {
+                id: 2,
+                name: 'User not found'
+            } as User]
+
+            expect(result).toEqual(expectedResult);
+            expect(service.findUserById).toHaveBeenCalledTimes(2);
+            expect(service.findUserById).toHaveBeenCalledWith(1);
+            expect(service.findUserById).toHaveBeenCalledWith(2);
+        });
+
+        it('finds multiple users by ids', async () => {
+            const users: User[] = [{ id: 1, name: 'Alice' } as User, { id: 2, name: 'Ahmet' } as User];
+
+            service.findUserById
+                .mockResolvedValueOnce({ id: 1, name: 'Alice' } as User)
+                .mockResolvedValueOnce({ id: 2, name: 'Ahmet' } as User);
+
+            const result = await resolver.findUsersByIds([1, 2]);
+
+            expect(result).toEqual(users);
+            expect(service.findUserById).toHaveBeenCalledTimes(2);
+            expect(service.findUserById).toHaveBeenCalledWith(1);
+            expect(service.findUserById).toHaveBeenCalledWith(2);
         });
 
         it('throws InternalServerErrorException on error', async () => {
