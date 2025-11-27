@@ -61,6 +61,34 @@ export class UsersService {
     }
   }
 
+
+  async findUserById(id: number): Promise<User | null> {
+    this.logger.log(`findUserById called | id=${id}`);
+
+    try {
+      const result = await this.usersRepo.findOne({ where: { id } });
+
+      this.logger.log(
+        `findUserById success | id=${id} | result=${result ? "FOUND" : "NULL"}`
+      );
+
+      return result;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        this.logger.error(
+          `findUserById failed | id=${id} | error=${error.message}`,
+          error.stack
+        );
+      } else {
+        this.logger.error(
+          `findUserById failed | id=${id} | error=${String(error)}`
+        );
+      }
+
+      throw new InternalServerErrorException("Failed to fetch user");
+    }
+  }
+
   async create(name: string): Promise<User> {
     this.logger.log(`create called | name=${name}`);
 
