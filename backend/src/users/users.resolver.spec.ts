@@ -93,7 +93,7 @@ describe('UsersResolver', () => {
 
         it('sets userExists when already exists and not forced', async () => {
             const input: AddUserInput = { name: 'Alice', force: false };
-            const existing = { id: 1, name: 'Alice' } as User;
+            const existing = [{ id: 1, name: 'Alice' } as User];
 
             service.findUsersByName.mockResolvedValue(existing);
 
@@ -104,7 +104,7 @@ describe('UsersResolver', () => {
 
         it('creates new user when force = true', async () => {
             const input: AddUserInput = { name: 'Alice', force: true };
-            const existing = { id: 1, name: 'Alice' } as User;
+            const existing = [{ id: 1, name: 'Alice' } as User];
             const newUser = { id: 2, name: 'Alice' } as User;
 
             service.findUsersByName.mockResolvedValue(existing);
