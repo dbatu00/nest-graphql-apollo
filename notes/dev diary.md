@@ -1,0 +1,134 @@
+“Resolver Test → Architecture Cleanup”
+
+Date: 2025-11-27
+Topic: Resolver error-handling & the “god function” refactor
+
+1. What I Tried
+
+I started with something simple:
+writing a resolver unit test.
+
+The positive test passed.
+
+The negative test (error scenario) failed, but not for the reason I expected.
+
+The resolver was throwing a different error than what I had in my test case.
+
+2. What I Found (Root Cause Discovery)
+
+I dug into it and realized several things:
+
+Resolvers were making raw direct DB calls.
+→ That means inconsistent behavior + duplicated logic.
+
+Some resolver methods didn’t have try/catch.
+→ They leaked internal errors instead of throwing the API-safe NestJS exceptions.
+
+findUser(idOrName) in the service
+looked clever but turned out to be a design trap:
+
+boolean logic based on type (“number = id, string = name”)
+
+slightly different behavior paths
+
+hardcoded assumptions
+
+no flexibility for future changes
+
+ambiguous responsibility (overloaded function)
+
+a silent “god function” smell
+
+Unit tests exposed the fact that resolver error behavior
+depended on internal quirks of findUser().
+
+This is very subtle technical debt — the exact kind that unit tests reveal early.
+
+3. Moment of Insight
+
+I realized:
+
+If I leave findUser(idOrName) as-is
+and just patch it with more conditions,
+I’ll be building architecture rot on top of architecture rot.
+
+I considered a “safe” enterprise pattern:
+
+Add findUserById and findUserByName
+
+Keep old findUser as a wrapper to avoid breaking callers
+
+Deprecate old one later
+
+But then I also realized:
+
+I’m early in the project
+
+The only caller is this resolver
+
+I can safely break it right now
+
+A wrapper adds indirection + future confusion
+
+Overloaded functions with secret branching logic become silent bombs
+
+So instead, I did the clean thing:
+
+4. The Decision
+
+Delete the ambiguous findUser(idOrName).
+
+Replace it with:
+
+findUserById(id: number)
+
+findUserByName(name: string)
+
+And remove direct DB calls from resolvers entirely.
+
+This gives:
+
+✔ Clear separation of concerns
+✔ No magic branching logic
+✔ Actual service-level abstraction
+✔ Predictable error behavior
+✔ Tests that reflect real contract
+✔ No future “enterprise-style hacks” to work around god functions
+
+And most importantly:
+
+✔ Avoids the exact architectural rot I’ve been studying.
+
+5. Why I Chose to Do It Now
+
+Because this is still a small codebase.
+
+If this were a real company:
+
+findUser(idOrName) might be called from 40+ places.
+
+Rewriting it would require a multi-team refactor.
+
+People would hack around it instead.
+
+The function would rot and grow even more logic.
+
+Eventually it becomes a “blast radius” feature that nobody wants to touch.
+
+Right now, I have the luxury to keep the codebase clean.
+
+So I took it.
+
+6. Outcome
+
+Resolver tests are predictable
+
+Error scenarios behave consistently
+
+Future features won’t rely on hidden branching logic
+
+Service layer is now explicit instead of magical
+
+Code readability drastically improved
+
+This was a small test issue that turned into a very meaningful architectural cleanup.
