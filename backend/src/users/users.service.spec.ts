@@ -63,31 +63,105 @@ describe('UsersService', () => {
         });
     });
 
+
+
+    // // ----------------------------
+    // // findUser
+    // // ----------------------------
+    // describe('findUser', () => {
+    //     it('finds user by ID', async () => {
+    //         const user = { id: 1, name: 'Alice' } as User;
+    //         repo.findOne.mockResolvedValue(user);
+
+    //         const result = await service.findUser(1);
+    //         expect(result).toEqual(user);
+    //         expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+    //     });
+
+    //     it('finds user by name', async () => {
+    //         const user = { id: 1, name: 'Alice' } as User;
+    //         repo.findOne.mockResolvedValue(user);
+
+    //         const result = await service.findUser('Alice');
+    //         expect(result).toEqual(user);
+    //         expect(repo.findOne).toHaveBeenCalledWith({ where: { name: 'Alice' } });
+    //     });
+
+    //     it('throws InternalServerErrorException on error', async () => {
+    //         repo.findOne.mockRejectedValue(new Error('DB error'));
+    //         await expect(service.findUser('Alice')).rejects.toThrow(InternalServerErrorException);
+    //     });
+    // });
+
     // ----------------------------
-    // findUser
+    // findUserById
     // ----------------------------
-    describe('findUser', () => {
-        it('finds user by ID', async () => {
+    describe('findUserById', () => {
+
+        it('finds user by ID (no result)', async () => {
+
+            repo.findOne.mockResolvedValue(null);
+
+            const result = await service.findUserById(1);
+            expect(result).toEqual(null);
+            expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
+        });
+
+        it('finds user by ID (single result)', async () => {
             const user = { id: 1, name: 'Alice' } as User;
             repo.findOne.mockResolvedValue(user);
 
-            const result = await service.findUser(1);
+            const result = await service.findUserById(1);
             expect(result).toEqual(user);
             expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
         });
 
-        it('finds user by name', async () => {
-            const user = { id: 1, name: 'Alice' } as User;
-            repo.findOne.mockResolvedValue(user);
 
-            const result = await service.findUser('Alice');
-            expect(result).toEqual(user);
-            expect(repo.findOne).toHaveBeenCalledWith({ where: { name: 'Alice' } });
-        });
 
         it('throws InternalServerErrorException on error', async () => {
             repo.findOne.mockRejectedValue(new Error('DB error'));
             await expect(service.findUser('Alice')).rejects.toThrow(InternalServerErrorException);
+        });
+    });
+
+    // ----------------------------
+    // findUsersByName
+    // ----------------------------
+    describe('findUsersByName', () => {
+
+        it('finds user by name(single name, no users)', async () => {
+
+            repo.find.mockResolvedValue([]);
+
+            const result = await service.findUsersByName('Alice');
+            expect(result).toEqual(null);
+            expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
+        });
+
+        it('finds user by name(single name, single user)', async () => {
+            const user = [{ id: 1, name: 'Alice' } as User];
+            repo.find.mockResolvedValue(user);
+
+            const result = await service.findUsersByName('Alice');
+            expect(result).toEqual(user);
+            expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
+        });
+
+        it('finds users by name(single name, multiple users)', async () => {
+            const users = [{ id: 1, name: 'Alice' } as User,
+            { id: 2, name: 'Alice' } as User
+            ];
+            repo.find.mockResolvedValue(users);
+
+            const result = await service.findUsersByName('Alice');
+            expect(result).toEqual(users);
+            expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
+        });
+
+
+        it('throws InternalServerErrorException on error', async () => {
+            repo.find.mockRejectedValue(new Error('DB error'));
+            await expect(service.findUsersByName('Alice')).rejects.toThrow(InternalServerErrorException);
         });
     });
 
