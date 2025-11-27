@@ -15,7 +15,7 @@ describe('UsersResolver', () => {
         const mockService: Partial<jest.Mocked<UsersService>> = {
             getAllUsers: jest.fn(),
             findUserById: jest.fn(),
-            findUser: jest.fn(),
+            findUsersByName: jest.fn(),
             create: jest.fn(),
             delete: jest.fn(),
         };
@@ -81,13 +81,13 @@ describe('UsersResolver', () => {
             const input: AddUserInput = { name: 'Alice', force: false };
             const user = { id: 1, name: 'Alice' } as User;
 
-            service.findUser.mockResolvedValue(null);
+            service.findUsersByName.mockResolvedValue(null);
             service.create.mockResolvedValue(user);
 
             const result = await resolver.addUser(input);
             expect(result.user).toEqual(user);
             expect(result.userExists).toBe(undefined);
-            expect(service.findUser).toHaveBeenCalledWith('Alice');
+            expect(service.findUsersByName).toHaveBeenCalledWith('Alice');
             expect(service.create).toHaveBeenCalledWith('Alice');
         });
 
@@ -95,7 +95,7 @@ describe('UsersResolver', () => {
             const input: AddUserInput = { name: 'Alice', force: false };
             const existing = { id: 1, name: 'Alice' } as User;
 
-            service.findUser.mockResolvedValue(existing);
+            service.findUsersByName.mockResolvedValue(existing);
 
             const result = await resolver.addUser(input);
             expect(result.userExists).toBe(true);
@@ -107,7 +107,7 @@ describe('UsersResolver', () => {
             const existing = { id: 1, name: 'Alice' } as User;
             const newUser = { id: 2, name: 'Alice' } as User;
 
-            service.findUser.mockResolvedValue(existing);
+            service.findUsersByName.mockResolvedValue(existing);
             service.create.mockResolvedValue(newUser);
 
             const result = await resolver.addUser(input);
@@ -117,7 +117,7 @@ describe('UsersResolver', () => {
 
         it('throws InternalServerErrorException on error', async () => {
             const input: AddUserInput = { name: 'Alice', force: false };
-            service.findUser.mockRejectedValue(new Error('DB error'));
+            service.findUsersByName.mockRejectedValue(new Error('DB error'));
 
             await expect(resolver.addUser(input)).rejects.toThrow(InternalServerErrorException);
         });
