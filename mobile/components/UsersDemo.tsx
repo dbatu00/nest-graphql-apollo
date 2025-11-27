@@ -75,15 +75,15 @@ export default function UsersDemo() {
   if (allNumbers) {
     // Query by IDs
     const userIds: number[] = entries.map(Number);
-    const query = `query($ids: [Int!]!) { findUsersById(ids: $ids) { id name } }`;
+    const query = `query($ids: [Int!]!) { findUsersByIds(ids: $ids) { id name } }`;
     const variables = { ids: userIds };
 
     try {
-      const data = await graphqlFetch<{ findUsersById: { id: number; name: string }[] }>(
+      const data = await graphqlFetch<{ findUsersByIds: { id: number; name: string }[] }>(
         query,
         variables
       );
-      setResult({ type: "getUsers", users: data.findUsersById });
+      setResult({ type: "getUsers", users: data.findUsersByIds });
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }

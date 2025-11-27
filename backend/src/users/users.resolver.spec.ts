@@ -14,6 +14,7 @@ describe('UsersResolver', () => {
     beforeEach(async () => {
         const mockService: Partial<jest.Mocked<UsersService>> = {
             getAllUsers: jest.fn(),
+            findUserById: jest.fn(),
             findUser: jest.fn(),
             create: jest.fn(),
             delete: jest.fn(),
@@ -52,23 +53,23 @@ describe('UsersResolver', () => {
 
 
     // ----------------------------
-    // findUsersById
+    // findUsersByIds
     // ----------------------------
-    describe('findUsersById', () => {
+    describe('findUsersByIds', () => {
         it('finds one by Id', async () => {
             const user: User = { id: 1, name: 'Alice' };
 
-            service.findUser.mockResolvedValue(user);
+            service.findUserById.mockResolvedValue(user);
 
-            const result = await resolver.findUsersById([user.id]);
+            const result = await resolver.findUsersByIds([user.id]);
 
             expect(result[0]).toEqual(user);
-            expect(service.findUser).toHaveBeenCalledWith(user.id);
+            expect(service.findUserById).toHaveBeenCalledWith(user.id);
         });
 
         it('throws InternalServerErrorException on error', async () => {
-            service.findUser.mockRejectedValue(new Error('DB error'));
-            await expect(resolver.findUsersById([1])).rejects.toThrow(Error);
+            service.findUserById.mockRejectedValue(new Error('DB error'));
+            await expect(resolver.findUsersByIds([1])).rejects.toThrow(Error);
         });
     });
 

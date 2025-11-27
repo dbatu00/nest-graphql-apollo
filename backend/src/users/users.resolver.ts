@@ -36,28 +36,49 @@ export class UsersResolver {
     }
   }
 
-  //1,2,3,4,5
   @Query(() => [User])
-  async findUsersById(
+  async findUsersByIds(
     @Args({ name: 'ids', type: () => [Int] }) ids: number[],
   ): Promise<User[]> {
-    const results = await Promise.all(
-      ids.map(async (id) => {
-        const user = await this.usersService.findUser(id);
-        if (user) {
-          return user;
-        }
+    this.logger.log(`findUsersByIds called | ids=${ids.join(",")}`);
 
-        // Return placeholder User entity if not found
-        return {
-          id,
-          name: 'User not found',
-        } as User;
-      }),
-    );
+    try {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          const user = await this.usersService.findUserById(id);
 
-    return results;
+          if (user) {
+            return user;
+          }
+
+          // Placeholder response when the user does not exist
+          return {
+            id,
+            name: 'User not found',
+          } as User;
+        }),
+      );
+
+      this.logger.log(`findUsersByIds success | count=${results.length}`);
+      return results;
+    } catch (error) {
+      // Log with stack trace for backend visibility
+      if (error instanceof Error) {
+        this.logger.error(
+          `findUsersByIds failed | ids=${ids.join(",")} | error=${error.message}`,
+          error.stack,
+        );
+      } else {
+        this.logger.error(
+          `findUsersByIds failed | ids=${ids.join(",")} | error=${JSON.stringify(error)}`,
+        );
+      }
+
+      // Throw a GraphQL-compatible NestJS exception
+      throw new InternalServerErrorException('Failed to fetch users');
+    }
   }
+
 
 
   @Query(() => [User])
@@ -151,7 +172,7 @@ export class UsersResolver {
 
     try {
       // Step 1: Find users by ID (returns placeholders if not found)
-      const findResults = await this.findUsersById(ids);
+      const findResults = await this.findUsersByIds(ids);
 
       const deletePromises = findResults.map(async (user) => {
         if (user.name === 'User not found') {

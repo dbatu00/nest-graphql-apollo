@@ -14,7 +14,7 @@ type AddUserOutput {
 
 type Query {
   getAllUsers: [User!]!
-  findUsersById(ids: [Int!]!): [User!]!
+  findUsersByIds(ids: [Int!]!): [User!]!
   findUsersByName(names: [String!]!): [User!]!
 }
 
