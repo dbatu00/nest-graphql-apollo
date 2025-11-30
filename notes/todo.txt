@@ -3,7 +3,6 @@
 3-) userservice 
   may want to introduce custom error classes 
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
-4-) get rid of app controller and app service
 5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) 
     a)use global db access module in app module
 6-) re structure folders to have users/test users/dto
