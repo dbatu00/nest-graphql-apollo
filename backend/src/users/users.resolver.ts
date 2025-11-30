@@ -130,7 +130,7 @@ export class UsersResolver {
     const addUserOutput = new AddUserOutput();
 
     try {
-      // Check if user with this name already exists
+      // Check if any users with this name already exist
       const user = await this.usersService.findUsersByName(addUserInput.name);
 
       if (!user) {

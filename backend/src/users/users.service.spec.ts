@@ -49,6 +49,7 @@ describe('UsersService', () => {
             const users: User[] = [{ id: 1, name: 'Alice' } as User];
             repo.find.mockResolvedValue(users);
             const result = await service.getAllUsers();
+
             expect(result).toEqual(users);
             expect(repo.find).toHaveBeenCalled();
         });
@@ -63,6 +64,7 @@ describe('UsersService', () => {
         it('finds no user by Id', async () => {
             repo.findOne.mockResolvedValue(null);
             const result = await service.findUserById(1);
+
             expect(result).toEqual(null);
             expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
         });
@@ -71,6 +73,7 @@ describe('UsersService', () => {
             const user = { id: 1, name: 'Alice' } as User;
             repo.findOne.mockResolvedValue(user);
             const result = await service.findUserById(1);
+
             expect(result).toEqual(user);
             expect(repo.findOne).toHaveBeenCalledWith({ where: { id: 1 } });
         });
@@ -85,6 +88,7 @@ describe('UsersService', () => {
         it('finds no users by name', async () => {
             repo.find.mockResolvedValue([]);
             const result = await service.findUsersByName('Alice');
+
             expect(result).toEqual(null);
             expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
         });
@@ -93,6 +97,7 @@ describe('UsersService', () => {
             const user = [{ id: 1, name: 'Alice' } as User];
             repo.find.mockResolvedValue(user);
             const result = await service.findUsersByName('Alice');
+
             expect(result).toEqual(user);
             expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
         });
@@ -103,6 +108,7 @@ describe('UsersService', () => {
             ];
             repo.find.mockResolvedValue(users);
             const result = await service.findUsersByName('Alice');
+
             expect(result).toEqual(users);
             expect(repo.find).toHaveBeenCalledWith({ where: { name: 'Alice' } });
         });
@@ -119,6 +125,7 @@ describe('UsersService', () => {
             repo.create.mockReturnValue({ name: 'Alice' } as User);
             repo.save.mockResolvedValue(user);
             const result = await service.create('Alice');
+
             expect(result).toEqual(user);
             expect(repo.create).toHaveBeenCalledWith({ name: 'Alice' });
             expect(repo.save).toHaveBeenCalledWith({ name: 'Alice' });
@@ -135,6 +142,7 @@ describe('UsersService', () => {
         it('returns true when a user is deleted', async () => {
             repo.delete.mockResolvedValue(makeDeleteResult(1));
             const result = await service.delete(1);
+
             expect(result).toBe(true);
             expect(repo.delete).toHaveBeenCalledWith({ id: 1 });
         });
@@ -142,6 +150,7 @@ describe('UsersService', () => {
         it('returns false when no user is deleted', async () => {
             repo.delete.mockResolvedValue(makeDeleteResult(0));
             const result = await service.delete(2);
+
             expect(result).toBe(false);
             expect(repo.delete).toHaveBeenCalledWith({ id: 2 });
         });

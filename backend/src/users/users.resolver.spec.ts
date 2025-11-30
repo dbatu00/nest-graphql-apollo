@@ -31,14 +31,10 @@ describe('UsersResolver', () => {
         service = module.get(UsersService);
     });
 
-    // ----------------------------
-    // getAllUsers
-    // ----------------------------
     describe('getAllUsers', () => {
         it('returns all users', async () => {
             const users = [{ id: 1, name: 'Alice' }] as User[];
             service.getAllUsers.mockResolvedValue(users);
-
             const result = await resolver.getAllUsers();
 
             expect(result).toEqual(users);
@@ -51,18 +47,10 @@ describe('UsersResolver', () => {
         });
     });
 
-
-    // ----------------------------
-    // findUsersByIds
-    // ----------------------------
     describe('findUsersByIds', () => {
         it('finds no users by id', async () => {
-
-
             service.findUserById.mockResolvedValue(null);
-
             const result = await resolver.findUsersByIds([1]);
-
             const expectedResult = [{
                 id: 1,
                 name: 'User not found',
@@ -74,9 +62,7 @@ describe('UsersResolver', () => {
 
         it('finds user by id', async () => {
             const user: User = { id: 1, name: 'Alice' };
-
             service.findUserById.mockResolvedValue(user);
-
             const result = await resolver.findUsersByIds([user.id]);
 
             expect(result).toEqual([user]);
@@ -84,11 +70,8 @@ describe('UsersResolver', () => {
         });
 
         it('finds no user by ids', async () => {
-
             service.findUserById.mockResolvedValue(null);
-
             const result = await resolver.findUsersByIds([1, 2]);
-
             const expectedResult = [{
                 id: 1,
                 name: 'User not found',
@@ -105,13 +88,10 @@ describe('UsersResolver', () => {
 
         it('finds one user by ids', async () => {
             const user: User = { id: 1, name: 'Alice' };
-
             service.findUserById
                 .mockResolvedValueOnce({ id: 1, name: 'Alice' } as User)
                 .mockResolvedValueOnce(null);
-
             const result = await resolver.findUsersByIds([1, 2]);
-
             const expectedResult = [user, {
                 id: 2,
                 name: 'User not found'
@@ -125,11 +105,9 @@ describe('UsersResolver', () => {
 
         it('finds multiple users by ids', async () => {
             const users: User[] = [{ id: 1, name: 'Alice' } as User, { id: 2, name: 'Ahmet' } as User];
-
             service.findUserById
                 .mockResolvedValueOnce({ id: 1, name: 'Alice' } as User)
                 .mockResolvedValueOnce({ id: 2, name: 'Ahmet' } as User);
-
             const result = await resolver.findUsersByIds([1, 2]);
 
             expect(result).toEqual(users);
@@ -144,18 +122,14 @@ describe('UsersResolver', () => {
         });
     });
 
-    // ----------------------------
-    // addUser
-    // ----------------------------
     describe('addUser', () => {
         it('creates a new user when not found', async () => {
             const input: AddUserInput = { name: 'Alice', force: false };
             const user = { id: 1, name: 'Alice' } as User;
-
             service.findUsersByName.mockResolvedValue(null);
             service.create.mockResolvedValue(user);
-
             const result = await resolver.addUser(input);
+
             expect(result.user).toEqual(user);
             expect(result.userExists).toBe(undefined);
             expect(service.findUsersByName).toHaveBeenCalledWith('Alice');
@@ -165,11 +139,11 @@ describe('UsersResolver', () => {
         it('sets userExists when already exists and not forced', async () => {
             const input: AddUserInput = { name: 'Alice', force: false };
             const existing = [{ id: 1, name: 'Alice' } as User];
-
             service.findUsersByName.mockResolvedValue(existing);
-
             const result = await resolver.addUser(input);
+
             expect(result.userExists).toBe(true);
+            expect(service.findUsersByName).toHaveBeenCalled();
             expect(service.create).not.toHaveBeenCalled();
         });
 
@@ -177,19 +151,18 @@ describe('UsersResolver', () => {
             const input: AddUserInput = { name: 'Alice', force: true };
             const existing = [{ id: 1, name: 'Alice' } as User];
             const newUser = { id: 2, name: 'Alice' } as User;
-
             service.findUsersByName.mockResolvedValue(existing);
             service.create.mockResolvedValue(newUser);
-
             const result = await resolver.addUser(input);
+
             expect(result.user).toEqual(newUser);
+            expect(service.findUsersByName).toHaveBeenCalled();
             expect(service.create).toHaveBeenCalled();
         });
 
         it('throws InternalServerErrorException on error', async () => {
             const input: AddUserInput = { name: 'Alice', force: false };
             service.findUsersByName.mockRejectedValue(new Error('DB error'));
-
             await expect(resolver.addUser(input)).rejects.toThrow(InternalServerErrorException);
         });
     });
