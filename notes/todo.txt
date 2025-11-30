@@ -1,8 +1,4 @@
 /* TODO:
-1-) unit tests
-  a-)resolver
-    x) branch and refactor resolver to have consistent findUser funcs
-      p) branch and refactor userservice to split finduser into two funcs
 2-) react memo?
 3-) userservice 
   may want to introduce custom error classes 
