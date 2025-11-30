@@ -5,7 +5,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { UsersModule } from './users/users.module';
 import { User } from './users/user.entity';
-
+import { AppService } from './app.service';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -24,6 +25,8 @@ import { User } from './users/user.entity';
       synchronize: true,
     }),
     UsersModule,
-  ]
+  ],
+  controllers: [AppController], // REST endpoints
+  providers: [AppService], // service for REST
 })
-export class AppModule { }
+export class AppModule {}
