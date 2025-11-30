@@ -4,7 +4,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { UsersModule } from './users/users.module';
-import { User } from './users/dto/user.entity';
+import { User } from './users/user.entity';
 
 @Module({
   imports: [
