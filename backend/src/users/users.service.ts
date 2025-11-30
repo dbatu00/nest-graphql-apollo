@@ -31,36 +31,6 @@ export class UsersService {
     }
   }
 
-  async findUser(idOrName: number | string): Promise<User | null> {
-    this.logger.log(`findUser called | param=${JSON.stringify(idOrName)}`);
-
-    try {
-      const whereClause =
-        typeof idOrName === "number"
-          ? { id: idOrName }
-          : { name: idOrName };
-
-      const result = await this.usersRepo.findOne({ where: whereClause });
-      this.logger.log(
-        `findUser success | param=${JSON.stringify(idOrName)} | result=${JSON.stringify(result)}`
-      );
-
-      return result;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        this.logger.error(
-          `findUser failed | param=${JSON.stringify(idOrName)} | error=${error.message}`,
-          error.stack
-        );
-      } else {
-        this.logger.error(
-          `findUser failed | param=${JSON.stringify(idOrName)} | error=${JSON.stringify(error)}`
-        );
-      }
-      throw new InternalServerErrorException("Failed to fetch user");
-    }
-  }
-
   async findUsersByName(name: string): Promise<User[] | null> {
 
     this.logger.log(`findUsersByName called | params=${name}`);
