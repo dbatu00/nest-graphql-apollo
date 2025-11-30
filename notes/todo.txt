@@ -5,9 +5,8 @@
   (e.g. UserNotFoundError) and map them to GraphQL errors later.
 5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) 
     a)use global db access module in app module
-6-) re structure folders to have users/test users/dto
 7-) user.service.spec.ts deleteResult is meaningless
 8-) user.service.spec.ts is it necessary to have the argument tuples argument(interface<T,Y,C> the Y here)
 9-) Use try/catch only for meaningful error conversion
-
+10-) frontend tests
 */
