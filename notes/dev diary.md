@@ -132,3 +132,20 @@ Service layer is now explicit instead of magical
 Code readability drastically improved
 
 This was a small test issue that turned into a very meaningful architectural cleanup.
+
+
+
+
+"Unit test mock func type args tuple - the Y"
+
+2025/11/30
+
+3️⃣ Advantages of keeping it
+findOne: jest.Mock<Promise<T | null>, [any]>;
+
+
+Helps TypeScript check that you call the mock with the correct arguments.
+
+If you do repo.findOne('wrong type'), TS will warn.
+
+Useful for catching mistakes in larger test suites.
