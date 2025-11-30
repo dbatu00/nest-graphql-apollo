@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersResolver } from '../users.resolver';
 import { UsersService } from '../users.service';
-import { User } from '../user.entity';
+import { User } from '../dto/user.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { AddUserInput } from '../dto/add-user.input';
 import { AddUserOutput } from '../dto/add-user.output';
