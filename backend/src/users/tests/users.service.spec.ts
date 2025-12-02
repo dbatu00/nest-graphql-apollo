@@ -34,6 +34,8 @@ describe('UsersService', () => {
         }).compile();
 
         service = module.get<UsersService>(UsersService);
+
+        jest.spyOn(service['logger'], 'error').mockImplementation(() => { });
     });
 
     describe('getAllUsers', () => {

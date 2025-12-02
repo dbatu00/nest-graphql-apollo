@@ -29,6 +29,10 @@ describe('UsersResolver', () => {
 
         resolver = module.get<UsersResolver>(UsersResolver);
         service = module.get(UsersService);
+
+        // <-- SILENCE LOGGER DURING TESTS
+        jest.spyOn(resolver['logger'], 'error').mockImplementation(() => { });
+
     });
 
     describe('getAllUsers', () => {
