@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Platform,
   View,
   Button,
   Text,
@@ -7,6 +8,7 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
+
 
 const GRAPHQL_URL = "http://192.168.1.5:3000/graphql";
 
@@ -290,20 +292,31 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 10,
   },
-  card: {
-    borderRadius: 12,
-    padding: 15,
-    flex: 1,
-    marginHorizontal: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 80,
-  },
+card: {
+  borderRadius: 12,
+  padding: 15,
+  flex: 1,
+  marginHorizontal: 5,
+  // Cross-platform shadow
+  ...Platform.select({
+    ios: {
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 3,
+    },
+    web: {
+      boxShadow: "0px 2px 4px rgba(0,0,0,0.1)",
+    },
+  }),
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 80,
+},
+
   cardName: { fontWeight: "bold", fontSize: 18 },
   cardId: { color: "#666", marginTop: 4 },
 });

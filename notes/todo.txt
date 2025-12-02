@@ -7,4 +7,9 @@
     a)use global db access module in app module
 9-) Use try/catch only for meaningful error conversion
 10-) frontend tests
+11-) pressing enter does 'add user' etc on website
+12-) unify log format
+# [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersService] getAllUsers called
+[0] [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersService] getAllUsers success | count=49
+[0] [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersResolver] getAllUsers success | result count: 49
 */
