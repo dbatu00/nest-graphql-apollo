@@ -9,9 +9,9 @@ import {
   FlatList,
 } from "react-native";
 import { parseQuery } from "@/utils/parseQuery";
+import { graphqlFetch } from "@/utils/graphqlFetch";
 
 
-const GRAPHQL_URL = "http://192.168.1.5:3000/graphql";
 
 export default function UsersDemo() {
   const [form, setForm] = useState({
@@ -28,25 +28,6 @@ export default function UsersDemo() {
     | { type: "deletedUsers"; users: { id: number; name: string }[] };
 
   const [result, setResult] = useState<Result>({ type: "idle" });
-
-  async function graphqlFetch<T>(
-    query: string,
-    variables: Record<string, any> = {}
-  ): Promise<T> {
-    const res = await fetch(GRAPHQL_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query, variables }),
-    });
-
-    const data = await res.json();
-
-    if (data.errors) {
-      throw new Error(data.errors[0]?.message || "GraphQL request failed");
-    }
-
-    return data.data as T;
-  }
 
  const getUsers = async () => 
   {
@@ -155,7 +136,7 @@ export default function UsersDemo() {
   const userIds = userIdsParsed.ids;
   const userNames = userIdsParsed.names;
 
-  
+
   if (userNames.length !== 0) {
     alert("Please only enter numerical values for deletion.")
     return;
