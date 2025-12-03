@@ -11,6 +11,7 @@ import {
 import { parseQuery } from "@/utils/parseQuery";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { mapResultToCards, Result, Card } from "@/utils/mapResultToCards";
+import { validateUserName } from "@/utils/validateUserName";
 
 export default function Users() {
   const [form, setForm] = useState({
@@ -72,7 +73,7 @@ export default function Users() {
   };
 
   const addUser = async () => {
-    if (!/^[A-Za-z][A-Za-z0-9]*$/.test(form.userName)) {
+    if (!validateUserName(form.userName)) {
       alert("User name must start with a letter and can only contain letters or digits.");
       return;
     }
