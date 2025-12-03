@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import UsersDemo from '../components/UsersDemo';
+import Users from '../components/Users';
 
 beforeEach(() => {
   // reset the global fetch mock provided by jest.setup.js
@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 test('renders inputs and buttons', () => {
-  const { getByPlaceholderText, getByText } = render(<UsersDemo />);
+  const { getByPlaceholderText, getByText } = render(<Users />);
 
   expect(getByPlaceholderText('User name')).toBeTruthy();
   expect(getByPlaceholderText('User IDs (comma separated)')).toBeTruthy();
@@ -35,7 +35,7 @@ test('adds a user and displays result', async () => {
     }),
   });
 
-  const { getByPlaceholderText, getByText, findByText } = render(<UsersDemo />);
+  const { getByPlaceholderText, getByText, findByText } = render(<Users />);
 
   fireEvent.changeText(getByPlaceholderText('User name'), 'Alice');
   fireEvent.press(getByText('Add User'));
@@ -58,7 +58,7 @@ test('gets all users when getUsers input empty', async () => {
     json: async () => ({ data: { getAllUsers: users } }),
   });
 
-  const { getByText, findByText } = render(<UsersDemo />);
+  const { getByText, findByText } = render(<Users />);
 
   fireEvent.press(getByText('Get Users'));
 
@@ -78,7 +78,7 @@ test('deletes users and displays deleted result', async () => {
     json: async () => ({ data: { deleteUser: deleted } }),
   });
 
-  const { getByPlaceholderText, getByText, findByText } = render(<UsersDemo />);
+  const { getByPlaceholderText, getByText, findByText } = render(<Users />);
 
   fireEvent.changeText(getByPlaceholderText('User IDs (comma separated)'), '5');
   fireEvent.press(getByText('Delete Users'));

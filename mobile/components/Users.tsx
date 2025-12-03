@@ -12,7 +12,7 @@ import { parseQuery } from "@/utils/parseQuery";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { mapResultToCards, Result, Card } from "@/utils/mapResultToCards";
 
-export default function UsersDemo() {
+export default function Users() {
   const [form, setForm] = useState({
     userName: "",
     userIdsStringForGetUsers: "",
@@ -160,7 +160,7 @@ export default function UsersDemo() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Users Demo</Text>
+      <Text style={styles.title}>Users</Text>
 
       <View style={styles.row}>
         <TextInput

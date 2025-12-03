@@ -24,7 +24,7 @@
  * - Only affects the web platform; warnings on iOS and Android remain visible.
  * - Easy to extend for other warnings by adding more conditions in the if statement.
  */
-import UsersDemo from "../../components/UsersDemo";
+import Users from "../../components/Users";
 import { Platform } from 'react-native';
 
 // Silence pointerEvents and shadow* warnings on web
@@ -45,5 +45,5 @@ if (Platform.OS === 'web') {
 }
 
 export default function Page() {
-  return <UsersDemo />;
+  return <Users />;
 }
