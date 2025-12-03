@@ -8,6 +8,7 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
+import { parseQuery } from "@/utils/parseQuery";
 
 
 const GRAPHQL_URL = "http://192.168.1.5:3000/graphql";
@@ -49,12 +50,9 @@ export default function UsersDemo() {
 
  const getUsers = async () => 
   {
-    const entries = form.userIdsStringForGetUsers
-        .split(",")
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+    const entries = parseQuery(form.userIdsStringForGetUsers)
 
-    if (entries.length === 0) {
+    if (entries.ids.length === 0 && entries.names.length === 0) {
       // No input → fetch all users
       const query = `query { getAllUsers { id name } }`;
       try {
@@ -66,19 +64,23 @@ export default function UsersDemo() {
       return;
   }
 
-  const allNumbers = entries.every((s) => /^\d+$/.test(s));
-  const allStrings = entries.every((s) => /^[A-Za-z][A-Za-z0-9]*$/.test(s));
 
-  if (!allNumbers && !allStrings) {
+
+  if (entries.ids.length !== 0 && entries.names.length !== 0) {
     alert("Enter either all numbers (IDs) or all valid names, separated by commas.");
     return;
   }
 
-  if (allNumbers) {
+  if(!entries.names.every(name => /^[^\d]/.test(name)))
+    {
+    alert("User names cannot start with a digit.");
+    return;
+  }
+
+  if (entries.ids.length !== 0) {
     // Query by IDs
-    const userIds: number[] = entries.map(Number);
     const query = `query($ids: [Int!]!) { findUsersByIds(ids: $ids) { id name } }`;
-    const variables = { ids: userIds };
+    const variables = { ids: entries.ids.map(Number) };
 
     try {
       const data = await graphqlFetch<{ findUsersByIds: { id: number; name: string }[] }>(
@@ -89,10 +91,10 @@ export default function UsersDemo() {
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
-  } else if (allStrings) {
+  } else {
     // Query by Names
     const query = `query($names: [String!]!) { findUsersByNames(names: $names) { id name } }`;
-    const variables = { names: entries };
+    const variables = { names: entries.names };
 
     try {
       const data = await graphqlFetch<{ findUsersByNames: { id: number; name: string }[] }>(
@@ -148,24 +150,27 @@ export default function UsersDemo() {
   };
 
   const deleteUser = async () => {
-  const userIdsStringForDeleteUsers = form.userIdsStringForDeleteUsers
+
+  const userIdsParsed = parseQuery(form.userIdsStringForDeleteUsers);
+  const userIds = userIdsParsed.ids;
+  const userNames = userIdsParsed.names;
+  
+  /*
+  form.userIdsStringForDeleteUsers
     .split(",")
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
+  */
 
-  if (userIdsStringForDeleteUsers.length === 0) {
+  if (userNames.length !== 0) {
+    alert("Please only enter numerical values for deletion.")
+    return;
+  }
+  else if(userIds.length === 0){
     alert("Please enter at least one user ID to delete.");
     return;
   }
-
-  const allValid = userIdsStringForDeleteUsers.every((s) => /^\d+$/.test(s));
-  if (!allValid) {
-    alert("User IDs must be numbers.");
-    return;
-  }
-
-  const userIds: number[] = userIdsStringForDeleteUsers.map(Number);
-
+ 
   const mutation = `mutation($ids: [Int!]!) { deleteUser(ids: $ids) { id name } }`;
   const variables = { ids: userIds };
 

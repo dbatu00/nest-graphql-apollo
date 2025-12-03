@@ -1,1 +1,2 @@
 1)frontend add user : a4,a4 => incorrect error ;; also what happens when this goes through
+2)frontend get user :  asdd,Unit,5a,a5

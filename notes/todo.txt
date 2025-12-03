@@ -14,3 +14,4 @@
 [0] [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersService] getAllUsers success | count=49
 [0] [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersResolver] getAllUsers success | result count: 49
 */
+13-) frontend getusers input check for string entries that start with a number
