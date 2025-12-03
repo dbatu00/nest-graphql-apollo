@@ -154,14 +154,8 @@ export default function UsersDemo() {
   const userIdsParsed = parseQuery(form.userIdsStringForDeleteUsers);
   const userIds = userIdsParsed.ids;
   const userNames = userIdsParsed.names;
-  
-  /*
-  form.userIdsStringForDeleteUsers
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  */
 
+  
   if (userNames.length !== 0) {
     alert("Please only enter numerical values for deletion.")
     return;
@@ -171,6 +165,7 @@ export default function UsersDemo() {
     return;
   }
  
+
   const mutation = `mutation($ids: [Int!]!) { deleteUser(ids: $ids) { id name } }`;
   const variables = { ids: userIds };
 
