@@ -29,7 +29,7 @@ export default function UsersDemo() {
 
   const [result, setResult] = useState<Result>({ type: "idle" });
 
- const getUsers = async () => 
+  const getUsers = async () => 
   {
     const entries = parseQuery(form.userIdsStringForGetUsers)
 
@@ -90,7 +90,6 @@ export default function UsersDemo() {
 };
 
 
-
   const addUser = async () => {
     if (!/^[A-Za-z][A-Za-z0-9]*$/.test(form.userName)) {
       alert(
@@ -128,7 +127,8 @@ export default function UsersDemo() {
     } catch (err) {
       setResult({ type: "error", message: String(err) });
     }
-  };
+};
+
 
   const deleteUser = async () => {
 
@@ -218,7 +218,7 @@ export default function UsersDemo() {
         )}
       />
     );
-  };
+};
 
   return (
     <View style={styles.container}>
