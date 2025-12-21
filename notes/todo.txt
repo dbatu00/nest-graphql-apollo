@@ -1,5 +1,4 @@
 /* TODO:
-1-) functionize and move Users.tsx utils to an utils folder
 2-) react memo?
 3-) userservice 
   may want to introduce custom error classes 
@@ -7,7 +6,6 @@
 5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) 
     a)use global db access module in app module
 9-) Use try/catch only for meaningful error conversion
-10-) frontend tests
 11-) pressing enter does 'add user' etc on website
 12-) unify log format
 # [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersService] getAllUsers called

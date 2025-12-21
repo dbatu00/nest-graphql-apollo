@@ -57,7 +57,6 @@ export class UsersService {
     }
   }
 
-
   async findUserById(id: number): Promise<User | null> {
     this.logger.log(`findUserById called | id=${id}`);
 
