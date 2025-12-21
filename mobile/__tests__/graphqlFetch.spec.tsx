@@ -43,11 +43,16 @@ describe("graphqlFetch", () => {
 
     const query = "query { test }";
     const variables = { a: 1 };
+     const url = process.env.EXPO_PUBLIC_API_URL;
+
+  if (!url) {
+    throw new Error('EXPO_PUBLIC_API_URL is not defined');
+  }
 
     await graphqlFetch(query, variables);
 
     expect(fetch).toHaveBeenCalledWith(
-      "http://192.168.1.5:3000/graphql",
+      url,
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/json" },
