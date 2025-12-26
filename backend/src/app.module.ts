@@ -20,7 +20,7 @@ import { User } from './users/user.entity';
       password: 'qweasdzxc',
       database: 'nest_graphql',
       entities: [User],
-      synchronize: true,
+      synchronize: false,
     }),
     UsersModule,
   ]
