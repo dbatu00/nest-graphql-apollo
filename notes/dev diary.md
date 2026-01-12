@@ -149,3 +149,24 @@ Helps TypeScript check that you call the mock with the correct arguments.
 If you do repo.findOne('wrong type'), TS will warn.
 
 Useful for catching mistakes in larger test suites.
+
+
+Date 12.01.2026
+
+Question
+
+When exposing posts over GraphQL, should the API return only a user_id and let the client fetch user data separately, or should the post directly expose its associated user object?
+
+Problem
+
+At the database level, posts reference users via a foreign key (user_id). However, exposing only this identifier at the API layer shifts responsibility to the client to resolve related user data. This forces clients to coordinate multiple requests, introduces unnecessary coupling between client logic and backend structure, and treats persistence details as part of the public API contract.
+
+Additionally, frontend requirements (e.g., displaying username, profile picture, or verification status) naturally require user data alongside posts, making separate fetches both repetitive and error-prone.
+
+Decision
+
+Posts should expose their associated user directly in the GraphQL schema rather than exposing only user_id.
+
+GraphQL APIs are designed to model domain relationships, not database foreign keys. By exposing user, the backend remains responsible for composing related data, and clients can declaratively request exactly the author information they need in a single query. This results in a cleaner API contract, better separation of concerns, and improved flexibility as user-related fields evolve over time.
+
+Foreign keys remain an internal database concern and are intentionally not reflected directly in the public GraphQL schema.

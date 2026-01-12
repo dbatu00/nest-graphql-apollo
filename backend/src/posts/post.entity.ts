@@ -4,6 +4,7 @@ import {
     Column,
     ManyToOne,
     CreateDateColumn,
+    JoinColumn
 } from 'typeorm';
 import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { User } from '../users/user.entity';
@@ -15,7 +16,9 @@ export class Post {
     @PrimaryGeneratedColumn()
     id: number;
 
+    @Field(() => User)
     @ManyToOne(() => User, user => user.posts, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'user_id' })
     user: User;
 
     @Field()
@@ -23,7 +26,7 @@ export class Post {
     content: string;
 
     @Field()
-    @CreateDateColumn()
+    @CreateDateColumn({ name: 'created_at' })
     createdAt: Date;
 
     @Field(() => Int)
