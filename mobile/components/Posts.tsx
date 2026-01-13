@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
-  Button,
   Text,
   StyleSheet,
   FlatList,
@@ -45,6 +44,11 @@ export default function Posts() {
     }
   };
 
+  // 🔹 Load posts on mount (page refresh)
+  useEffect(() => {
+    getAllPosts();
+  }, []);
+
   const renderResult = () => {
     if (result.type === "error") {
       return <Text style={feedStyles.error}>{result.message}</Text>;
@@ -63,7 +67,9 @@ export default function Posts() {
               )}
               renderItem={({ item }) => (
                 <View style={feedStyles.postCard}>
-                  <Text style={feedStyles.author}>User name: {item.user.name}</Text>
+                  <Text style={feedStyles.author}>
+                    User name: {item.user.name}
+                  </Text>
 
                   <Text style={feedStyles.content}>
                     Content: {item.content}
@@ -94,15 +100,10 @@ export default function Posts() {
     <View style={styles.container}>
       <Text style={styles.title}>Posts</Text>
 
-      <View style={styles.row}>
-        <Button title="Get All Posts" onPress={getAllPosts} />
-      </View>
-
-      {/* THIS MUST HAVE FLEX */}
+      {/* MUST HAVE FLEX FOR SCROLL */}
       <View style={{ flex: 1 }}>
         {renderResult()}
       </View>
     </View>
   );
 }
-
