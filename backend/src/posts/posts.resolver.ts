@@ -1,37 +1,33 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
-import { PostsService } from './posts.service';
-import { Post } from './post.entity';
-import { Logger, InternalServerErrorException } from '@nestjs/common';
-
+import { Resolver, Query, Mutation, Args, Int } from "@nestjs/graphql";
+import { PostsService } from "./posts.service";
+import { Post } from "./post.entity";
+import { Logger } from "@nestjs/common";
 
 @Resolver(() => Post)
 export class PostsResolver {
-
     private readonly logger = new Logger(PostsResolver.name);
 
     constructor(private readonly postsService: PostsService) { }
 
+    @Query(() => [Post])
+    async getAllPosts(): Promise<Post[]> {
+        return this.postsService.getAllPosts();
+    }
 
-    @Query(() => [Post]) //gql 
-    async getAllPosts(): Promise<Post[]> { //ts
-        this.logger.log(`getAllPosts called`);
+    // 🔹 ADD POST
+    @Mutation(() => Post)
+    async addPost(
+        @Args("userId", { type: () => Int }) userId: number,
+        @Args("content") content: string,
+    ): Promise<Post> {
+        return this.postsService.addPost(userId, content);
+    }
 
-        try {
-            const result = await this.postsService.getAllPosts();
-            this.logger.log(`getAllPosts success | result count: ${result.length}`);
-            return result;
-        } catch (error: unknown) {
-            if (error instanceof Error) {
-                this.logger.error(
-                    `getAllPosts failed | error: ${error.message}`,
-                    error.stack,
-                );
-            } else {
-                this.logger.error(
-                    `getAllPosts failed | error: ${JSON.stringify(error)}`,
-                );
-            }
-            throw new InternalServerErrorException('Failed to fetch posts');
-        }
+    // 🔹 DELETE POST
+    @Mutation(() => Boolean)
+    async deletePost(
+        @Args("postId", { type: () => Int }) postId: number,
+    ): Promise<boolean> {
+        return this.postsService.deletePost(postId);
     }
 }

@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostsService } from './posts.service';
 import { PostsResolver } from './posts.resolver';
 import { Post } from './post.entity';
+import { User } from 'src/users/user.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Post])],
+  imports: [TypeOrmModule.forFeature([Post, User])],
   providers: [PostsService, PostsResolver]
 })
 export class PostsModule { }
