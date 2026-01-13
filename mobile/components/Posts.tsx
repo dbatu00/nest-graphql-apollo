@@ -9,6 +9,7 @@ import {
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { commonStyles as styles } from "@/styles/common";
 import { Post } from "@/types/Post";
+import { feedStyles } from "@/styles/feed";
 
 type Result =
   | { type: "idle" }
@@ -62,10 +63,10 @@ export default function Posts() {
               )}
               renderItem={({ item }) => (
                 <View style={feedStyles.postCard}>
-                  <Text style={feedStyles.author}>{item.user.name}</Text>
+                  <Text style={feedStyles.author}>User name: {item.user.name}</Text>
 
                   <Text style={feedStyles.content}>
-                    {item.content}
+                    Content: {item.content}
                   </Text>
 
                   <View style={feedStyles.footer}>
@@ -105,77 +106,3 @@ export default function Posts() {
   );
 }
 
-const feedStyles = StyleSheet.create({
-  feedOuter: {
-    flex: 1,
-    alignItems: "center",
-    paddingTop: 12,
-  },
-
-  feedContainer: {
-    flex: 1,
-    width: "100%",
-    maxWidth: 520,          // Twitter-like column
-    borderWidth: 2,
-    borderColor: "#000",    // HARD LINE
-    backgroundColor: "#fff",
-  },
-
-  feedContent: {
-    padding: 12,
-  },
-
-  postCard: {
-    borderWidth: 2,
-    borderColor: "#000",    // HARD LINE
-    padding: 12,
-    backgroundColor: "#fff",
-  },
-
-  separator: {
-    height: 12,
-  },
-
-  author: {
-    fontWeight: "700",
-    fontSize: 15,
-    color: "#000",
-  },
-
-  content: {
-    marginTop: 6,
-    marginBottom: 10,
-    fontSize: 14,
-    lineHeight: 20,
-    color: "#000",
-  },
-
-  footer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-    paddingTop: 6,
-  },
-
-  timestamp: {
-    fontSize: 11,
-    color: "#000",
-  },
-
-  stats: {
-    flexDirection: "row",
-    gap: 16,
-  },
-
-  stat: {
-    fontSize: 12,
-    color: "#000",
-  },
-
-  error: {
-    marginTop: 10,
-    color: "red",
-  },
-});
