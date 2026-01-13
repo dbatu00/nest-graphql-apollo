@@ -20,12 +20,7 @@ export const feedStyles = StyleSheet.create({
     padding: 12,
   },
 
-  postCard: {
-    borderWidth: 2,
-    borderColor: "#000",    // HARD LINE
-    padding: 12,
-    backgroundColor: "#fff",
-  },
+ 
 
   separator: {
     height: 12,
@@ -72,5 +67,35 @@ export const feedStyles = StyleSheet.create({
   error: {
     marginTop: 10,
     color: "red",
-  },
+  },postCard: {
+  position: "relative",
+  borderWidth: 2,
+  borderColor: "#000",
+  padding: 12,
+  backgroundColor: "#fff",
+},
+
+deleteButton: {
+  position: "absolute",
+  top: 6,
+  right: 6,
+
+  paddingHorizontal: 12,
+  paddingVertical: 6,
+
+  alignSelf: "flex-start",
+
+  borderWidth: 1,
+  borderColor: "#000",
+  backgroundColor: "#fff",
+
+  zIndex: 10,
+},
+
+deleteText: {
+  fontSize: 12,
+  fontWeight: "700",
+  color: "#000",
+},
+
 });
