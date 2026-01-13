@@ -14,3 +14,4 @@
 */
 13-) frontend getusers input check for string entries that start with a number
 14-) get all users case when there are no users in db
+15-) extract query strings for readability

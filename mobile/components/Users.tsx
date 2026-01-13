@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { parseQuery } from "@/utils/parseQuery";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { mapResultToCards, Result, Card } from "@/utils/mapResultToCards";
+import { mapResultToCards, Result, Card } from "@/utils/mapUserResultsToCards";
 import { validateUserName } from "@/utils/validateUserName";
 import { commonStyles as styles} from "@/styles/common";
 

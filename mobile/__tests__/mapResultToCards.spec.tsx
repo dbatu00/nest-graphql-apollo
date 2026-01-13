@@ -1,5 +1,5 @@
 // utils/__tests__/mapResultToCards.spec.ts
-import { mapResultToCards, Result, Card } from "../utils/mapResultToCards";
+import { mapResultToCards, Result, Card } from "../utils/mapUserResultsToCards";
 
 describe("mapResultToCards", () => {
   it("should return an empty array for 'idle' result", () => {
