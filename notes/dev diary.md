@@ -170,3 +170,16 @@ Posts should expose their associated user directly in the GraphQL schema rather 
 GraphQL APIs are designed to model domain relationships, not database foreign keys. By exposing user, the backend remains responsible for composing related data, and clients can declaratively request exactly the author information they need in a single query. This results in a cleaner API contract, better separation of concerns, and improved flexibility as user-related fields evolve over time.
 
 Foreign keys remain an internal database concern and are intentionally not reflected directly in the public GraphQL schema.
+
+
+
+
+
+
+
+14.01.2026
+
+In GraphQL, addPost returns a Post!, but the client does not need the returned post data. Why not change the mutation to return Boolean instead?
+
+Answer:
+Because returning Boolean weakens the API contract and undermines GraphQL’s design. GraphQL mutations are meant to return the resulting domain object, not just signal success. Returning Post preserves flexibility for current and future clients, allows immediate UI updates without refetching, exposes server-generated fields (such as id and createdAt), and enables clearer error handling. Even if one client does not need the data today, the schema should remain expressive and composable. Returning the created object is the idiomatic and future-proof GraphQL approach.
