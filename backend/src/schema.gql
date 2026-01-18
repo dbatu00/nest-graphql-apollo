@@ -26,6 +26,11 @@ type AddUserOutput {
   userExists: Boolean
 }
 
+type AuthPayload {
+  user: User!
+  token: String!
+}
+
 type Query {
   getAllUsers: [User!]!
   findUsersByIds(ids: [Int!]!): [User!]!
@@ -38,6 +43,8 @@ type Mutation {
   deleteUser(ids: [Int!]!): [User!]!
   addPost(userId: Int!, content: String!): Post!
   deletePost(postId: Int!): Boolean!
+  signUp(username: String!, password: String!): AuthPayload!
+  login(username: String!, password: String!): AuthPayload!
 }
 
 input AddUserInput {

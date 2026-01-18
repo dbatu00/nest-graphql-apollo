@@ -8,6 +8,7 @@ import { User } from './users/user.entity';
 import { Post } from './posts/post.entity';
 import { PostsModule } from './posts/posts.module';
 import { AuthModule } from './auth/auth.module';
+import { AuthCredential } from './auth/auth.entity';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { AuthModule } from './auth/auth.module';
       username: 'postgres',
       password: 'qweasdzxc',
       database: 'nest_graphql',
-      entities: [User, Post],
+      entities: [User, Post, AuthCredential],
       synchronize: false,
     }),
     UsersModule,
