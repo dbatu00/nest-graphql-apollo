@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
 import { AuthCredential } from "./auth.entity";
 import { User } from "../users/user.entity";
+import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class AuthService {
@@ -10,10 +11,9 @@ export class AuthService {
         @InjectRepository(AuthCredential)
         private readonly authRepo: Repository<AuthCredential>,
 
-        @InjectRepository(User)
-        private readonly userRepo: Repository<User>,
+        private readonly dataSource: DataSource,
 
-        private readonly dataSource: DataSource
+        private readonly jwtService: JwtService
     ) { }
 
     async signUp(username: string, password: string) {
@@ -45,8 +45,8 @@ export class AuthService {
             return user;
         });
 
-        // 3. Issue token (mock)
-        const token = this.issueMockToken(result.id);
+        // 3. Issue token (Access)
+        const token = this.issueAccessToken(result);
 
         return {
             user: result,
@@ -68,7 +68,7 @@ export class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        const token = this.issueMockToken(credential.user.id);
+        const token = this.issueAccessToken(credential.user);
 
         return {
             user: credential.user,
@@ -76,9 +76,10 @@ export class AuthService {
         };
     }
 
-    private issueMockToken(userId: number): string {
-        // TEMPORARY
-        // Replace later with JWT / Firebase / OAuth
-        return `mock-token-${userId}-${Date.now()}`;
+    private issueAccessToken(user: User): string {
+        return this.jwtService.sign({
+            sub: user.id,
+            username: user.name,
+        });
     }
 }

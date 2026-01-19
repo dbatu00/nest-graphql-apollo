@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
@@ -9,6 +10,8 @@ import { Post } from './posts/post.entity';
 import { PostsModule } from './posts/posts.module';
 import { AuthModule } from './auth/auth.module';
 import { AuthCredential } from './auth/auth.entity';
+import { ConfigModule } from '@nestjs/config';
+
 
 @Module({
   imports: [
@@ -25,6 +28,9 @@ import { AuthCredential } from './auth/auth.entity';
       database: 'nest_graphql',
       entities: [User, Post, AuthCredential],
       synchronize: false,
+    }),
+    ConfigModule.forRoot({
+      isGlobal: true, // IMPORTANT
     }),
     UsersModule,
     PostsModule,

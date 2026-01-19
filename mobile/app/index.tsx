@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { router } from "expo-router";
-import { useAuth } from "./(auth)/useAuth";
+import { useAuth } from "../hooks/useAuth";
 
 export default function Index() {
   const { user, loading } = useAuth();
