@@ -1,28 +1,72 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-} from "react-native";
+import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { commonStyles } from "../../styles/common";
+import { graphqlFetch } from "@/utils/graphqlFetch";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLogin = async () => {
+    setError("");
+
+    if (!username || !password) {
+      setError("Username and password required");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await graphqlFetch<{
+        login: {
+          token: string;
+          user: { id: number; name: string };
+        };
+      }>(
+        `
+        mutation Login($username: String!, $password: String!) {
+          login(username: $username, password: $password) {
+            token
+            user {
+              id
+              name
+            }
+          }
+        }
+        `,
+        { username, password }
+      );
+
+      // success → navigate
+      router.replace("/(app)/posts");
+    } catch (err: any) {
+      setError(err.message || "Invalid credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View style={[commonStyles.container, commonStyles.center]}>
       <Text style={commonStyles.title}>Login</Text>
 
-      <View style={{ width: "100%", maxWidth: 320 }}>
+      {/* width-constrained block */}
+      <View style={{ width: 260 }}>
         <TextInput
           placeholder="Username"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
-          style={commonStyles.input}
+          style={{
+            borderWidth: 1,
+            borderColor: "#ccc",
+            borderRadius: 6,
+            padding: 10,
+            marginBottom: 12,
+          }}
         />
 
         <TextInput
@@ -30,29 +74,39 @@ export default function Login() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={commonStyles.input}
+          style={{
+            borderWidth: 1,
+            borderColor: "#ccc",
+            borderRadius: 6,
+            padding: 10,
+            marginBottom: 16,
+          }}
         />
 
-        <Pressable
-  style={({ pressed }) => [
-    commonStyles.button,
-    {
-      alignSelf: "center",
-      width: 200,          // 👈 centered button width
-      marginTop: 8,
-    },
-    pressed && { opacity: 0.85 },
-  ]}
-  onPress={() => router.replace("/(app)/posts")}
->
-  <Text style={commonStyles.buttonText}>Login</Text>
-</Pressable>
+        {/* button wrapper fixes stretch */}
+        <View style={{ alignItems: "center" }}>
+          <Pressable
+            style={commonStyles.button}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            <Text style={commonStyles.buttonText}>
+              {loading ? "Logging in..." : "Login"}
+            </Text>
+          </Pressable>
+        </View>
+
+        {error ? (
+          <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+            {error}
+          </Text>
+        ) : null}
 
         <Pressable
           onPress={() => router.push("/(auth)/signUp")}
-          style={{ marginTop: 12, alignItems: "center" }}
+          style={{ marginTop: 16 }}
         >
-          <Text>Don’t have an account? Sign up</Text>
+          <Text style={{ textAlign: "center" }}>Sign up</Text>
         </Pressable>
       </View>
     </View>
