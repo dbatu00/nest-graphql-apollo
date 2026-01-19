@@ -1,3 +1,5 @@
+import { getToken } from "@/utils/token";
+
 export async function graphqlFetch<T>(
   query: string,
   variables: Record<string, any> = {}
@@ -5,12 +7,17 @@ export async function graphqlFetch<T>(
   const url = process.env.EXPO_PUBLIC_API_URL;
 
   if (!url) {
-    throw new Error('EXPO_PUBLIC_API_URL is not defined');
+    throw new Error("EXPO_PUBLIC_API_URL is not defined");
   }
+
+  const token = getToken();
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ query, variables }),
   });
 

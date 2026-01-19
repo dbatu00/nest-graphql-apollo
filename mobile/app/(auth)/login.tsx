@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { commonStyles } from "../../styles/common";
 import { graphqlFetch } from "@/utils/graphqlFetch";
+import { saveToken } from "@/utils/token";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -19,11 +20,15 @@ export default function Login() {
     }
 
     setLoading(true);
+
     try {
-      await graphqlFetch<{
+      const res = await graphqlFetch<{
         login: {
           token: string;
-          user: { id: number; name: string };
+          user: {
+            id: number;
+            name: string;
+          };
         };
       }>(
         `
@@ -40,7 +45,10 @@ export default function Login() {
         { username, password }
       );
 
-      // success → navigate
+      // store access token (web-only for now)
+      saveToken(res.login.token);
+
+      // navigate to app
       router.replace("/(app)/posts");
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
@@ -53,7 +61,6 @@ export default function Login() {
     <View style={[commonStyles.container, commonStyles.center]}>
       <Text style={commonStyles.title}>Login</Text>
 
-      {/* width-constrained block */}
       <View style={{ width: 260 }}>
         <TextInput
           placeholder="Username"
@@ -83,7 +90,6 @@ export default function Login() {
           }}
         />
 
-        {/* button wrapper fixes stretch */}
         <View style={{ alignItems: "center" }}>
           <Pressable
             style={commonStyles.button}
@@ -97,7 +103,13 @@ export default function Login() {
         </View>
 
         {error ? (
-          <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+          <Text
+            style={{
+              color: "red",
+              marginTop: 10,
+              textAlign: "center",
+            }}
+          >
             {error}
           </Text>
         ) : null}

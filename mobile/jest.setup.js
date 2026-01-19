@@ -6,4 +6,16 @@ global.fetch = jest.fn();
 // Mock window.confirm used in Add User flow
 global.confirm = jest.fn(() => true);
 
-process.env.EXPO_PUBLIC_API_URL = 'http://localhost:3000/graphql';
+// Mock localStorage (REQUIRED)
+Object.defineProperty(global, "localStorage", {
+  value: {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  },
+  writable: true,
+});
+
+// Env vars
+process.env.EXPO_PUBLIC_API_URL = "http://localhost:3000/graphql";
