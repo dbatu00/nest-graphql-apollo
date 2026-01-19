@@ -8,6 +8,7 @@ import { AuthResolver } from "./auth.resolver";
 import { AuthCredential } from "./auth.entity";
 import { User } from "../users/user.entity";
 import { JwtStrategy } from "./jwt.strategy";
+import { UsersModule } from "src/users/users.module";
 
 console.log('JWT_SECRET in AuthModule:', process.env.JWT_SECRET);
 
@@ -19,6 +20,7 @@ console.log('JWT_SECRET in AuthModule:', process.env.JWT_SECRET);
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: "15m" },
     }),
+    UsersModule
   ],
   providers: [
     AuthService,

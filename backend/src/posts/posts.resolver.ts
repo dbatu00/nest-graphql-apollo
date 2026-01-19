@@ -1,7 +1,10 @@
 import { Resolver, Query, Mutation, Args, Int } from "@nestjs/graphql";
+import { Logger, UseGuards } from "@nestjs/common";
 import { PostsService } from "./posts.service";
 import { Post } from "./post.entity";
-import { Logger } from "@nestjs/common";
+import { GqlAuthGuard } from "../auth/gql-auth.guard";
+import { CurrentUser } from "../auth/current-user.decorator";
+import { User } from "src/users/user.entity";
 
 @Resolver(() => Post)
 export class PostsResolver {
@@ -9,21 +12,22 @@ export class PostsResolver {
 
     constructor(private readonly postsService: PostsService) { }
 
+    @UseGuards(GqlAuthGuard)
     @Query(() => [Post])
     async getAllPosts(): Promise<Post[]> {
         return this.postsService.getAllPosts();
     }
 
-    // 🔹 ADD POST
+    @UseGuards(GqlAuthGuard)
     @Mutation(() => Post)
     async addPost(
-        @Args("userId", { type: () => Int }) userId: number,
+        @CurrentUser() user: User,
         @Args("content") content: string,
     ): Promise<Post> {
-        return this.postsService.addPost(userId, content);
+        return this.postsService.addPost(user.id, content);
     }
 
-    // 🔹 DELETE POST
+    @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     async deletePost(
         @Args("postId", { type: () => Int }) postId: number,

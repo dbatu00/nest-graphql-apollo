@@ -41,7 +41,7 @@ type Query {
 type Mutation {
   addUser(addUserInput: AddUserInput!): AddUserOutput!
   deleteUser(ids: [Int!]!): [User!]!
-  addPost(userId: Int!, content: String!): Post!
+  addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
