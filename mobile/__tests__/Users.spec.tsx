@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import Users from '../components/Users';
+import Users from '../app/(app)/users';
 
 beforeEach(() => {
   // reset the global fetch mock provided by jest.setup.js

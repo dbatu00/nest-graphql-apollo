@@ -49,7 +49,7 @@ export default function Login() {
       saveToken(res.login.token);
 
       // navigate to app
-      router.replace("/(app)/posts");
+      router.replace("/(app)/feed");
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
     } finally {
