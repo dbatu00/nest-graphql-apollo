@@ -7,6 +7,7 @@ import { feedStyles } from "@/styles/feed";
 import { getCurrentUser } from "@/utils/currentUser";
 import { PostList } from "@/components/feed/PostList";
 import { FeedHeader } from "@/components/layout/FeedHeader";
+import { Composer } from "@/components/feed/Composer";
 
 
 export default function Posts() {
@@ -98,48 +99,14 @@ useEffect(() => {
   return (
     <View style={styles.container}>
 
-      <View
-  style={{
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    borderBottomWidth: 2,
-    borderColor: "#000",
-  }}
->
+ 
  <FeedHeader title="Feed" />
-</View>
-      {/* ---------- COMPOSER ---------- */}
-      <View style={{ padding: 12, borderBottomWidth: 2, borderColor: "#000" }}>
-        <TextInput
-          multiline
-          value={content}
-          onChangeText={setContent}
-          placeholder="What's happening?"
-          style={{
-            borderWidth: 1,
-            borderColor: "#000",
-            padding: 10,
-            minHeight: 120,
-            textAlignVertical: "top",
-          }}
-        />
 
-        <TouchableOpacity
-          onPress={publishPost}
-          style={{
-            alignSelf: "flex-end",
-            marginTop: 10,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderWidth: 1,
-            borderColor: "#000",
-          }}
-        >
-          <Text style={{ fontWeight: "700" }}>Publish</Text>
-        </TouchableOpacity>
-      </View>
+    <Composer
+  value={content}
+  onChange={setContent}
+  onPublish={publishPost}
+/>
 
       {/* ---------- FEED ---------- */}
       {result.type === "error" && (
