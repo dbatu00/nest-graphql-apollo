@@ -6,6 +6,7 @@ import { Post } from "@/types/Post";
 import { feedStyles } from "@/styles/feed";
 import { getCurrentUser } from "@/utils/currentUser";
 import { logout } from "@/utils/logout";
+import { PostItem } from "@/components/feed/PostItem";
 
 
 export default function Posts() {
@@ -165,45 +166,14 @@ useEffect(() => {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={feedStyles.feedContent}
           ItemSeparatorComponent={() => <View style={feedStyles.separator} />}
-          renderItem={({ item }) => {
-            console.log(
-              "POST USER:",
-              item.user.id,
-              "CURRENT USER:",
-              currentUserId
-            );
+          renderItem={({ item }) => (
+  <PostItem
+    post={item}
+    currentUserId={currentUserId}
+    onDelete={confirmDelete}
+  />
+)}
 
-            return (
-              <View style={feedStyles.postCard}>
-                {currentUserId === item.user.id && (
-                  <TouchableOpacity
-                    style={feedStyles.deleteButton}
-                    activeOpacity={0.7}
-                    onPress={() => confirmDelete(item.id)}
-                  >
-                    <Text style={feedStyles.deleteText}>DELETE</Text>
-                  </TouchableOpacity>
-                )}
-
-                <Text style={feedStyles.author}>
-                  User: {item.user.name}
-                </Text>
-
-                <Text style={feedStyles.content}>{item.content}</Text>
-
-                <View style={feedStyles.footer}>
-                  <Text style={feedStyles.timestamp}>
-                    {new Date(item.createdAt).toLocaleString()}
-                  </Text>
-
-                  <View style={feedStyles.stats}>
-                    <Text style={feedStyles.stat}>👍 {item.likes}</Text>
-                    <Text style={feedStyles.stat}>🔁 {item.shares}</Text>
-                  </View>
-                </View>
-              </View>
-            );
-          }}
         />
       )}
     </View>
