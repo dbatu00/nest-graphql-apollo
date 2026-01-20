@@ -7,6 +7,7 @@ import { feedStyles } from "@/styles/feed";
 import { getCurrentUser } from "@/utils/currentUser";
 import { logout } from "@/utils/logout";
 import { PostItem } from "@/components/feed/PostItem";
+import { PostList } from "@/components/feed/PostList";
 
 
 export default function Posts() {
@@ -160,22 +161,13 @@ useEffect(() => {
         <Text style={feedStyles.error}>{result.message}</Text>
       )}
 
-      {result.type === "getPosts" && result.posts && (
-        <FlatList
-          data={result.posts}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={feedStyles.feedContent}
-          ItemSeparatorComponent={() => <View style={feedStyles.separator} />}
-          renderItem={({ item }) => (
-  <PostItem
-    post={item}
+     {result.type === "getPosts" && result.posts && (
+  <PostList
+    posts={result.posts}
     currentUserId={currentUserId}
     onDelete={confirmDelete}
   />
 )}
-
-        />
-      )}
     </View>
   );
 }
