@@ -81,7 +81,6 @@ export default function Posts() {
   await graphqlFetch(`
     mutation {
       addPost(
-        userId: ${selectedUserId},
         content: "${content.replace(/"/g, '\\"')}"
       ) {
         id
