@@ -6,6 +6,10 @@ module.exports = {
   testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest', 
+    '^.+\\.(ts|tsx)$': 'ts-jest',
+  },
+
+  moduleNameMapper: {
+    '^src/(.*)$': '<rootDir>/src/$1',
   },
 };

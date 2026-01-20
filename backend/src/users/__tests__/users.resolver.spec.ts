@@ -5,7 +5,7 @@ import { UsersService } from '../users.service';
 import { User } from '../user.entity';
 import { InternalServerErrorException } from '@nestjs/common';
 import { AddUserInput } from '../dto/add-user.input';
-import { AddUserOutput } from '../dto/add-user.output';
+
 
 describe('UsersResolver', () => {
     let resolver: UsersResolver;

@@ -4,14 +4,8 @@ import { graphqlFetch } from "@/utils/graphqlFetch";
 import { commonStyles as styles } from "@/styles/common";
 import { Post } from "@/types/Post";
 import { feedStyles } from "@/styles/feed";
-import { jwtDecode } from "jwt-decode";
+import { getCurrentUser } from "@/utils/currentUser";
 
-type JwtPayload = {
-  sub: number; // user id
-  username: string;
-  iat: number;
-  exp: number;
-};
 
 export default function Posts() {
   const [result, setResult] = useState<{
@@ -21,24 +15,18 @@ export default function Posts() {
   }>({ type: "idle" });
 
   const [content, setContent] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-  /* ---------- AUTH ---------- */
-  useEffect(() => {
-    const token = localStorage.getItem("auth_token");
-    if (!token) {
-      console.log("No auth token found");
-      return;
-    }
-
-    try {
-      const decoded = jwtDecode<JwtPayload>(token);
-      setCurrentUserId(decoded.sub);
-      console.log("Current user id:", decoded.sub);
-    } catch (e) {
-      console.warn("Invalid token", e);
-    }
-  }, []);
+useEffect(() => {
+  getCurrentUser()
+    .then(user => {
+      console.log("Current user:", user);
+      setCurrentUserId(user.id);
+    })
+    .catch(() => {
+      console.log("Not authenticated");
+    });
+}, []);
 
   /* ---------- DATA ---------- */
   const getAllPosts = async () => {

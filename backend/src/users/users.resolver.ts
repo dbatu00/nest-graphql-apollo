@@ -4,6 +4,10 @@ import { User } from './user.entity';
 import { Logger, InternalServerErrorException } from '@nestjs/common';
 import { AddUserInput } from './dto/add-user.input';
 import { AddUserOutput } from './dto/add-user.output';
+import { CurrentUser } from 'src/auth/current-user.decorator';
+import { GqlAuthGuard } from 'src/auth/gql-auth.guard';
+import { UseGuards } from '@nestjs/common';
+
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -12,6 +16,12 @@ export class UsersResolver {
 
   constructor(private readonly usersService: UsersService) { }
 
+
+  @UseGuards(GqlAuthGuard)
+  @Query(() => User)
+  me(@CurrentUser() user: User) {
+    return user;
+  }
 
   @Query(() => [User]) //gql 
   async getAllUsers(): Promise<User[]> { //ts

@@ -32,6 +32,7 @@ type AuthPayload {
 }
 
 type Query {
+  me: User!
   getAllUsers: [User!]!
   findUsersByIds(ids: [Int!]!): [User!]!
   findUsersByNames(names: [String!]!): [User!]!
