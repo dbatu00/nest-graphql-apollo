@@ -5,6 +5,7 @@ import { commonStyles as styles } from "@/styles/common";
 import { Post } from "@/types/Post";
 import { feedStyles } from "@/styles/feed";
 import { getCurrentUser } from "@/utils/currentUser";
+import { logout } from "@/utils/logout";
 
 
 export default function Posts() {
@@ -27,6 +28,8 @@ useEffect(() => {
       console.log("Not authenticated");
     });
 }, []);
+
+
 
   /* ---------- DATA ---------- */
   const getAllPosts = async () => {
@@ -93,6 +96,33 @@ useEffect(() => {
   /* ---------- UI ---------- */
   return (
     <View style={styles.container}>
+
+      <View
+  style={{
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 2,
+    borderColor: "#000",
+  }}
+>
+  <Text style={{ fontWeight: "700", fontSize: 18 }}>
+    Feed
+  </Text>
+
+  <TouchableOpacity
+    onPress={logout}
+    style={{
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: "#000",
+    }}
+  >
+    <Text style={{ fontWeight: "700" }}>Logout</Text>
+  </TouchableOpacity>
+</View>
       {/* ---------- COMPOSER ---------- */}
       <View style={{ padding: 12, borderBottomWidth: 2, borderColor: "#000" }}>
         <TextInput
