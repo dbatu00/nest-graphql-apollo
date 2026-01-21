@@ -1,15 +1,15 @@
 import { Injectable, UnauthorizedException, BadRequestException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
-import { AuthCredential } from "./auth.entity";
+import { Auth } from "./auth.entity";
 import { User } from "../users/user.entity";
 import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class AuthService {
     constructor(
-        @InjectRepository(AuthCredential)
-        private readonly authRepo: Repository<AuthCredential>,
+        @InjectRepository(Auth)
+        private readonly authRepo: Repository<Auth>,
 
         private readonly dataSource: DataSource,
 
@@ -18,9 +18,11 @@ export class AuthService {
 
     async signUp(username: string, password: string) {
         // 1. Enforce uniqueness
-        const existing = await this.authRepo.findOne({
-            where: { username },
-        });
+        const existing = await this.authRepo
+            .createQueryBuilder("auth")
+            .innerJoin("auth.user", "user")
+            .where("user.name = :username", { username })
+            .getOne();
 
         if (existing) {
             throw new BadRequestException("Username already exists");
@@ -34,7 +36,7 @@ export class AuthService {
 
             await manager.save(user);
 
-            const credential = manager.create(AuthCredential, {
+            const credential = manager.create(Auth, {
                 username,
                 password,
                 user,
@@ -55,10 +57,11 @@ export class AuthService {
     }
 
     async login(username: string, password: string) {
-        const credential = await this.authRepo.findOne({
-            where: { username },
-            relations: ["user"],
-        });
+        const credential = await this.authRepo
+            .createQueryBuilder("auth")
+            .innerJoinAndSelect("auth.user", "user")
+            .where("user.name = :username", { username })
+            .getOne();
 
         if (!credential) {
             throw new UnauthorizedException("Invalid credentials");
@@ -75,6 +78,8 @@ export class AuthService {
             token,
         };
     }
+
+
 
     private issueAccessToken(user: User): string {
         return this.jwtService.sign({

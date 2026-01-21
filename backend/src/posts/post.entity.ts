@@ -4,36 +4,24 @@ import {
     Column,
     ManyToOne,
     CreateDateColumn,
-    JoinColumn
+    JoinColumn, UpdateDateColumn
 } from 'typeorm';
-import { ObjectType, Field, Int } from '@nestjs/graphql';
 import { User } from '../users/user.entity';
 
-@ObjectType()
 @Entity('posts')
 export class Post {
-    @Field(() => Int)
     @PrimaryGeneratedColumn()
     id: number;
 
-    @Field(() => User)
-    @ManyToOne(() => User, user => user.posts, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'user_id' })
-    user: User;
-
-    @Field()
-    @Column()
+    @Column('text')
     content: string;
 
-    @Field()
-    @CreateDateColumn({ name: 'created_at' })
+    @ManyToOne(() => User, { onDelete: 'CASCADE' })
+    user: User;
+
+    @CreateDateColumn()
     createdAt: Date;
 
-    @Field(() => Int)
-    @Column({ default: 0 })
-    likes: number;
-
-    @Field(() => Int)
-    @Column({ default: 0 })
-    shares: number;
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

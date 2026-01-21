@@ -5,27 +5,28 @@ import {
     OneToOne,
     JoinColumn,
     CreateDateColumn,
+    UpdateDateColumn
 } from "typeorm";
-import { ObjectType, Field, Int } from "@nestjs/graphql";
 import { User } from "../users/user.entity";
 
-@ObjectType()
-@Entity("auth_credentials")
-export class AuthCredential {
-    @Field(() => Int)
+@Entity('auth')
+export class Auth {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @OneToOne(() => User, { onDelete: "CASCADE" })
-    @JoinColumn({ name: "user_id" })
-    user: User;
-
     @Column({ unique: true })
-    username: string;
+    email: string;
 
     @Column()
     password: string;
 
-    @CreateDateColumn({ name: "created_at" })
+    @OneToOne(() => User, { onDelete: 'CASCADE' })
+    @JoinColumn()
+    user: User;
+
+    @CreateDateColumn()
     createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

@@ -65,11 +65,14 @@ describe('UsersResolver', () => {
         });
 
         it('finds user by id', async () => {
-            const user: User = { id: 1, name: 'Alice' };
-            service.findUserById.mockResolvedValue(user);
+            const user: User = { id: 1, name: 'Alice' } as User;
+
+            service.findUserById.mockResolvedValueOnce(user);
+
             const result = await resolver.findUsersByIds([user.id]);
 
             expect(result).toEqual([user]);
+            expect(service.findUserById).toHaveBeenCalledTimes(1);
             expect(service.findUserById).toHaveBeenCalledWith(user.id);
         });
 
@@ -91,7 +94,7 @@ describe('UsersResolver', () => {
         });
 
         it('finds one user by ids', async () => {
-            const user: User = { id: 1, name: 'Alice' };
+            const user: User = { id: 1, name: 'Alice' } as User;
             service.findUserById
                 .mockResolvedValueOnce({ id: 1, name: 'Alice' } as User)
                 .mockResolvedValueOnce(null);

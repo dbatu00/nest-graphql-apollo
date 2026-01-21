@@ -9,7 +9,7 @@ import { User } from './users/user.entity';
 import { Post } from './posts/post.entity';
 import { PostsModule } from './posts/posts.module';
 import { AuthModule } from './auth/auth.module';
-import { AuthCredential } from './auth/auth.entity';
+import { Auth } from './auth/auth.entity';
 import { ConfigModule } from '@nestjs/config';
 
 
@@ -26,8 +26,8 @@ import { ConfigModule } from '@nestjs/config';
       username: 'postgres',
       password: 'qweasdzxc',
       database: 'nest_graphql',
-      entities: [User, Post, AuthCredential],
-      synchronize: false,
+      entities: [User, Post, Auth],
+      synchronize: true,
     }),
     ConfigModule.forRoot({
       isGlobal: true, // IMPORTANT

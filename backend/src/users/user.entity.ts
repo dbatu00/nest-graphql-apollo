@@ -1,18 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
-import { ObjectType, Field, Int } from '@nestjs/graphql';
-import { Post } from '../posts/post.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@ObjectType()
 @Entity('users')
 export class User {
-  @Field(() => Int)
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Field()
   @Column()
   name: string;
 
-  @OneToMany(() => Post, post => post.user)
-  posts?: Post[];
+  @Column({ nullable: true })
+  bio?: string;
+
+  @Column({ default: false })
+  verified: boolean;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }
