@@ -2,13 +2,12 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type Post {
+type User {
   id: Int!
-  user: User!
-  content: String!
+  username: String!
+  displayName: String
   createdAt: DateTime!
-  likes: Int!
-  shares: Int!
+  updatedAt: DateTime!
 }
 
 """
@@ -16,14 +15,12 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-type User {
+type Post {
   id: Int!
-  name: String!
-}
-
-type AddUserOutput {
-  user: User
-  userExists: Boolean
+  content: String!
+  user: User!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type AuthPayload {
@@ -33,22 +30,13 @@ type AuthPayload {
 
 type Query {
   me: User!
-  getAllUsers: [User!]!
-  findUsersByIds(ids: [Int!]!): [User!]!
-  findUsersByNames(names: [String!]!): [User!]!
-  getAllPosts: [Post!]!
+  userByUsername(username: String!): User
+  feed: [Post!]!
 }
 
 type Mutation {
-  addUser(addUserInput: AddUserInput!): AddUserOutput!
-  deleteUser(ids: [Int!]!): [User!]!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
-}
-
-input AddUserInput {
-  name: String!
-  force: Boolean! = false
 }

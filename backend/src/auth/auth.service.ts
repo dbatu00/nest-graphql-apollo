@@ -12,47 +12,39 @@ export class AuthService {
         private readonly authRepo: Repository<Auth>,
 
         private readonly dataSource: DataSource,
-
-        private readonly jwtService: JwtService
+        private readonly jwtService: JwtService,
     ) { }
 
     async signUp(username: string, password: string) {
-        // 1. Enforce uniqueness
-        const existing = await this.authRepo
-            .createQueryBuilder("auth")
-            .innerJoin("auth.user", "user")
-            .where("user.name = :username", { username })
-            .getOne();
+        const existingUser = await this.dataSource
+            .getRepository(User)
+            .findOne({ where: { username } });
 
-        if (existing) {
+        if (existingUser) {
             throw new BadRequestException("Username already exists");
         }
 
-        // 2. Transaction: create user + credentials
-        const result = await this.dataSource.transaction(async (manager) => {
+        const user = await this.dataSource.transaction(async (manager) => {
             const user = manager.create(User, {
-                name: username, // keep simple for now
+                username,
+                displayName: username,
             });
 
             await manager.save(user);
 
-            const credential = manager.create(Auth, {
-                username,
+            const auth = manager.create(Auth, {
                 password,
                 user,
             });
 
-            await manager.save(credential);
+            await manager.save(auth);
 
             return user;
         });
 
-        // 3. Issue token (Access)
-        const token = this.issueAccessToken(result);
-
         return {
-            user: result,
-            token,
+            user,
+            token: this.issueAccessToken(user),
         };
     }
 
@@ -60,31 +52,23 @@ export class AuthService {
         const credential = await this.authRepo
             .createQueryBuilder("auth")
             .innerJoinAndSelect("auth.user", "user")
-            .where("user.name = :username", { username })
+            .where("user.username = :username", { username })
             .getOne();
 
-        if (!credential) {
+        if (!credential || credential.password !== password) {
             throw new UnauthorizedException("Invalid credentials");
         }
-
-        if (credential.password !== password) {
-            throw new UnauthorizedException("Invalid credentials");
-        }
-
-        const token = this.issueAccessToken(credential.user);
 
         return {
             user: credential.user,
-            token,
+            token: this.issueAccessToken(credential.user),
         };
     }
-
-
 
     private issueAccessToken(user: User): string {
         return this.jwtService.sign({
             sub: user.id,
-            username: user.name,
+            username: user.username,
         });
     }
 }

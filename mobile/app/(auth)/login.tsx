@@ -22,34 +22,34 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await graphqlFetch<{
-        login: {
-          token: string;
-          user: {
-            id: number;
-            name: string;
-          };
-        };
-      }>(
-        `
-        mutation Login($username: String!, $password: String!) {
-          login(username: $username, password: $password) {
-            token
-            user {
-              id
-              name
-            }
-          }
-        }
-        `,
-        { username, password }
-      );
+     const res = await graphqlFetch<{
+  login: {
+    token: string;
+    user: {
+      id: number;
+      username: string;
+      displayName?: string;
+    };
+  };
+}>(
+  `
+  mutation Login($username: String!, $password: String!) {
+    login(username: $username, password: $password) {
+      token
+      user {
+        id
+        username
+        displayName
+      }
+    }
+  }
+  `,
+  { username, password }
+);
 
-      // store access token (web-only for now)
-      saveToken(res.login.token);
+saveToken(res.login.token);
+router.replace("/(app)/feed");
 
-      // navigate to app
-      router.replace("/(app)/feed");
     } catch (err: any) {
       setError(err.message || "Invalid credentials");
     } finally {

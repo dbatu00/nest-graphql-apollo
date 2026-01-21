@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 
 type User = {
   id: number;
-  name: string;
+  username: string;
+  displayName?: string;
 } | null;
 
 export function useAuth() {

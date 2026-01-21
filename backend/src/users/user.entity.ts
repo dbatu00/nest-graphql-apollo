@@ -1,22 +1,32 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { ObjectType, Field, Int } from '@nestjs/graphql';
 
+@ObjectType()
 @Entity('users')
 export class User {
+  @Field(() => Int)
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  name: string;
+  @Field()
+  @Column({ unique: true })
+  username: string;
 
+  @Field({ nullable: true })
   @Column({ nullable: true })
-  bio?: string;
+  displayName?: string;
 
-  @Column({ default: false })
-  verified: boolean;
-
+  @Field()
   @CreateDateColumn()
   createdAt: Date;
 
+  @Field()
   @UpdateDateColumn()
   updatedAt: Date;
 }

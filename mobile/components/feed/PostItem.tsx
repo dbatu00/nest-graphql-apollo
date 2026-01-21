@@ -23,7 +23,7 @@ export function PostItem({ post, currentUserId, onDelete }: Props) {
         </TouchableOpacity>
       )}
 
-      <Text style={feedStyles.author}>User: {post.user.name}</Text>
+      <Text style={feedStyles.author}>User: {post.user.username}</Text>
 
       <Text style={feedStyles.content}>{post.content}</Text>
 

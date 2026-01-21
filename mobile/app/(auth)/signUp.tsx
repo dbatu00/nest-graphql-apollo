@@ -28,16 +28,19 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      await graphqlFetch(
-        `
-        mutation SignUp($username: String!, $password: String!) {
-          signUp(username: $username, password: $password) {
-            user { id }
-          }
-        }
-        `,
-        { username, password }
-      );
+    await graphqlFetch(
+  `
+  mutation SignUp($username: String!, $password: String!) {
+    signUp(username: $username, password: $password) {
+      user {
+        id
+        username
+      }
+    }
+  }
+  `,
+  { username, password }
+);
 
       setSuccess(true);
 

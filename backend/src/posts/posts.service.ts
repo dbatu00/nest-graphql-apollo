@@ -1,72 +1,65 @@
 import {
     Injectable,
-    Logger,
-    InternalServerErrorException,
     NotFoundException,
-} from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Post } from "./post.entity";
-import { User } from "../users/user.entity";
+    ForbiddenException,
+    InternalServerErrorException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Post } from './post.entity';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class PostsService {
-    private readonly logger = new Logger(PostsService.name);
-
     constructor(
-        @InjectRepository(Post) private postsRepo: Repository<Post>,
-        @InjectRepository(User) private usersRepo: Repository<User>,
+        @InjectRepository(Post)
+        private readonly postsRepo: Repository<Post>,
+        @InjectRepository(User)
+        private readonly usersRepo: Repository<User>,
     ) { }
 
-    async getAllPosts(): Promise<Post[]> {
-        this.logger.log(`getAllPosts called`);
-
+    async getFeed(): Promise<Post[]> {
         try {
             return await this.postsRepo.find({
-                relations: ["user"],
-                order: { createdAt: "DESC" }, // feed order
+                relations: ['user'],
+                order: { createdAt: 'DESC' },
             });
-        } catch (error) {
-            this.logger.error("getAllPosts failed", error);
-            throw new InternalServerErrorException();
+        } catch {
+            throw new InternalServerErrorException('Failed to load feed');
         }
     }
 
-    // 🔹 ADD POST
     async addPost(userId: number, content: string): Promise<Post> {
-        this.logger.log(`addPost called | userId=${userId}`);
-
-        const user = await this.usersRepo.findOne({
-            where: { id: userId },
-        });
+        const user = await this.usersRepo.findOne({ where: { id: userId } });
 
         if (!user) {
-            throw new NotFoundException("User not found");
+            throw new NotFoundException('User not found');
         }
 
-        const post = this.postsRepo.create({
-            user,
-            content,
-        });
+        const post = this.postsRepo.create({ content, user });
 
         try {
             return await this.postsRepo.save(post);
-        } catch (error) {
-            this.logger.error("addPost failed", error);
-            throw new InternalServerErrorException("Failed to create post");
+        } catch {
+            throw new InternalServerErrorException('Failed to create post');
         }
     }
 
-    // 🔹 DELETE POST
-    async deletePost(postId: number): Promise<boolean> {
-        this.logger.log(`deletePost called | postId=${postId}`);
+    async deletePost(postId: number, userId: number): Promise<boolean> {
+        const post = await this.postsRepo.findOne({
+            where: { id: postId },
+            relations: ['user'],
+        });
 
-        const result = await this.postsRepo.delete(postId);
-
-        if (result.affected === 0) {
-            throw new NotFoundException("Post not found");
+        if (!post) {
+            throw new NotFoundException('Post not found');
         }
 
+        if (post.user.id !== userId) {
+            throw new ForbiddenException('You cannot delete this post');
+        }
+
+        await this.postsRepo.remove(post);
         return true;
     }
 }

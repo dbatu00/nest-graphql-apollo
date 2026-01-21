@@ -2,38 +2,34 @@ import { useEffect, useState, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { Post } from "@/types/Post";
 
-type FeedState =
-  | { status: "idle" }
-  | { status: "loading" }
-  | { status: "error"; error: string }
-  | { status: "ready"; posts: Post[] };
-
 export function useFeed() {
-  const [state, setState] = useState<FeedState>({ status: "idle" });
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const fetchPosts = useCallback(async () => {
     try {
-      setState({ status: "loading" });
+      setLoading(true);
 
-      const data = await graphqlFetch<{ getAllPosts: Post[] }>(`
+      const data = await graphqlFetch<{ feed: Post[] }>(`
         query {
-          getAllPosts {
+          feed {
             id
             content
             createdAt
-            likes
-            shares
-            user { id name }
+            user {
+              id
+              username
+            }
           }
         }
       `);
 
-      setState({ status: "ready", posts: data.getAllPosts });
-    } catch (err) {
-      setState({
-        status: "error",
-        error: String(err),
-      });
+      setPosts(data.feed);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -42,33 +38,39 @@ export function useFeed() {
   }, [fetchPosts]);
 
   const publish = async (content: string) => {
-    if (!content.trim()) return;
-
-    await graphqlFetch(`
-      mutation {
-        addPost(content: "${content.replace(/"/g, '\\"')}") { id }
+    await graphqlFetch(
+      `
+      mutation AddPost($content: String!) {
+        addPost(content: $content) {
+          id
+        }
       }
-    `);
+      `,
+      { content }
+    );
 
-    await fetchPosts();
+    fetchPosts();
   };
 
   const remove = async (postId: number) => {
-    await graphqlFetch(`
-      mutation {
-        deletePost(postId: ${postId})
+    await graphqlFetch(
+      `
+      mutation DeletePost($postId: Int!) {
+        deletePost(postId: $postId)
       }
-    `);
+      `,
+      { postId }
+    );
 
-    await fetchPosts();
+    fetchPosts();
   };
 
   return {
-    posts: state.status === "ready" ? state.posts : [],
-    loading: state.status === "loading",
-    error: state.status === "error" ? state.error : null,
-    refresh: fetchPosts,
+    posts,
+    loading,
+    error,
     publish,
     remove,
+    refresh: fetchPosts,
   };
 }

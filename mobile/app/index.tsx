@@ -16,7 +16,7 @@ export default function Index() {
     if (loading) return;
 
     if (user) {
-      router.replace("/(app)/posts");
+      router.replace("/(app)/feed");
     } else {
       router.replace("/(auth)/login");
     }
