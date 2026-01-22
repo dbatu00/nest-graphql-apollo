@@ -11,7 +11,12 @@ type Tab = "posts" | "followers" | "following" | "likes" | "shares";
 
 export default function Profile() {
   const { username } = useLocalSearchParams<{ username: string }>();
-  const { profile, posts, loading } = useProfile(username!);
+
+  const {
+    profile,
+    posts = [], // ✅ hard default
+    loading,
+  } = useProfile(username!);
 
   const [activeTab, setActiveTab] = useState<Tab>("posts");
 
@@ -46,6 +51,12 @@ export default function Profile() {
       <ProfileTabs active={activeTab} onChange={setActiveTab} />
 
       {/* Content */}
+      {activeTab === "posts" && posts.length === 0 && (
+        <Text style={{ color: "#999", marginTop: 12 }}>
+          No posts yet
+        </Text>
+      )}
+
       {activeTab === "posts" &&
         posts.map(post => (
           <View key={post.id} style={{ marginBottom: 16 }}>

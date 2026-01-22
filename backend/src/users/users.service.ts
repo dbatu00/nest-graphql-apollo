@@ -16,7 +16,15 @@ export class UsersService {
     return this.userRepo.findOne({ where: { id } });
   }
 
-  findByUsername(username: string): Promise<User | null> {
-    return this.userRepo.findOne({ where: { username: username } });
+  async findByUsername(username: string) {
+    return this.userRepo.findOne({
+      where: { username },
+      relations: ["posts"], // 🔴 REQUIRED
+      order: {
+        posts: {
+          createdAt: "DESC",
+        },
+      },
+    });
   }
 }

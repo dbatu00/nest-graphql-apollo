@@ -2,10 +2,10 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type User {
+type Post {
   id: Int!
-  username: String!
-  displayName: String
+  content: String!
+  user: User!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -15,10 +15,14 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-type Post {
+type User {
   id: Int!
-  content: String!
-  user: User!
+  username: String!
+  displayName: String
+  bio: String
+  posts: [Post!]!
+  followersCount: Int!
+  followingCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -33,6 +37,8 @@ type Query {
   feed: [Post!]!
   postsByUsername(username: String!): [Post!]!
   me: User!
+  followers(username: String!): [User!]!
+  following(username: String!): [User!]!
 }
 
 type Mutation {
@@ -40,4 +46,6 @@ type Mutation {
   deletePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
+  followUser(username: String!): Boolean!
+  unfollowUser(username: String!): Boolean!
 }

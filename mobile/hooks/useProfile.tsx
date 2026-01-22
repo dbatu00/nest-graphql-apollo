@@ -1,41 +1,76 @@
 import { useEffect, useState } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
+import { Post } from "@/types/Post";
+
+type Profile = {
+  id: number;
+  username: string;
+  displayName?: string;
+  bio?: string;
+  followersCount: number;
+  followingCount: number;
+};
 
 export function useProfile(username: string) {
-  const [profile, setProfile] = useState<any>(null);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      const data = await graphqlFetch<{
-        userByUsername: any;
-        postsByUsername: any[];
-      }>(
-        `
-        query ($username: String!) {
-          userByUsername(username: $username) {
-            id
-            username
-            displayName
-            createdAt
-          }
+    if (!username) return;
 
-          postsByUsername(username: $username) {
-            id
-            content
-            createdAt
+    let cancelled = false;
+
+    async function fetchProfile() {
+      try {
+        setLoading(true);
+
+        const data = await graphqlFetch<{
+          userByUsername: Profile & { posts: Post[] };
+        }>(`
+          query UserProfile($username: String!) {
+            userByUsername(username: $username) {
+              id
+              username
+              displayName
+              bio
+              followersCount
+              followingCount
+              posts {
+                id
+                content
+                createdAt
+              }
+            }
           }
+        `, { username });
+
+        if (cancelled) return;
+
+        setProfile(data.userByUsername);
+        setPosts(data.userByUsername.posts ?? []);
+      } catch {
+        if (!cancelled) {
+          setProfile(null);
+          setPosts([]);
         }
-        `,
-        { username }
-      );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
 
-      setProfile(data.userByUsername);
-      setPosts(data.postsByUsername);
-      setLoading(false);
-    })();
+    fetchProfile();
+
+    return () => {
+      cancelled = true;
+    };
   }, [username]);
 
-  return { profile, posts, loading };
+  return {
+    profile,
+    posts,
+    loading,
+  };
 }
