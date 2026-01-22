@@ -12,14 +12,6 @@ import { CurrentUser } from 'src/auth/current-user.decorator';
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) { }
 
-  /**
-   * Logged-in user's own profile
-   */
-  @UseGuards(GqlAuthGuard)
-  @Query(() => User)
-  me(@CurrentUser() user: User): User {
-    return user;
-  }
 
   /**
    * Public profile lookup
