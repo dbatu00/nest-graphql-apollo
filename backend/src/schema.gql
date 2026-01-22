@@ -29,9 +29,9 @@ type AuthPayload {
 }
 
 type Query {
-  me: User!
   userByUsername(username: String!): User
   feed: [Post!]!
+  me: User!
 }
 
 type Mutation {
