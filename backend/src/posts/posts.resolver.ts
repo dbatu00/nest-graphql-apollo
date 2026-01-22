@@ -33,4 +33,14 @@ export class PostsResolver {
     ) {
         return this.postsService.deletePost(postId, user.id);
     }
+
+
+
+    @Query(() => [Post])
+    postsByUsername(
+        @Args("username") username: string,
+    ) {
+        return this.postsService.getPostsByUsername(username);
+    }
+
 }

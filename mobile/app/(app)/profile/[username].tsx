@@ -5,10 +5,10 @@ import { commonStyles } from "@/styles/common";
 
 export default function Profile() {
   const { username } = useLocalSearchParams<{ username: string }>();
-  const { profile, loading, error } = useProfile(username!);
+  const { profile, posts, loading } = useProfile(username!);
 
   if (loading) return <Text>Loading…</Text>;
-  if (error || !profile) return <Text>User not found</Text>;
+  if (!profile) return <Text>User not found</Text>;
 
   return (
     <View style={commonStyles.container}>
@@ -16,17 +16,18 @@ export default function Profile() {
         {profile.displayName ?? profile.username}
       </Text>
 
-      <Text style={{ color: "#666", marginBottom: 8 }}>
+      <Text style={{ color: "#666", marginBottom: 16 }}>
         @{profile.username}
       </Text>
 
-      {profile.bio && (
-        <Text style={{ marginBottom: 12 }}>{profile.bio}</Text>
-      )}
-
-      <Text style={{ color: "#999" }}>
-        Joined {new Date(profile.createdAt).toDateString()}
-      </Text>
+      {posts.map(post => (
+        <View key={post.id} style={{ marginBottom: 16 }}>
+          <Text>{post.content}</Text>
+          <Text style={{ fontSize: 12, color: "#999" }}>
+            {new Date(post.createdAt).toLocaleString()}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }

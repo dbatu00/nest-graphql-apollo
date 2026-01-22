@@ -62,4 +62,24 @@ export class PostsService {
         await this.postsRepo.remove(post);
         return true;
     }
+
+    async getPostsByUserId(userId: number): Promise<Post[]> {
+        return this.postsRepo.find({
+            where: { user: { id: userId } },
+            relations: ['user'],
+            order: { createdAt: 'DESC' },
+        });
+    }
+
+    async getPostsByUsername(username: string): Promise<Post[]> {
+        const user = await this.usersRepo.findOne({
+            where: { username },
+        });
+
+        if (!user) return [];
+
+        return this.getPostsByUserId(user.id);
+    }
+
+
 }

@@ -3,27 +3,39 @@ import { graphqlFetch } from "@/utils/graphqlFetch";
 
 export function useProfile(username: string) {
   const [profile, setProfile] = useState<any>(null);
+  const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    graphqlFetch<{ userByUsername: any }>(
-      `
-      query ($username: String!) {
-        userByUsername(username: $username) {
-          id
-          username
-          displayName
-          createdAt
+    (async () => {
+      const data = await graphqlFetch<{
+        userByUsername: any;
+        postsByUsername: any[];
+      }>(
+        `
+        query ($username: String!) {
+          userByUsername(username: $username) {
+            id
+            username
+            displayName
+            createdAt
+          }
+
+          postsByUsername(username: $username) {
+            id
+            content
+            createdAt
+          }
         }
-      }
-      `,
-      { username }
-    )
-      .then(res => setProfile(res.userByUsername))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+        `,
+        { username }
+      );
+
+      setProfile(data.userByUsername);
+      setPosts(data.postsByUsername);
+      setLoading(false);
+    })();
   }, [username]);
 
-  return { profile, loading, error };
+  return { profile, posts, loading };
 }
