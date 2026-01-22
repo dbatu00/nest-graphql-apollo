@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Post } from "@/types/Post";
 import { feedStyles } from "@/styles/feed";
+import { ProfileLink } from "@/components/common/ProfileLink";
 
 type Props = {
   post: Post;
@@ -23,7 +24,9 @@ export function PostItem({ post, currentUserId, onDelete }: Props) {
         </TouchableOpacity>
       )}
 
-      <Text style={feedStyles.author}>User: {post.user.username}</Text>
+      <ProfileLink username={post.user.username}>
+  User: @{post.user.username}
+</ProfileLink>
 
       <Text style={feedStyles.content}>{post.content}</Text>
 
@@ -32,10 +35,6 @@ export function PostItem({ post, currentUserId, onDelete }: Props) {
           {new Date(post.createdAt).toLocaleString()}
         </Text>
 
-        <View style={feedStyles.stats}>
-          <Text style={feedStyles.stat}>👍 {post.likes}</Text>
-          <Text style={feedStyles.stat}>🔁 {post.shares}</Text>
-        </View>
       </View>
     </View>
   );
