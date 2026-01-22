@@ -1,17 +1,39 @@
+// app/(app)/profile/[username].tsx
+
 import { View, Text } from "react-native";
 import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { useProfile } from "@/hooks/useProfile";
+import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { commonStyles } from "@/styles/common";
+
+type Tab = "posts" | "followers" | "following" | "likes" | "shares";
 
 export default function Profile() {
   const { username } = useLocalSearchParams<{ username: string }>();
   const { profile, posts, loading } = useProfile(username!);
 
-  if (loading) return <Text>Loading…</Text>;
-  if (!profile) return <Text>User not found</Text>;
+  const [activeTab, setActiveTab] = useState<Tab>("posts");
+
+  if (loading) {
+    return (
+      <View style={commonStyles.container}>
+        <Text>Loading…</Text>
+      </View>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <View style={commonStyles.container}>
+        <Text>User not found</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={commonStyles.container}>
+      {/* Header */}
       <Text style={{ fontSize: 22, fontWeight: "bold" }}>
         {profile.displayName ?? profile.username}
       </Text>
@@ -20,14 +42,25 @@ export default function Profile() {
         @{profile.username}
       </Text>
 
-      {posts.map(post => (
-        <View key={post.id} style={{ marginBottom: 16 }}>
-          <Text>{post.content}</Text>
-          <Text style={{ fontSize: 12, color: "#999" }}>
-            {new Date(post.createdAt).toLocaleString()}
-          </Text>
-        </View>
-      ))}
+      {/* Tabs */}
+      <ProfileTabs active={activeTab} onChange={setActiveTab} />
+
+      {/* Content */}
+      {activeTab === "posts" &&
+        posts.map(post => (
+          <View key={post.id} style={{ marginBottom: 16 }}>
+            <Text>{post.content}</Text>
+            <Text style={{ fontSize: 12, color: "#999" }}>
+              {new Date(post.createdAt).toLocaleString()}
+            </Text>
+          </View>
+        ))}
+
+      {activeTab !== "posts" && (
+        <Text style={{ color: "#999", marginTop: 12 }}>
+          {activeTab} — coming later
+        </Text>
+      )}
     </View>
   );
 }
