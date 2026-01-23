@@ -1,8 +1,6 @@
-// app/(app)/profile/[username].tsx
-
 import { View, Text } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useProfile } from "@/hooks/useProfile";
 import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { commonStyles } from "@/styles/common";
@@ -14,11 +12,24 @@ export default function Profile() {
 
   const {
     profile,
-    posts = [], // ✅ hard default
+    posts = [],
+    followers,
+    following,
+    fetchFollowers,
+    fetchFollowing,
     loading,
   } = useProfile(username!);
 
   const [activeTab, setActiveTab] = useState<Tab>("posts");
+
+  useEffect(() => {
+    if (activeTab === "followers") {
+      fetchFollowers();
+    }
+    if (activeTab === "following") {
+      fetchFollowing();
+    }
+  }, [activeTab, fetchFollowers, fetchFollowing]);
 
   if (loading) {
     return (
@@ -50,7 +61,7 @@ export default function Profile() {
       {/* Tabs */}
       <ProfileTabs active={activeTab} onChange={setActiveTab} />
 
-      {/* Content */}
+      {/* POSTS */}
       {activeTab === "posts" && posts.length === 0 && (
         <Text style={{ color: "#999", marginTop: 12 }}>
           No posts yet
@@ -67,11 +78,33 @@ export default function Profile() {
           </View>
         ))}
 
-      {activeTab !== "posts" && (
+      {/* FOLLOWERS */}
+      {activeTab === "followers" && followers.length === 0 && (
         <Text style={{ color: "#999", marginTop: 12 }}>
-          {activeTab} — coming later
+          No followers yet
         </Text>
       )}
+
+      {activeTab === "followers" &&
+        followers.map(user => (
+          <View key={user.id} style={{ marginBottom: 12 }}>
+            <Text>@{user.username}</Text>
+          </View>
+        ))}
+
+      {/* FOLLOWING */}
+      {activeTab === "following" && following.length === 0 && (
+        <Text style={{ color: "#999", marginTop: 12 }}>
+          Not following anyone yet
+        </Text>
+      )}
+
+      {activeTab === "following" &&
+        following.map(user => (
+          <View key={user.id} style={{ marginBottom: 12 }}>
+            <Text>@{user.username}</Text>
+          </View>
+        ))}
     </View>
   );
 }
