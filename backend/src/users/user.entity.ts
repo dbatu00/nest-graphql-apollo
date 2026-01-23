@@ -40,12 +40,6 @@ export class User {
   @OneToMany(() => Follow, follow => follow.following)
   followers: Follow[];
 
-  @Field(() => Int)
-  followersCount: number = 0;
-
-  @Field(() => Int)
-  followingCount: number = 0;
-
   @Field()
   @CreateDateColumn()
   createdAt: Date;
@@ -53,4 +47,5 @@ export class User {
   @Field()
   @UpdateDateColumn()
   updatedAt: Date;
+
 }

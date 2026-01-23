@@ -49,6 +49,7 @@ export default function Posts() {
         posts={feed.posts}
         currentUserId={currentUserId}
         onDelete={handleDelete}
+        onToggleFollow={feed.toggleFollowOptimistic} 
       />
     </View>
   );

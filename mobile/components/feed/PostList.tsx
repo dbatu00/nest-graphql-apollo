@@ -7,20 +7,29 @@ type Props = {
   posts: Post[];
   currentUserId: number | null;
   onDelete: (postId: number) => void;
+  onToggleFollow: (username: string, follow: boolean) => void;
 };
 
-export function PostList({ posts, currentUserId, onDelete }: Props) {
+export function PostList({
+  posts,
+  currentUserId,
+  onDelete,
+  onToggleFollow,
+}: Props) {
   return (
     <FlatList
       data={posts}
       keyExtractor={(item) => item.id.toString()}
       contentContainerStyle={feedStyles.feedContent}
-      ItemSeparatorComponent={() => <View style={feedStyles.separator} />}
+      ItemSeparatorComponent={() => (
+        <View style={feedStyles.separator} />
+      )}
       renderItem={({ item }) => (
         <PostItem
           post={item}
           currentUserId={currentUserId}
           onDelete={onDelete}
+          onToggleFollow={onToggleFollow}
         />
       )}
     />

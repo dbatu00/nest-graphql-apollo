@@ -21,10 +21,11 @@ type User {
   displayName: String
   bio: String
   posts: [Post!]!
-  followersCount: Int!
-  followingCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
+  isFollowedByMe: Boolean!
+  followersCount: Int!
+  followingCount: Int!
 }
 
 type AuthPayload {
