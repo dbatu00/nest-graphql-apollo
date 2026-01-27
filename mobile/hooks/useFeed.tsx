@@ -11,20 +11,20 @@ export function useFeed() {
     try {
       setLoading(true);
 
-      const data = await graphqlFetch<{ feed: Post[] }>(`
+      const data = await graphqlFetch<{ feed: Post[] }>
+      (`
        query {
-  feed {
-    id
-    content
-    createdAt
-    user {
-      id
-      username
-      isFollowedByMe
-    }
-  }
-}
-
+          feed {
+            id
+            content
+            createdAt
+            user {
+              id
+              username
+              isFollowedByMe
+            }
+          }
+        }
       `);
 
       setPosts(data.feed);
