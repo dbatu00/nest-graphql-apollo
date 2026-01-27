@@ -1,18 +1,10 @@
 /* TODO:
-2-) react memo?
-3-) userservice 
-  may want to introduce custom error classes 
-  (e.g. UserNotFoundError) and map them to GraphQL errors later.
+3-) may want to introduce custom error classes - e.g. UserNotFoundError) and map them to GraphQL errors later.
 5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) 
-    a)use global db access module in app module
 9-) Use try/catch only for meaningful error conversion
-11-) pressing enter does 'add user' etc on website
-12-) unify log format
-# [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersService] getAllUsers called
-[0] [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersService] getAllUsers success | count=49
-[0] [Nest] 5988  - 02.12.2025 18:34:21     LOG [UsersResolver] getAllUsers success | result count: 49
-*/
-13-) frontend getusers input check for string entries that start with a number
-14-) get all users case when there are no users in db
+14-) get all cases when db is empty
 15-) extract query strings for readability
 16-) logged in user gets deleted, feed says user not found
+17-) postItem isowner and canfollow checks are sloppy
+18-) currentUserId is passed around in client. its unneccesary. centralize auth and identity
+*/
