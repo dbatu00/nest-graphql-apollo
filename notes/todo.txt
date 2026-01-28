@@ -7,4 +7,6 @@
 16-) logged in user gets deleted, feed says user not found
 17-) postItem isowner and canfollow checks are sloppy
 18-) currentUserId is passed around in client. its unneccesary. centralize auth and identity
+19-) make sure you check which profile tabs refresh on page refresh vs tab change
+20-) resolver async
 */
