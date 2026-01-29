@@ -1,7 +1,7 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
 import { Post } from "@/types/Post";
 import { feedStyles } from "@/styles/feed";
-import { ProfileLink } from "@/components/common/ProfileLink";
+import { UserRow } from "@/components/user/UserRow";
 
 type Props = {
   post: Post;
@@ -17,50 +17,23 @@ export function PostItem({
   onToggleFollow,
 }: Props) {
   const isOwner = currentUserId === post.user.id;
-  const canFollow =
-    currentUserId !== null && post.user.id !== currentUserId;
 
   return (
     <View style={feedStyles.postCard}>
-      {isOwner && (
-        <TouchableOpacity
-          style={feedStyles.deleteButton}
-          activeOpacity={0.7}
-          onPress={() => onDelete(post.id)}
-        >
-          <Text style={feedStyles.deleteText}>DELETE</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Author + Follow */}
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
+      {/* User row: handles follow/unfollow or delete */}
+      <UserRow
+        user={{
+          id: post.user.id,
+          username: post.user.username,
+          displayName: post.user.username, // or use displayName if available
+          followedByMe: post.user.followedByMe,
         }}
-      >
-        <ProfileLink username={post.user.username}>
-          @{post.user.username}
-        </ProfileLink>
+        currentUserId={currentUserId ?? undefined}
+        onDelete={isOwner ? () => onDelete(post.id) : undefined}
+        onToggleFollow={isOwner ? undefined : onToggleFollow}
+      />
 
-        {canFollow && (
-          <TouchableOpacity
-            onPress={() =>
-              onToggleFollow(
-                post.user.username,
-                !post.user.isFollowedByMe
-              )
-            }
-          >
-            <Text style={{ fontWeight: "600" }}>
-              {post.user.isFollowedByMe ? "Unfollow" : "Follow"}
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Content */}
+      {/* Post content */}
       <Text style={feedStyles.content}>{post.content}</Text>
 
       {/* Footer */}

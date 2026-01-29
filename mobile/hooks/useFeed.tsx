@@ -21,7 +21,7 @@ export function useFeed() {
             user {
               id
               username
-              isFollowedByMe
+              followedByMe
             }
           }
         }
@@ -79,7 +79,7 @@ export function useFeed() {
             ...post,
             user: {
               ...post.user,
-              isFollowedByMe: shouldFollow,
+              followedByMe: shouldFollow,
             },
           }
         : post
@@ -105,7 +105,7 @@ export function useFeed() {
               ...post,
               user: {
                 ...post.user,
-                isFollowedByMe: !shouldFollow,
+                followedByMe: !shouldFollow,
               },
             }
           : post

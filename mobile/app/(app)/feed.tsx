@@ -45,11 +45,11 @@ export default function Posts() {
         <Text style={feedStyles.error}>{feed.error}</Text>
       )}
 
-      <PostList
+     <PostList
         posts={feed.posts}
         currentUserId={currentUserId}
-        onDelete={handleDelete}
-        onToggleFollow={feed.toggleFollowOptimistic} 
+        onDelete={(postId: number) => feed.remove(postId)}
+        onToggleFollow={feed.toggleFollowOptimistic}
       />
     </View>
   );

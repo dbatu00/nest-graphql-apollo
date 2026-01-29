@@ -19,7 +19,7 @@ export class UsersResolver {
   }
 
   @ResolveField(() => Boolean)
-  async isFollowedByMe(
+  async followedByMe(
     @Parent() user: User,
     @CurrentUser() currentUser?: User,
   ) {

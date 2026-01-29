@@ -5,6 +5,6 @@ export type Post = {
   user: {
     id: number;
     username: string;
-    isFollowedByMe: boolean;
+    followedByMe: boolean;
   };
 };

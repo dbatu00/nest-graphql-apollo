@@ -23,7 +23,7 @@ type User {
   posts: [Post!]!
   createdAt: DateTime!
   updatedAt: DateTime!
-  isFollowedByMe: Boolean!
+  followedByMe: Boolean!
   followersCount: Int!
   followingCount: Int!
 }

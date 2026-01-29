@@ -102,18 +102,21 @@ export default function Profile() {
         <Text style={{ color: "#999", marginTop: 12 }}>No followers yet</Text>
       )}
 
-      {activeTab === "followers" &&
-        followers.map((f: Follower) => {
-          const isSelf = f.user.username === currentUser.username;
-          return (
-            <UserRow
-              key={f.user.id}
-              user={f.user}
-              followedByMe={f.followedByMe}
-              onToggleFollow={isSelf ? undefined : toggleFollow}
-            />
-          );
-        })}
+     {activeTab === "followers" &&
+  followers.map(f => {
+    const isSelf = f.user.username === currentUser.username;
+
+    return (
+      <UserRow
+        key={f.user.id}
+        user={{
+          ...f.user,
+          followedByMe: f.followedByMe, 
+        }}
+        onToggleFollow={isSelf ? undefined : toggleFollow}
+      />
+    );
+  })}
 
       {/* FOLLOWING */}
       {activeTab === "following" && following.length === 0 && (
