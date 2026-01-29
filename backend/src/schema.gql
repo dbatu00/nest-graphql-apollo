@@ -38,7 +38,17 @@ type FollowerView {
   followedByMe: Boolean!
 }
 
+type Activity {
+  id: Int!
+  type: String!
+  actor: User!
+  targetId: Int
+  targetType: String
+  createdAt: DateTime!
+}
+
 type Query {
+  activityFeed(username: String!, limit: Float): [Activity!]!
   userByUsername(username: String!): User
   feed: [Post!]!
   postsByUsername(username: String!): [Post!]!
@@ -50,6 +60,9 @@ type Query {
 }
 
 type Mutation {
+  toggleLike(postId: Float!, shouldLike: Boolean!): Boolean!
+  toggleFollow(targetUsername: String!, shouldFollow: Boolean!): Boolean!
+  sharePost(postId: Float!): Boolean!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!

@@ -1,7 +1,10 @@
 import { View, Text, Pressable } from "react-native";
 
-const TABS = ["posts", "followers", "following", "likes", "shares"] as const;
-type Tab = typeof TABS[number];
+// Add "activity" to tabs
+export const TABS = ["posts", "followers", "following", "likes", "shares", "activity"] as const;
+
+// Export Tab type for reuse
+export type Tab = typeof TABS[number];
 
 export function ProfileTabs({
   active,
