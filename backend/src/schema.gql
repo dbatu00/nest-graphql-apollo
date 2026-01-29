@@ -46,6 +46,7 @@ type Query {
   followers(username: String!): [User!]!
   following(username: String!): [User!]!
   followersWithFollowState(username: String!): [FollowerView!]!
+  followingWithFollowState(username: String!): [FollowerView!]!
 }
 
 type Mutation {

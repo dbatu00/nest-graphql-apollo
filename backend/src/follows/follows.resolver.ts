@@ -43,6 +43,8 @@ export class FollowsResolver {
             .then(rows => rows.map(r => r.following));
     }
 
+
+
     @UseGuards(GqlAuthGuard)
     @Query(() => [FollowerView])
     async followersWithFollowState(
@@ -62,6 +64,25 @@ export class FollowsResolver {
                 raw[i].followedByMe === "true",
         }));
     }
+
+    @UseGuards(GqlAuthGuard)
+    @Query(() => [FollowerView])
+    async followingWithFollowState(
+        @Args("username") username: string,
+        @CurrentUser() user: User,
+    ) {
+        const { entities, raw } =
+            await this.followsService.getFollowingWithFollowState(
+                username,
+                user.id
+            );
+
+        return entities.map((u, i) => ({
+            user: u,
+            followedByMe: raw[i].followedByMe === true || raw[i].followedByMe === "true",
+        }));
+    }
+
 
 
 }

@@ -131,56 +131,93 @@ export function useProfile(username: string) {
     );
   }, [username]);
 
-  /* FOLLOWING (later) */
+  /* FOLLOWING */
   const fetchFollowing = useCallback(async () => {
     if (!username) return;
-  }, [username]);
+
+    const data = await graphqlFetch<{ followingWithFollowState: FollowerViewAPI[] }>(
+        `
+        query FollowingWithFollowState($username: String!) {
+            followingWithFollowState(username: $username) {
+                followedByMe
+                user {
+                    id
+                    username
+                    displayName
+                }
+            }
+        }
+        `,
+        { username }
+    );
+
+    setFollowing(
+        (data.followingWithFollowState ?? []).map(f => ({
+            user: f.user,
+            followedByMe: f.followedByMe,
+        }))
+    );
+}, [username]);
+
 
   /* FOLLOW / UNFOLLOW */
-  const toggleFollow = useCallback(
-    async (targetUsername: string, shouldFollow: boolean) => {
-      // 🚫 prevent self-follow
-      if (!currentUsername || currentUsername === targetUsername) {
-        return;
-      }
+ const toggleFollow = useCallback(
+  async (targetUsername: string, shouldFollow: boolean) => {
+    if (!currentUsername || currentUsername === targetUsername) return;
 
-      // optimistic update
+    // update both followers and following
+    setFollowers(prev =>
+      prev.map(f =>
+        f.user.username === targetUsername
+          ? { ...f, followedByMe: shouldFollow }
+          : f
+      )
+    );
+
+    setFollowing(prev =>
+      prev.map(f =>
+        f.user.username === targetUsername
+          ? { ...f, followedByMe: shouldFollow }
+          : f
+      )
+    );
+
+    try {
+      await graphqlFetch(
+        shouldFollow
+          ? `
+          mutation FollowUser($username: String!) {
+            followUser(username: $username)
+          }
+        `
+          : `
+          mutation UnfollowUser($username: String!) {
+            unfollowUser(username: $username)
+          }
+        `,
+        { username: targetUsername }
+      );
+    } catch {
+      // rollback
       setFollowers(prev =>
         prev.map(f =>
           f.user.username === targetUsername
-            ? { ...f, followedByMe: shouldFollow }
+            ? { ...f, followedByMe: !shouldFollow }
             : f
         )
       );
+      setFollowing(prev =>
+        prev.map(f =>
+          f.user.username === targetUsername
+            ? { ...f, followedByMe: !shouldFollow }
+            : f
+        )
+      );
+    }
+  },
+  [currentUsername]
+);
 
-      try {
-        await graphqlFetch(
-          shouldFollow
-            ? `
-              mutation FollowUser($username: String!) {
-                followUser(username: $username)
-              }
-            `
-            : `
-              mutation UnfollowUser($username: String!) {
-                unfollowUser(username: $username)
-              }
-            `,
-          { username: targetUsername }
-        );
-      } catch {
-        // rollback
-        setFollowers(prev =>
-          prev.map(f =>
-            f.user.username === targetUsername
-              ? { ...f, followedByMe: !shouldFollow }
-              : f
-          )
-        );
-      }
-    },
-    [currentUsername]
-  );
 
   return {
     profile,

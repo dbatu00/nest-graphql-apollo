@@ -98,6 +98,40 @@ export class FollowsService {
         return result;
     }
 
+    async getFollowingWithFollowState(
+        profileUsername: string,
+        viewerId: number,
+    ) {
+        const qb = this.userRepo
+            .createQueryBuilder("u") // u = user being followed
+            .innerJoin(
+                Follow,
+                "f",
+                "f.followingId = u.id"
+            )
+            .innerJoin(
+                "users",
+                "profile",
+                "profile.id = f.followerId"
+            )
+            .leftJoin(
+                Follow,
+                "f2",
+                "f2.followerId = :viewerId AND f2.followingId = u.id",
+                { viewerId }
+            )
+            .where("profile.username = :profileUsername", { profileUsername })
+            .select(["u.id", "u.username", "u.displayName"])
+            .addSelect(
+                "CASE WHEN f2.id IS NULL THEN false ELSE true END",
+                "followedByMe"
+            );
+
+        const result = await qb.getRawAndEntities();
+        return result;
+    }
+
+
 
 
 

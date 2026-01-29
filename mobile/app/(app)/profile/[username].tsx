@@ -119,9 +119,19 @@ export default function Profile() {
   })}
 
       {/* FOLLOWING */}
-      {activeTab === "following" && following.length === 0 && (
-        <Text style={{ color: "#999", marginTop: 12 }}>Not following anyone yet</Text>
-      )}
+      {activeTab === "following" &&
+  following.map(f => {
+    const isSelf = f.user.username === currentUser.username;
+
+    return (
+      <UserRow
+        key={f.user.id}
+        user={{ ...f.user, followedByMe: f.followedByMe }}
+        onToggleFollow={isSelf ? undefined : toggleFollow}
+      />
+    );
+  })}
+
     </View>
   );
 }
