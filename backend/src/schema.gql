@@ -33,6 +33,11 @@ type AuthPayload {
   token: String!
 }
 
+type FollowerView {
+  user: User!
+  followedByMe: Boolean!
+}
+
 type Query {
   userByUsername(username: String!): User
   feed: [Post!]!
@@ -40,6 +45,7 @@ type Query {
   me: User!
   followers(username: String!): [User!]!
   following(username: String!): [User!]!
+  followersWithFollowState(username: String!): [FollowerView!]!
 }
 
 type Mutation {

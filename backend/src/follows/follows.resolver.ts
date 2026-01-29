@@ -5,6 +5,7 @@ import { Follow } from "./follow.entity";
 import { GqlAuthGuard } from "../auth/gql-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { User } from "../users/user.entity";
+import { FollowerView } from "./dto/follower-view.type";
 
 @Resolver()
 export class FollowsResolver {
@@ -41,4 +42,26 @@ export class FollowsResolver {
             .getFollowing(username)
             .then(rows => rows.map(r => r.following));
     }
+
+    @UseGuards(GqlAuthGuard)
+    @Query(() => [FollowerView])
+    async followersWithFollowState(
+        @Args("username") username: string,
+        @CurrentUser() user: User,
+    ) {
+        const { entities, raw } =
+            await this.followsService.getFollowersWithFollowState(
+                username,
+                user.id,
+            );
+
+        return entities.map((u, i) => ({
+            user: u,
+            followedByMe:
+                raw[i].followedByMe === true ||
+                raw[i].followedByMe === "true",
+        }));
+    }
+
+
 }

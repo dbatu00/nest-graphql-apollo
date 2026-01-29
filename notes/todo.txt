@@ -9,4 +9,5 @@
 18-) currentUserId is passed around in client. its unneccesary. centralize auth and identity
 19-) make sure you check which profile tabs refresh on page refresh vs tab change
 20-) resolver async
+21-) follow service  async getFollowersWithFollowStat is there a better way than to return user and raw arrays
 */
