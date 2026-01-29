@@ -1,17 +1,11 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
-import { UseGuards, Logger, InternalServerErrorException } from '@nestjs/common';
-
+import { Resolver, Query, Mutation, Args, Int, ResolveField, Parent } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
-
-
-import { GqlAuthGuard } from 'src/auth/gql-auth.guard';
 import { CurrentUser } from 'src/auth/current-user.decorator';
 
 @Resolver(() => User)
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) { }
-
 
   /**
    * Public profile lookup
@@ -23,5 +17,31 @@ export class UsersResolver {
   ): Promise<User | null> {
     return this.usersService.findByUsername(username);
   }
+
+  @ResolveField(() => Boolean)
+  async followedByMe(
+    @Parent() user: User,
+    @CurrentUser() currentUser?: User,
+  ) {
+    if (!currentUser) return false;
+    if (currentUser.id === user.id) return false;
+
+    return this.usersService.isFollowing(
+      currentUser.id,
+      user.id,
+    );
+  }
+
+  @ResolveField(() => Int)
+  followersCount(@Parent() user: User) {
+    return this.usersService.countFollowers(user.id);
+  }
+
+  @ResolveField(() => Int)
+  followingCount(@Parent() user: User) {
+    return this.usersService.countFollowing(user.id);
+  }
+
+
 }
 

@@ -11,6 +11,8 @@ import { PostsModule } from './posts/posts.module';
 import { AuthModule } from './auth/auth.module';
 import { Auth } from './auth/auth.entity';
 import { ConfigModule } from '@nestjs/config';
+import { FollowsModule } from './follows/follows.module';
+import { Follow } from './follows/follow.entity';
 
 
 @Module({
@@ -26,7 +28,7 @@ import { ConfigModule } from '@nestjs/config';
       username: 'postgres',
       password: 'qweasdzxc',
       database: 'nest_graphql',
-      entities: [User, Post, Auth],
+      entities: [User, Post, Auth, Follow],
       synchronize: true,
     }),
     ConfigModule.forRoot({
@@ -35,6 +37,7 @@ import { ConfigModule } from '@nestjs/config';
     UsersModule,
     PostsModule,
     AuthModule,
+    FollowsModule,
   ]
 })
 export class AppModule { }

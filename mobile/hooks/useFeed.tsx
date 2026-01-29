@@ -11,8 +11,9 @@ export function useFeed() {
     try {
       setLoading(true);
 
-      const data = await graphqlFetch<{ feed: Post[] }>(`
-        query {
+      const data = await graphqlFetch<{ feed: Post[] }>
+      (`
+       query {
           feed {
             id
             content
@@ -20,6 +21,7 @@ export function useFeed() {
             user {
               id
               username
+              followedByMe
             }
           }
         }
@@ -65,6 +67,54 @@ export function useFeed() {
     fetchPosts();
   };
 
+  const toggleFollowOptimistic = async (
+  username: string,
+  shouldFollow: boolean,
+) => {
+  // 1. Optimistic update
+  setPosts(prev =>
+    prev.map(post =>
+      post.user.username === username
+        ? {
+            ...post,
+            user: {
+              ...post.user,
+              followedByMe: shouldFollow,
+            },
+          }
+        : post
+    )
+  );
+
+  // 2. Fire mutation (do NOT await for UI)
+  try {
+    await graphqlFetch(
+      `
+      mutation ToggleFollow($username: String!) {
+        ${shouldFollow ? "followUser" : "unfollowUser"}(username: $username)
+      }
+      `,
+      { username }
+    );
+  } catch {
+    // 3. Rollback if failed
+    setPosts(prev =>
+      prev.map(post =>
+        post.user.username === username
+          ? {
+              ...post,
+              user: {
+                ...post.user,
+                followedByMe: !shouldFollow,
+              },
+            }
+          : post
+      )
+    );
+  }
+};
+
+
   return {
     posts,
     loading,
@@ -72,5 +122,6 @@ export function useFeed() {
     publish,
     remove,
     refresh: fetchPosts,
+    toggleFollowOptimistic
   };
 }
