@@ -4,7 +4,8 @@ import { Post } from "src/posts/post.entity";
 import { Repository } from "typeorm";
 import { Activity } from "./activity.entity";
 import { User } from "src/users/user.entity";
-
+import { Follow } from "src/follows/follow.entity";
+Follow
 
 @Injectable()
 export class ActivityService {
@@ -14,25 +15,71 @@ export class ActivityService {
         @InjectRepository(Post)
         private readonly postRepo: Repository<Post>,
         @InjectRepository(User)
-        private readonly userRepo: Repository<User>,
+        private readonly userRepo: Repository<User>
     ) { }
+
+    async createActivity(input: {
+        type: "post" | "like" | "share" | "follow";
+        actor: User;
+        targetPost?: Post;
+        targetUser?: User;
+        active?: boolean;
+    }) {
+        return this.activityRepo.save({
+            type: input.type,
+            actor: input.actor,
+            actorId: input.actor.id,                  // ✅
+            targetPost: input.targetPost,
+            targetPostId: input.targetPost?.id,       // ✅
+            targetUser: input.targetUser,
+            targetUserId: input.targetUser?.id,       // ✅
+            active: input.active ?? true,
+        });
+    }
+
+    async getProfileActivity(username: string, limit = 50) {
+        const user = await this.userRepo.findOneBy({ username });
+        if (!user) return [];
+
+        return this.activityRepo
+            .createQueryBuilder("a")
+            .innerJoinAndSelect("a.actor", "actor")
+            .leftJoinAndSelect("a.targetPost", "targetPost")
+            .leftJoinAndSelect("a.targetUser", "targetUser")
+            .where("actor.id = :userId", { userId: user.id })
+            .andWhere("a.active = true")
+            .orderBy("a.createdAt", "DESC")
+            .take(limit)
+            .getMany();
+    }
 
     // FEED: get recent activities of a user + people they follow
     async getUserFeed(username: string, limit = 50) {
         const user = await this.userRepo.findOneBy({ username });
         if (!user) return [];
 
-        // fetch own + followed users' activities
         return this.activityRepo
             .createQueryBuilder("a")
-            .leftJoinAndSelect("a.actor", "actor")
+            .innerJoinAndSelect("a.actor", "actor") // ✅ MUST be select
+            .leftJoin(
+                Follow,
+                "f",
+                "f.followingId = actor.id AND f.followerId = :viewerId",
+                { viewerId: user.id }
+            )
             .leftJoinAndSelect("a.targetPost", "targetPost")
-            .where("a.actorId = :userId OR a.actorId IN (SELECT followingId FROM follows WHERE followerId = :userId)", { userId: user.id })
+            .leftJoinAndSelect("a.targetUser", "targetUser")
+            .where(
+                "actor.id = :viewerId OR f.id IS NOT NULL",
+                { viewerId: user.id }
+            )
             .andWhere("a.active = true")
             .orderBy("a.createdAt", "DESC")
             .take(limit)
             .getMany();
     }
+
+
 
     // LIKE
     async toggleLike(userId: number, postId: number, shouldLike: boolean) {

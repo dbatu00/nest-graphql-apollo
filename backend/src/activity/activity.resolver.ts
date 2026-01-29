@@ -9,11 +9,15 @@ export class ActivityResolver {
     constructor(private readonly activityService: ActivityService) { }
 
     @Query(() => [ActivityGQL])
-    async activityFeed(
-        @Args("username") username: string,
-        @Args("limit", { type: () => Number, nullable: true }) limit = 50 // ⚠️ explicit type
+    activityFeed(@CurrentUser() user: User) {
+        return this.activityService.getUserFeed(user.username);
+    }
+
+    @Query(() => [ActivityGQL])
+    profileActivity(
+        @Args("username") username: string
     ) {
-        return this.activityService.getUserFeed(username, limit);
+        return this.activityService.getProfileActivity(username);
     }
 
     @Mutation(() => Boolean)

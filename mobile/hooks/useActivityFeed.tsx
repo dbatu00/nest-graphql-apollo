@@ -8,13 +8,19 @@ export function useActivityFeed(username?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchActivities = useCallback(async () => {
+    if (!username) {
+      setActivities([]);
+      return;
+    }
+
     try {
       setLoading(true);
+      setError(null);
 
-      const data = await graphqlFetch<{ activityFeed: Activity[] }>(
+      const data = await graphqlFetch<{ profileActivity: Activity[] }>(
         `
-        query ActivityFeed($username: String) {
-          activityFeed(username: $username) {
+        query ProfileActivity($username: String!) {
+          profileActivity(username: $username) {
             id
             type
             createdAt
@@ -27,9 +33,9 @@ export function useActivityFeed(username?: string) {
         { username }
       );
 
-      setActivities(data.activityFeed);
+      setActivities(data.profileActivity);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message ?? "Failed to load activity");
     } finally {
       setLoading(false);
     }

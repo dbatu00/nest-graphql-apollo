@@ -1,25 +1,23 @@
-// activity.types.ts
 import { ObjectType, Field, Int } from "@nestjs/graphql";
 import { User } from "../users/user.entity";
+import { Post } from "../posts/post.entity";
 
-export type ActivityTypeEnum = "post" | "follow" | "like" | "share";
-
-@ObjectType("Activity") // name exposed in GraphQL
+@ObjectType("Activity")
 export class ActivityGQL {
     @Field(() => Int)
     id: number;
 
     @Field(() => String)
-    type: ActivityTypeEnum;
+    type: "post" | "follow" | "like" | "share";
 
     @Field(() => User)
     actor: User;
 
-    @Field(() => Int, { nullable: true })
-    targetId?: number;
+    @Field(() => User, { nullable: true })
+    targetUser?: User;
 
-    @Field(() => String, { nullable: true })
-    targetType?: "user" | "post";
+    @Field(() => Post, { nullable: true })
+    targetPost?: Post;
 
     @Field(() => Date)
     createdAt: Date;

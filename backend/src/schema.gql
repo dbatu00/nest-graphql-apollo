@@ -42,13 +42,14 @@ type Activity {
   id: Int!
   type: String!
   actor: User!
-  targetId: Int
-  targetType: String
+  targetUser: User
+  targetPost: Post
   createdAt: DateTime!
 }
 
 type Query {
-  activityFeed(username: String!, limit: Float): [Activity!]!
+  activityFeed: [Activity!]!
+  profileActivity(username: String!): [Activity!]!
   userByUsername(username: String!): User
   feed: [Post!]!
   postsByUsername(username: String!): [Post!]!

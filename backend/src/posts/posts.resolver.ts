@@ -5,10 +5,13 @@ import { Post } from './post.entity';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { User } from '../users/user.entity';
+import { ActivityService } from 'src/activity/activity.service';
 
 @Resolver(() => Post)
 export class PostsResolver {
-    constructor(private readonly postsService: PostsService) { }
+    constructor(
+        private readonly postsService: PostsService,
+        private readonly activityService: ActivityService) { }
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [Post])
@@ -18,13 +21,14 @@ export class PostsResolver {
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Post)
-    addPost(
+    async addPost(
         @CurrentUser() user: User,
         @Args('content') content: string,
     ) {
-        return this.postsService.addPost(user.id, content);
-    }
 
+        return this.postsService.addPost(user.id, content);
+
+    }
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     deletePost(

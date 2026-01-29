@@ -9,21 +9,31 @@ export class Activity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => User, user => user.id)
-    actor: User; // who did the action
+    @ManyToOne(() => User)
+    actor: User;
 
-    @Column({ type: "enum", enum: ["post", "like", "share", "follow"] })
-    type: ActivityType;
+    @Column()
+    actorId: number;   // 👈 REQUIRED for QueryBuilder filtering
+
+    @ManyToOne(() => User, { nullable: true })
+    targetUser?: User;
 
     @Column({ nullable: true })
-    targetUserId?: number; // for follow/unfollow, share
+    targetUserId?: number;
 
     @ManyToOne(() => Post, { nullable: true })
-    targetPost?: Post; // for like/share
+    targetPost?: Post;
+
+    @Column({ nullable: true })
+    targetPostId?: number;
+
+    @Column()
+    type: string;
 
     @Column({ default: true })
-    active: boolean; // false if unfollow/unlike/unshare
+    active: boolean;
 
     @CreateDateColumn()
     createdAt: Date;
 }
+
