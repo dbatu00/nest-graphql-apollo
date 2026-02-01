@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { Activity } from "@/types/Activity";
 
-export function useActivityFeed(username?: string) {
+export function useProfileActivity(username?: string) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

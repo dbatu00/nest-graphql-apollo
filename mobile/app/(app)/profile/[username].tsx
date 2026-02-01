@@ -6,7 +6,7 @@ import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
 import { commonStyles } from "@/styles/common";
 import { getCurrentUser } from "@/utils/currentUser";
-import { useActivityFeed } from "@/hooks/useActivityFeed";
+import { useProfileActivity } from "@/hooks/useProfileActivity";
 import { ProfileTabs, Tab } from "@/components/profile/ProfileTabs";
 
 type User = {
@@ -56,7 +56,7 @@ export default function Profile() {
 
   // Activity feed only when tab is active
   const { activities, loading: activityLoading, refresh: refreshActivities } =
-    useActivityFeed(activeTab === "activity" ? username : undefined);
+    useProfileActivity(activeTab === "activity" ? username : undefined);
 
   if (loading || !currentUser) {
     return (

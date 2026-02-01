@@ -48,7 +48,7 @@ type Activity {
 }
 
 type Query {
-  activityFeed: [Activity!]!
+  userFeed: [Activity!]!
   profileActivity(username: String!): [Activity!]!
   userByUsername(username: String!): User
   feed: [Post!]!

@@ -9,7 +9,7 @@ export class ActivityResolver {
     constructor(private readonly activityService: ActivityService) { }
 
     @Query(() => [ActivityGQL])
-    activityFeed(@CurrentUser() user: User) {
+    userFeed(@CurrentUser() user: User) {
         return this.activityService.getUserFeed(user.username);
     }
 

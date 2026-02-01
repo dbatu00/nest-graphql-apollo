@@ -5,7 +5,6 @@ import { Repository } from "typeorm";
 import { Activity } from "./activity.entity";
 import { User } from "src/users/user.entity";
 import { Follow } from "src/follows/follow.entity";
-Follow
 
 @Injectable()
 export class ActivityService {
@@ -18,6 +17,14 @@ export class ActivityService {
         private readonly userRepo: Repository<User>
     ) { }
 
+    private buildBaseActivityQuery() {
+        return this.activityRepo
+            .createQueryBuilder("a")
+            .innerJoinAndSelect("a.actor", "actor")
+            .leftJoinAndSelect("a.targetPost", "targetPost")
+            .leftJoinAndSelect("a.targetUser", "targetUser")
+            .where("a.active = true");
+    }
     async createActivity(input: {
         type: "post" | "like" | "share" | "follow";
         actor: User;
@@ -41,13 +48,8 @@ export class ActivityService {
         const user = await this.userRepo.findOneBy({ username });
         if (!user) return [];
 
-        return this.activityRepo
-            .createQueryBuilder("a")
-            .innerJoinAndSelect("a.actor", "actor")
-            .leftJoinAndSelect("a.targetPost", "targetPost")
-            .leftJoinAndSelect("a.targetUser", "targetUser")
-            .where("actor.id = :userId", { userId: user.id })
-            .andWhere("a.active = true")
+        return this.buildBaseActivityQuery()
+            .andWhere("actor.id = :userId", { userId: user.id })
             .orderBy("a.createdAt", "DESC")
             .take(limit)
             .getMany();
@@ -58,22 +60,17 @@ export class ActivityService {
         const user = await this.userRepo.findOneBy({ username });
         if (!user) return [];
 
-        return this.activityRepo
-            .createQueryBuilder("a")
-            .innerJoinAndSelect("a.actor", "actor") // ✅ MUST be select
+        return this.buildBaseActivityQuery()
             .leftJoin(
                 Follow,
                 "f",
                 "f.followingId = actor.id AND f.followerId = :viewerId",
                 { viewerId: user.id }
             )
-            .leftJoinAndSelect("a.targetPost", "targetPost")
-            .leftJoinAndSelect("a.targetUser", "targetUser")
             .where(
                 "actor.id = :viewerId OR f.id IS NOT NULL",
                 { viewerId: user.id }
             )
-            .andWhere("a.active = true")
             .orderBy("a.createdAt", "DESC")
             .take(limit)
             .getMany();
