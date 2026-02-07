@@ -1,13 +1,15 @@
 import React from "react";
-import { View, Text, Pressable } from "react-native";
-import { Activity, ActivityType } from "@/types/Activity";
+import { View, Text } from "react-native";
+import { Activity } from "@/types/Activity";
+import { UserRow } from "@/components/user/UserRow";
 
 type Props = {
   activity: Activity;
+  currentUserId?: number;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
 };
 
-export const ActivityRow = ({ activity, onToggleFollow }: Props) => {
+export const ActivityRow = ({ activity, currentUserId, onToggleFollow }: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
 
   // Build display message based on activity type
@@ -27,27 +29,6 @@ export const ActivityRow = ({ activity, onToggleFollow }: Props) => {
       break;
   }
 
-  // Optional follow button for "follow" activities
-  const renderFollowButton = () => {
-    if (type !== "follow" || !onToggleFollow || !targetUser) return null;
-    // You could add logic to check if the current user already follows targetUser
-    const shouldFollow = true; // assume we want to follow/unfollow
-    return (
-      <Pressable
-        onPress={() => onToggleFollow(targetUser.username, shouldFollow)}
-        style={{
-          marginLeft: 8,
-          paddingHorizontal: 8,
-          paddingVertical: 4,
-          backgroundColor: "#eee",
-          borderRadius: 4,
-        }}
-      >
-        <Text>{shouldFollow ? "Follow" : "Unfollow"}</Text>
-      </Pressable>
-    );
-  };
-
   return (
     <View
       style={{
@@ -55,13 +36,27 @@ export const ActivityRow = ({ activity, onToggleFollow }: Props) => {
         paddingHorizontal: 16,
         borderBottomWidth: 1,
         borderColor: "#eee",
-        flexDirection: "row",
-        alignItems: "center",
       }}
     >
-      <Text style={{ flex: 1 }}>{message}</Text>
-      {renderFollowButton()}
-      <Text style={{ fontSize: 12, color: "#999", marginLeft: 8 }}>
+      {/* Message for post/like/share */}
+      {type !== "follow" && <Text style={{ marginBottom: 6 }}>{message}</Text>}
+
+      {/* Follow row */}
+      {type === "follow" && targetUser && onToggleFollow && (
+        <UserRow
+          user={{
+            id: targetUser.id,
+            username: targetUser.username,
+            displayName: targetUser.displayName,
+            followedByMe: targetUser.followedByMe ?? false,
+          }}
+          currentUserId={currentUserId}
+          onToggleFollow={onToggleFollow}
+        />
+      )}
+
+      {/* Timestamp */}
+      <Text style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
         {new Date(createdAt).toLocaleString()}
       </Text>
     </View>

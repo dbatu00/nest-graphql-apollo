@@ -1,22 +1,16 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { Activity } from "@/types/Activity";
 
 export function useProfileActivity(username?: string) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const fetchActivities = useCallback(async () => {
-    if (!username) {
-      setActivities([]);
-      return;
-    }
+  const refresh = useCallback(async () => {
+    if (!username) return;
 
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-
       const data = await graphqlFetch<{ profileActivity: Activity[] }>(
         `
         query ProfileActivity($username: String!) {
@@ -25,25 +19,76 @@ export function useProfileActivity(username?: string) {
             type
             createdAt
             actor { id username displayName }
-            targetUser { id username displayName }
-            targetPost { id content }
+            targetUser { id username displayName followedByMe }
+            targetPost { id content user { id username displayName } createdAt }
           }
         }
-        `,
+      `,
         { username }
       );
-
-      setActivities(data.profileActivity);
-    } catch (err: any) {
-      setError(err.message ?? "Failed to load activity");
+      
+      setActivities(data.profileActivity ?? []);
+    } catch (err) {
+      
+      setActivities([]);
     } finally {
       setLoading(false);
     }
   }, [username]);
 
   useEffect(() => {
-    fetchActivities();
-  }, [fetchActivities]);
+    if (!username) return;
+    refresh();
+  }, [username, refresh]);
 
-  return { activities, loading, error, refresh: fetchActivities };
+  const toggleFollowOptimistic = useCallback(
+    async (username: string, shouldFollow: boolean) => {
+      setActivities(prev =>
+        prev.map(a => {
+          if (a.type === "follow" && a.targetUser?.username === username) {
+            return {
+              ...a,
+              targetUser: { ...a.targetUser, followedByMe: shouldFollow },
+            };
+          }
+          return a;
+        })
+      );
+
+      try {
+        await graphqlFetch(
+          shouldFollow
+            ? `
+            mutation FollowUser($username: String!) {
+              followUser(username: $username)
+            }
+          `
+            : `
+            mutation UnfollowUser($username: String!) {
+              unfollowUser(username: $username)
+            }
+          `,
+          { username }
+        );
+        // re-sync activities from server
+        await refresh();
+      } catch (err) {
+        // rollback
+        setActivities(prev =>
+          prev.map(a => {
+            if (a.type === "follow" && a.targetUser?.username === username) {
+              return {
+                ...a,
+                targetUser: { ...a.targetUser, followedByMe: !shouldFollow },
+              };
+            }
+            return a;
+          })
+        );
+      }
+    },
+    [refresh]
+  );
+
+  return { activities, loading, refresh, toggleFollowOptimistic };
 }

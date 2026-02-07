@@ -61,9 +61,7 @@ type Query {
 }
 
 type Mutation {
-  toggleLike(postId: Float!, shouldLike: Boolean!): Boolean!
   toggleFollow(targetUsername: String!, shouldFollow: Boolean!): Boolean!
-  sharePost(postId: Float!): Boolean!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!

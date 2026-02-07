@@ -1,45 +1,39 @@
 import React from "react";
-import { View, Text } from "react-native";
 import { Activity } from "@/types/Activity";
+import { PostItem } from "@/components/feed/PostItem";
+import { ActivityRow } from "@/components/feed/ActivityRow";
 
 type Props = {
   activity: Activity;
+  currentUserId: number | null;
+  onDeletePost?: (postId: number) => void;
+  onToggleFollow?: (username: string, follow: boolean) => void;
 };
 
-export function FeedItem({ activity }: Props) {
-  switch (activity.type) {
-    case "post":
-      if (!activity.targetPost) return null;
+export function FeedItem({
+  activity,
+  currentUserId,
+  onDeletePost,
+  onToggleFollow,
+}: Props) {
+  // Twitter rule:
+  // Posts are full cards, everything else is compact
 
-      return (
-        <View>
-          <Text>
-            <Text style={{ fontWeight: "bold" }}>
-              {activity.actor.username}
-            </Text>{" "}
-            posted
-          </Text>
-
-          <Text>{activity.targetPost.content}</Text>
-        </View>
-      );
-
-    case "follow":
-      if (!activity.targetUser) return null;
-
-      return (
-        <Text>
-          <Text style={{ fontWeight: "bold" }}>
-            {activity.actor.username}
-          </Text>{" "}
-          followed{" "}
-          <Text style={{ fontWeight: "bold" }}>
-            {activity.targetUser.username}
-          </Text>
-        </Text>
-      );
-
-    default:
-      return null;
+  if (activity.type === "post" && activity.targetPost) {
+    return (
+      <PostItem
+        post={activity.targetPost}
+        currentUserId={currentUserId}
+        onDelete={onDeletePost ?? (() => {})}
+        onToggleFollow={onToggleFollow ?? (() => {})}
+      />
+    );
   }
+
+  return (
+    <ActivityRow
+      activity={activity}
+      onToggleFollow={onToggleFollow}
+    />
+  );
 }

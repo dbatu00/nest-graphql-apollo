@@ -15,6 +15,7 @@ export type Activity = {
     id: number;
     username: string;
     displayName?: string;
+    followedByMe?: boolean;
   };
   targetPost?: Post; // ✅ FIX
 };

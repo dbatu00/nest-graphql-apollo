@@ -1,32 +1,36 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Post } from "src/posts/post.entity";
-import { EntityManager, Repository } from "typeorm";
+import { Repository, EntityManager } from "typeorm";
+
 import { Activity } from "./activity.entity";
-import { User } from "src/users/user.entity";
-import { Follow } from "src/follows/follow.entity";
 import { ActivityType } from "./activity.constants";
+import { User } from "src/users/user.entity";
+import { Post } from "src/posts/post.entity";
+import { Follow } from "src/follows/follow.entity";
 
 @Injectable()
 export class ActivityService {
     constructor(
         @InjectRepository(Activity)
         private readonly activityRepo: Repository<Activity>,
+        @InjectRepository(User)
+        private readonly userRepo: Repository<User>,
         @InjectRepository(Post)
         private readonly postRepo: Repository<Post>,
-        @InjectRepository(User)
-        private readonly userRepo: Repository<User>
     ) { }
+
+    /* ----------------------------- helpers ----------------------------- */
 
     private buildBaseActivityQuery() {
         return this.activityRepo
             .createQueryBuilder("a")
             .innerJoinAndSelect("a.actor", "actor")
             .leftJoinAndSelect("a.targetPost", "targetPost")
-            .leftJoinAndSelect("targetPost.user", "targetPostUser") // ✅ ADD THIS
+            .leftJoinAndSelect("targetPost.user", "targetPostUser")
             .leftJoinAndSelect("a.targetUser", "targetUser")
             .where("a.active = true");
     }
+
     async createActivity(
         input: {
             type: ActivityType;
@@ -53,6 +57,7 @@ export class ActivityService {
         });
     }
 
+    /* ------------------------------ feeds ------------------------------ */
 
     async getProfileActivity(username: string, limit = 50) {
         const user = await this.userRepo.findOneBy({ username });
@@ -65,7 +70,6 @@ export class ActivityService {
             .getMany();
     }
 
-    // FEED: get recent activities of a user + people they follow
     async getHomeFeed(username: string, limit = 50) {
         const user = await this.userRepo.findOneBy({ username });
         if (!user) return [];
@@ -77,46 +81,36 @@ export class ActivityService {
                 "f.followingId = actor.id AND f.followerId = :viewerId",
                 { viewerId: user.id }
             )
-            .where(
-                "actor.id = :viewerId OR f.id IS NOT NULL",
-                { viewerId: user.id }
-            )
+            .where("actor.id = :viewerId OR f.id IS NOT NULL", {
+                viewerId: user.id,
+            })
             .orderBy("a.createdAt", "DESC")
             .take(limit)
             .getMany();
     }
 
+    /* ----------------------------- follow ------------------------------ */
 
-
-    // LIKE
-    async toggleLike(userId: number, postId: number, shouldLike: boolean) {
-        const existing = await this.activityRepo.findOne({
-            where: { actor: { id: userId }, targetPost: { id: postId }, type: "like" },
+    async toggleFollow(
+        userId: number,
+        targetUsername: string,
+        shouldFollow: boolean,
+    ) {
+        const actor = await this.userRepo.findOneBy({ id: userId });
+        const targetUser = await this.userRepo.findOneBy({
+            username: targetUsername,
         });
 
-        if (existing) {
-            existing.active = shouldLike;
-            await this.activityRepo.save(existing);
-            return true;
+        if (!actor || !targetUser || actor.id === targetUser.id) {
+            return false;
         }
-
-        if (shouldLike) {
-            const post = await this.postRepo.findOneBy({ id: postId });
-            if (!post) return false;
-
-            await this.activityRepo.save({ actor: { id: userId }, targetPost: post, type: "like", active: true });
-        }
-
-        return true;
-    }
-
-    // FOLLOW
-    async toggleFollow(userId: number, targetUsername: string, shouldFollow: boolean) {
-        const targetUser = await this.userRepo.findOneBy({ username: targetUsername });
-        if (!targetUser || targetUser.id === userId) return false;
 
         const existing = await this.activityRepo.findOne({
-            where: { actor: { id: userId }, targetUserId: targetUser.id, type: "follow" },
+            where: {
+                actorId: actor.id,
+                targetUserId: targetUser.id,
+                type: "follow",
+            },
         });
 
         if (existing) {
@@ -126,18 +120,13 @@ export class ActivityService {
         }
 
         if (shouldFollow) {
-            await this.activityRepo.save({ actor: { id: userId }, targetUserId: targetUser.id, type: "follow", active: true });
+            await this.createActivity({
+                type: "follow",
+                actor,
+                targetUser,
+            });
         }
 
-        return true;
-    }
-
-    // SHARE
-    async share(userId: number, postId: number) {
-        const post = await this.postRepo.findOneBy({ id: postId });
-        if (!post) return false;
-
-        await this.activityRepo.save({ actor: { id: userId }, targetPost: post, type: "share", active: true });
         return true;
     }
 }

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from "typeorm";
+import {
+    Entity,
+    PrimaryGeneratedColumn,
+    Column,
+    ManyToOne,
+    CreateDateColumn,
+} from "typeorm";
 import { User } from "../users/user.entity";
 import { Post } from "../posts/post.entity";
 import type { ActivityType } from "./activity.constants";
@@ -12,7 +18,7 @@ export class Activity {
     actor: User;
 
     @Column()
-    actorId: number;   // 👈 REQUIRED for QueryBuilder filtering
+    actorId: number;
 
     @ManyToOne(() => User, { nullable: true })
     targetUser?: User;
@@ -34,7 +40,4 @@ export class Activity {
 
     @CreateDateColumn()
     createdAt: Date;
-
-
 }
-

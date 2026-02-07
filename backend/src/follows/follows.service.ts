@@ -34,7 +34,17 @@ export class FollowsService {
 
         if (exists) return true;
 
-        await this.followRepo.save({ follower, following });
+        try {
+            await this.followRepo.save({ follower, following });
+        } catch (err: any) {
+            // concurrent insert may cause unique constraint violation
+            // treat as success if the follow already exists
+            const code = err?.code ?? err?.driverError?.code;
+            if (code === "23505") {
+                return true;
+            }
+            throw err;
+        }
 
         // emit activity (event)
         await this.activityService.createActivity({

@@ -55,7 +55,7 @@ export default function Profile() {
   }, [activeTab, fetchFollowers, fetchFollowing]);
 
   // Activity feed only when tab is active
-  const { activities, loading: activityLoading, refresh: refreshActivities } =
+  const { activities, loading: activityLoading, refresh: refreshActivities, toggleFollowOptimistic } =
     useProfileActivity(activeTab === "activity" ? username : undefined);
 
   if (loading || !currentUser) {
@@ -147,7 +147,7 @@ export default function Profile() {
                 activity={activity}
                 onToggleFollow={
                   activity.type === "follow"
-                    ? (username, shouldFollow) => toggleFollow(username, shouldFollow)
+                    ? toggleFollowOptimistic
                     : undefined
                 }
               />
