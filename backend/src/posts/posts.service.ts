@@ -8,8 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { User } from '../users/user.entity';
-import { Activity } from 'src/activity/activity.entity';
-
+import { ActivityService } from 'src/activity/activity.service';
+import { ACTIVITY_TYPE } from 'src/activity/activity.constants';
 
 @Injectable()
 export class PostsService {
@@ -18,6 +18,7 @@ export class PostsService {
         private readonly postsRepo: Repository<Post>,
         @InjectRepository(User)
         private readonly usersRepo: Repository<User>,
+        private readonly activityService: ActivityService,
     ) { }
 
     async getFeed(): Promise<Post[]> {
@@ -38,19 +39,18 @@ export class PostsService {
                 user: { id: userId },
             });
 
-            await manager.save(Activity, {
-                type: "post",
-                actor: { id: userId },
-                actorId: userId,              // ✅ REQUIRED
-                targetPost: post,
-                targetPostId: post.id,        // ✅ REQUIRED
-                active: true,
-            });
+            await this.activityService.createActivity(
+                {
+                    type: ACTIVITY_TYPE.POST,
+                    actor: { id: userId } as User,
+                    targetPost: post,
+                },
+                manager, // 🔴 THIS is the missing piece
+            );
 
             return post;
         });
     }
-
 
 
     async deletePost(postId: number, userId: number): Promise<boolean> {
@@ -80,14 +80,8 @@ export class PostsService {
     }
 
     async getPostsByUsername(username: string): Promise<Post[]> {
-        const user = await this.usersRepo.findOne({
-            where: { username },
-        });
-
+        const user = await this.usersRepo.findOne({ where: { username } });
         if (!user) return [];
-
         return this.getPostsByUserId(user.id);
     }
-
-
 }

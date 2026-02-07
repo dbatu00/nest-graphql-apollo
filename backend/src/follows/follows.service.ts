@@ -3,6 +3,8 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Follow } from "./follow.entity";
 import { User } from "../users/user.entity";
+import { ActivityService } from "src/activity/activity.service";
+import { ACTIVITY_TYPE } from "src/activity/activity.constants";
 
 @Injectable()
 export class FollowsService {
@@ -11,7 +13,12 @@ export class FollowsService {
         private readonly followRepo: Repository<Follow>,
         @InjectRepository(User)
         private readonly userRepo: Repository<User>,
+        private readonly activityService: ActivityService,
     ) { }
+
+    // =========================
+    // FOLLOW / UNFOLLOW (STATE)
+    // =========================
 
     async follow(followerId: number, username: string) {
         const follower = await this.userRepo.findOneBy({ id: followerId });
@@ -28,6 +35,14 @@ export class FollowsService {
         if (exists) return true;
 
         await this.followRepo.save({ follower, following });
+
+        // emit activity (event)
+        await this.activityService.createActivity({
+            type: ACTIVITY_TYPE.FOLLOW,
+            actor: follower,
+            targetUser: following,
+        });
+
         return true;
     }
 
@@ -38,8 +53,17 @@ export class FollowsService {
         if (!follower || !following) return false;
 
         await this.followRepo.delete({ follower, following });
+
+        // NOTE:
+        // we keep activity immutable for now
+        // (optional later: deactivate follow activity)
+
         return true;
     }
+
+    // =========================
+    // BASIC LISTS
+    // =========================
 
     async getFollowers(username: string) {
         return this.followRepo.find({
@@ -55,25 +79,26 @@ export class FollowsService {
         });
     }
 
+    // ==================================================
+    // FOLLOWERS TAB (WITH followedByMe FOR VIEWER)
+    // ==================================================
+
     async getFollowersWithFollowState(
         profileUsername: string,
         viewerId: number,
     ) {
         const qb = this.userRepo
-            .createQueryBuilder("u") // 👈 ROOT ENTITY = User
-            // follow row where u is the follower
+            .createQueryBuilder("u") // u = follower
             .innerJoin(
                 Follow,
                 "f",
                 "f.followerId = u.id",
             )
-            // profile being followed
             .innerJoin(
                 "users",
                 "profile",
                 "profile.id = f.followingId",
             )
-            // does viewer follow this user?
             .leftJoin(
                 Follow,
                 "f2",
@@ -91,12 +116,12 @@ export class FollowsService {
                 "followedByMe",
             );
 
-
-        const result = await qb.getRawAndEntities();
-
-
-        return result;
+        return qb.getRawAndEntities();
     }
+
+    // ==================================================
+    // FOLLOWING TAB (WITH followedByMe FOR VIEWER)
+    // ==================================================
 
     async getFollowingWithFollowState(
         profileUsername: string,
@@ -107,35 +132,30 @@ export class FollowsService {
             .innerJoin(
                 Follow,
                 "f",
-                "f.followingId = u.id"
+                "f.followingId = u.id",
             )
             .innerJoin(
                 "users",
                 "profile",
-                "profile.id = f.followerId"
+                "profile.id = f.followerId",
             )
             .leftJoin(
                 Follow,
                 "f2",
                 "f2.followerId = :viewerId AND f2.followingId = u.id",
-                { viewerId }
+                { viewerId },
             )
             .where("profile.username = :profileUsername", { profileUsername })
-            .select(["u.id", "u.username", "u.displayName"])
+            .select([
+                "u.id",
+                "u.username",
+                "u.displayName",
+            ])
             .addSelect(
                 "CASE WHEN f2.id IS NULL THEN false ELSE true END",
-                "followedByMe"
+                "followedByMe",
             );
 
-        const result = await qb.getRawAndEntities();
-        return result;
+        return qb.getRawAndEntities();
     }
-
-
-
-
-
-
-
-
 }

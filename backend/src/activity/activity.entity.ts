@@ -1,8 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn } from "typeorm";
 import { User } from "../users/user.entity";
 import { Post } from "../posts/post.entity";
-
-export type ActivityType = "post" | "like" | "share" | "follow";
+import type { ActivityType } from "./activity.constants";
 
 @Entity()
 export class Activity {
@@ -28,12 +27,14 @@ export class Activity {
     targetPostId?: number;
 
     @Column()
-    type: string;
+    type: ActivityType;
 
     @Column({ default: true })
     active: boolean;
 
     @CreateDateColumn()
     createdAt: Date;
+
+
 }
 

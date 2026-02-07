@@ -28,6 +28,15 @@ type User {
   followingCount: Int!
 }
 
+type Activity {
+  id: Int!
+  type: String!
+  actor: User!
+  targetUser: User
+  targetPost: Post
+  createdAt: DateTime!
+}
+
 type AuthPayload {
   user: User!
   token: String!
@@ -38,17 +47,8 @@ type FollowerView {
   followedByMe: Boolean!
 }
 
-type Activity {
-  id: Int!
-  type: String!
-  actor: User!
-  targetUser: User
-  targetPost: Post
-  createdAt: DateTime!
-}
-
 type Query {
-  userFeed: [Activity!]!
+  homeFeed: [Activity!]!
   profileActivity(username: String!): [Activity!]!
   userByUsername(username: String!): User
   feed: [Post!]!

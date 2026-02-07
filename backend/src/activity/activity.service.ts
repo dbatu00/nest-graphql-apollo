@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Post } from "src/posts/post.entity";
-import { Repository } from "typeorm";
+import { EntityManager, Repository } from "typeorm";
 import { Activity } from "./activity.entity";
 import { User } from "src/users/user.entity";
 import { Follow } from "src/follows/follow.entity";
+import { ActivityType } from "./activity.constants";
 
 @Injectable()
 export class ActivityService {
@@ -25,24 +26,32 @@ export class ActivityService {
             .leftJoinAndSelect("a.targetUser", "targetUser")
             .where("a.active = true");
     }
-    async createActivity(input: {
-        type: "post" | "like" | "share" | "follow";
-        actor: User;
-        targetPost?: Post;
-        targetUser?: User;
-        active?: boolean;
-    }) {
-        return this.activityRepo.save({
+    async createActivity(
+        input: {
+            type: ActivityType;
+            actor: User;
+            targetPost?: Post;
+            targetUser?: User;
+            active?: boolean;
+        },
+        manager?: EntityManager,
+    ) {
+        const repo = manager
+            ? manager.getRepository(Activity)
+            : this.activityRepo;
+
+        return repo.save({
             type: input.type,
             actor: input.actor,
-            actorId: input.actor.id,                  // ✅
+            actorId: input.actor.id,
             targetPost: input.targetPost,
-            targetPostId: input.targetPost?.id,       // ✅
+            targetPostId: input.targetPost?.id,
             targetUser: input.targetUser,
-            targetUserId: input.targetUser?.id,       // ✅
+            targetUserId: input.targetUser?.id,
             active: input.active ?? true,
         });
     }
+
 
     async getProfileActivity(username: string, limit = 50) {
         const user = await this.userRepo.findOneBy({ username });
@@ -56,7 +65,7 @@ export class ActivityService {
     }
 
     // FEED: get recent activities of a user + people they follow
-    async getUserFeed(username: string, limit = 50) {
+    async getHomeFeed(username: string, limit = 50) {
         const user = await this.userRepo.findOneBy({ username });
         if (!user) return [];
 

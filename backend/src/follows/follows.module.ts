@@ -4,10 +4,13 @@ import { Follow } from "./follow.entity";
 import { FollowsService } from "./follows.service";
 import { FollowsResolver } from "./follows.resolver";
 import { User } from "src/users/user.entity";
+import { ActivityModule } from "src/activity/activity.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Follow, User])],
+  imports: [
+    TypeOrmModule.forFeature([Follow, User]),
+    ActivityModule, // 👈 for follow activities
+  ],
   providers: [FollowsService, FollowsResolver],
-  exports: [TypeOrmModule],
 })
 export class FollowsModule { }
