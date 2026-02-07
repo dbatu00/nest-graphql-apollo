@@ -23,6 +23,7 @@ export class ActivityService {
             .createQueryBuilder("a")
             .innerJoinAndSelect("a.actor", "actor")
             .leftJoinAndSelect("a.targetPost", "targetPost")
+            .leftJoinAndSelect("targetPost.user", "targetPostUser") // ✅ ADD THIS
             .leftJoinAndSelect("a.targetUser", "targetUser")
             .where("a.active = true");
     }

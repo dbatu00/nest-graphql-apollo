@@ -1,56 +1,28 @@
-import React, { useState, useEffect } from "react";
-import { View, Text } from "react-native";
+import React from "react";
+import { View, Text, ScrollView } from "react-native";
 import { commonStyles as styles } from "@/styles/common";
-import { feedStyles } from "@/styles/feed";
-import { getCurrentUser } from "@/utils/currentUser";
-import { PostList } from "@/components/feed/PostList";
 import { FeedHeader } from "@/components/layout/FeedHeader";
-import { Composer } from "@/components/feed/Composer";
 import { useFeed } from "@/hooks/useFeed";
+import { FeedItem } from "@/components/feed/FeedItem";
 
-export default function Posts() {
-  const [content, setContent] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-
+export default function Feed() {
   const feed = useFeed();
-
-  useEffect(() => {
-    getCurrentUser()
-      .then(user => setCurrentUserId(user.id))
-      .catch(() => {});
-  }, []);
-
-  const handlePublish = async () => {
-    await feed.publish(content);
-    setContent("");
-  };
-
-  const handleDelete = (postId: number) => {
-    if (window.confirm("Are you sure you want to delete this post?")) {
-      feed.remove(postId);
-    }
-  };
 
   return (
     <View style={styles.container}>
       <FeedHeader title="Feed" />
 
-      <Composer
-        value={content}
-        onChange={setContent}
-        onPublish={handlePublish}
-      />
+      {feed.loading && <Text>Loading…</Text>}
+      {feed.error && <Text>{feed.error}</Text>}
 
-      {feed.error && (
-        <Text style={feedStyles.error}>{feed.error}</Text>
-      )}
-
-     <PostList
-        posts={feed.posts}
-        currentUserId={currentUserId}
-        onDelete={(postId: number) => feed.remove(postId)}
-        onToggleFollow={feed.toggleFollowOptimistic}
-      />
+      <ScrollView>
+        {feed.activities.map(activity => (
+          <FeedItem
+            key={activity.id}
+            activity={activity}
+          />
+        ))}
+      </ScrollView>
     </View>
   );
 }

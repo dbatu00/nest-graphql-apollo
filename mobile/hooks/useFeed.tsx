@@ -1,127 +1,62 @@
 import { useEffect, useState, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { Post } from "@/types/Post";
+import { Activity } from "@/types/Activity";
 
 export function useFeed() {
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchFeed = useCallback(async () => {
     try {
       setLoading(true);
 
-      const data = await graphqlFetch<{ feed: Post[] }>
-      (`
-       query {
-          feed {
+      const data = await graphqlFetch<{ homeFeed: Activity[] }>(`
+        query {
+          homeFeed {
             id
-            content
+            type
             createdAt
-            user {
+            actor {
               id
               username
-              followedByMe
+              displayName
+            }
+            targetPost {
+              id
+              content
+              createdAt
+              user {
+                id
+                username
+                followedByMe
+              }
+            }
+            targetUser {
+              id
+              username
+              displayName
             }
           }
         }
       `);
 
-      setPosts(data.feed);
+      setActivities(data.homeFeed);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message ?? "Failed to load feed");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
-
-  const publish = async (content: string) => {
-    await graphqlFetch(
-      `
-      mutation AddPost($content: String!) {
-        addPost(content: $content) {
-          id
-        }
-      }
-      `,
-      { content }
-    );
-
-    fetchPosts();
-  };
-
-  const remove = async (postId: number) => {
-    await graphqlFetch(
-      `
-      mutation DeletePost($postId: Int!) {
-        deletePost(postId: $postId)
-      }
-      `,
-      { postId }
-    );
-
-    fetchPosts();
-  };
-
-  const toggleFollowOptimistic = async (
-  username: string,
-  shouldFollow: boolean,
-) => {
-  // 1. Optimistic update
-  setPosts(prev =>
-    prev.map(post =>
-      post.user.username === username
-        ? {
-            ...post,
-            user: {
-              ...post.user,
-              followedByMe: shouldFollow,
-            },
-          }
-        : post
-    )
-  );
-
-  // 2. Fire mutation (do NOT await for UI)
-  try {
-    await graphqlFetch(
-      `
-      mutation ToggleFollow($username: String!) {
-        ${shouldFollow ? "followUser" : "unfollowUser"}(username: $username)
-      }
-      `,
-      { username }
-    );
-  } catch {
-    // 3. Rollback if failed
-    setPosts(prev =>
-      prev.map(post =>
-        post.user.username === username
-          ? {
-              ...post,
-              user: {
-                ...post.user,
-                followedByMe: !shouldFollow,
-              },
-            }
-          : post
-      )
-    );
-  }
-};
-
+    fetchFeed();
+  }, [fetchFeed]);
 
   return {
-    posts,
+    activities,
     loading,
     error,
-    publish,
-    remove,
-    refresh: fetchPosts,
-    toggleFollowOptimistic
+    refresh: fetchFeed,
   };
 }
