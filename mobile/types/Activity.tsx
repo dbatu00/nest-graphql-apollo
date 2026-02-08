@@ -5,7 +5,7 @@ export type Activity = {
   id: number;
   type: ActivityType;
   createdAt: string;
-  active: boolean; // ✅ add
+  active: boolean;
   actor: { id: number; username: string; displayName?: string };
   targetUser?: {
     id: number;
@@ -14,5 +14,5 @@ export type Activity = {
     followedByMe?: boolean;
     active?: boolean;
   };
-  targetPost?: Post;
+  targetPost?: Post; // now includes likesCount and likedByMe
 };

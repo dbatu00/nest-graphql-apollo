@@ -12,139 +12,92 @@ import { ActivityService } from 'src/activity/activity.service';
 import { ACTIVITY_TYPE } from 'src/activity/activity.constants';
 import { Like } from './like.entity';
 
-
 @Injectable()
 export class PostsService {
     constructor(
-        @InjectRepository(Post)
-        private readonly postsRepo: Repository<Post>,
-        @InjectRepository(User)
-        private readonly usersRepo: Repository<User>,
-        @InjectRepository(Like)
-        private readonly likesRepo: Repository<Like>, // NEW
+        @InjectRepository(Post) private readonly postsRepo: Repository<Post>,
+        @InjectRepository(User) private readonly usersRepo: Repository<User>,
+        @InjectRepository(Like) private readonly likesRepo: Repository<Like>,
         private readonly activityService: ActivityService,
     ) { }
 
     async getFeed(): Promise<Post[]> {
-        try {
-            return await this.postsRepo.find({
-                relations: ['user'],
-                order: { createdAt: 'DESC' },
-            });
-        } catch {
-            throw new InternalServerErrorException('Failed to load feed');
-        }
+        return this.postsRepo.find({
+            relations: ['user'],
+            order: { createdAt: 'DESC' },
+        });
     }
-
     async addPost(userId: number, content: string) {
         return this.postsRepo.manager.transaction(async manager => {
+            // 1️⃣ fetch full user
+            const user = await manager.findOne(User, { where: { id: userId } });
+            if (!user) throw new Error('User not found');
+
+            // 2️⃣ create post with actual entity
             const post = await manager.save(Post, {
                 content,
-                user: { id: userId },
+                user,
             });
 
+            // 3️⃣ create activity with proper actor entity
             await this.activityService.createActivity(
-                {
-                    type: ACTIVITY_TYPE.POST,
-                    actor: { id: userId } as User,
-                    targetPost: post,
-                },
-                manager, // 🔴 THIS is the missing piece
+                { type: 'post', actor: user, targetPost: post },
+                manager,
             );
 
             return post;
         });
     }
 
-
     async deletePost(postId: number, userId: number): Promise<boolean> {
-        const post = await this.postsRepo.findOne({
-            where: { id: postId },
-            relations: ['user'],
-        });
+        const post = await this.postsRepo.findOne({ where: { id: postId }, relations: ['user'] });
+        if (!post) throw new NotFoundException('Post not found');
+        if (post.user.id !== userId) throw new ForbiddenException('Cannot delete');
 
-        if (!post) {
-            throw new NotFoundException('Post not found');
-        }
-
-        if (post.user.id !== userId) {
-            throw new ForbiddenException('You cannot delete this post');
-        }
-        // remove any activities that reference this post to avoid FK constraint errors
         await this.activityService.deleteActivitiesForPost(postId);
-
         await this.postsRepo.remove(post);
         return true;
-    }
-
-    async getPostsByUserId(userId: number): Promise<Post[]> {
-        return this.postsRepo.find({
-            where: { user: { id: userId } },
-            relations: ['user'],
-            order: { createdAt: 'DESC' },
-        });
-    }
-
-    async getPostsByUsername(username: string): Promise<Post[]> {
-        const user = await this.usersRepo.findOne({ where: { username } });
-        if (!user) return [];
-        return this.getPostsByUserId(user.id);
     }
 
     async getLikesInfo(postId: number, userId?: number) {
         const [count, liked] = await Promise.all([
             this.likesRepo.count({ where: { postId, active: true } }),
-            userId
-                ? this.likesRepo.findOne({ where: { postId, userId, active: true } })
-                : Promise.resolve(null),
+            userId ? this.likesRepo.findOne({ where: { postId, userId, active: true } }) : null,
         ]);
 
-        return {
-            likesCount: count,
-            likedByMe: !!liked,
-        };
+        return { likesCount: count, likedByMe: !!liked };
     }
 
     async toggleLike(userId: number, postId: number) {
-        // 1️⃣ Find the user and post
         const user = await this.usersRepo.findOneBy({ id: userId });
         const post = await this.postsRepo.findOneBy({ id: postId });
-        if (!user || !post) {
-            throw new Error('User or Post not found');
-        }
+        if (!user || !post) throw new Error('User or post not found');
 
-        // 2️⃣ Find existing like
-        let like = await this.likesRepo.findOne({
-            where: { userId, postId },
-            order: { createdAt: 'DESC' },
-        });
-
+        let like = await this.likesRepo.findOne({ where: { userId, postId } });
         let likedNow: boolean;
 
         if (like) {
-            // Toggle active flag
             like.active = !like.active;
             likedNow = like.active;
             await this.likesRepo.save(like);
         } else {
-            // Create new like
             like = await this.likesRepo.save({ user, userId, post, postId });
             likedNow = true;
         }
 
-        // 3️⃣ Create or deactivate Activity
+        // prevent duplicate like activities
         if (likedNow) {
             await this.activityService.createActivity({
-                type: ACTIVITY_TYPE.LIKE,
+                type: 'like',
                 actor: user,
                 targetPost: post,
+                active: true, // ensure it's active
             });
         } else {
-            await this.activityService.deactivateLikeActivity(userId, postId);
-
+            await this.activityService.deactivateLikeActivity(user.id, postId);
         }
+
 
         return likedNow;
     }
-
 }

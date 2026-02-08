@@ -52,11 +52,8 @@ type FollowerView {
 
 type Query {
   feed(username: String): [Activity!]!
-  homeFeed: [Activity!]!
-  profileActivity(username: String!): [Activity!]!
   userByUsername(username: String!): User
   posts: [Post!]!
-  postsByUsername(username: String!): [Post!]!
   me: User!
   followers(username: String!): [User!]!
   following(username: String!): [User!]!

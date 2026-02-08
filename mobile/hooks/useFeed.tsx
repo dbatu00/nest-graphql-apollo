@@ -9,12 +9,10 @@ export function useFeed(username?: string) {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-  // Fetch current user
   useEffect(() => {
     getCurrentUser().then(user => setCurrentUserId(user?.id ?? null));
   }, []);
 
-  // Fetch feed activities (home or profile based on username)
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -29,10 +27,16 @@ export function useFeed(username?: string) {
             createdAt
             actor { id username displayName }
             targetUser { id username displayName followedByMe }
-            targetPost { id content user { id username followedByMe } createdAt }
+            targetPost {
+              id
+              content
+              user { id username followedByMe }
+              createdAt
+              likesCount
+              likedByMe
+            }
           }
-        }
-      `,
+        }`,
         { username }
       );
       setActivities(data.feed ?? []);
@@ -47,53 +51,80 @@ export function useFeed(username?: string) {
     refresh();
   }, [refresh]);
 
-  // Optimistic follow/unfollow
   const toggleFollowOptimistic = useCallback(
     async (targetUsername: string, shouldFollow: boolean) => {
-      // Optimistic update
       setActivities(prev =>
-        prev.map(a => {
-          if (a.type === "follow" && a.targetUser?.username === targetUsername) {
-            return {
-              ...a,
-              targetUser: { ...a.targetUser, followedByMe: shouldFollow },
-            };
-          }
-          return a;
-        })
+        prev.map(a =>
+          a.type === "follow" && a.targetUser?.username === targetUsername
+            ? { ...a, targetUser: { ...a.targetUser, followedByMe: shouldFollow } }
+            : a
+        )
       );
 
-      // GraphQL call
       try {
         await graphqlFetch(
           shouldFollow
-            ? `
-            mutation FollowUser($username: String!) {
-              followUser(username: $username)
-            }
-          `
-            : `
-            mutation UnfollowUser($username: String!) {
-              unfollowUser(username: $username)
-            }
-          `,
+            ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
+            : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
           { username: targetUsername }
         );
-        // re-sync from server
         await refresh();
       } catch {
-        // rollback
         setActivities(prev =>
-          prev.map(a => {
-            if (a.type === "follow" && a.targetUser?.username === targetUsername) {
-              return {
-                ...a,
-                targetUser: { ...a.targetUser, followedByMe: !shouldFollow },
-              };
-            }
-            return a;
-          })
+          prev.map(a =>
+            a.type === "follow" && a.targetUser?.username === targetUsername
+              ? { ...a, targetUser: { ...a.targetUser, followedByMe: !shouldFollow } }
+              : a
+          )
         );
+      }
+    },
+    [refresh]
+  );
+
+  const toggleLikeOptimistic = useCallback(
+  async (postId: number, currentlyLiked: boolean) => {
+    setActivities(prev =>
+      prev.map(a =>
+        a.targetPost?.id === postId
+          ? { ...a, targetPost: { ...a.targetPost, likedByMe: !currentlyLiked, likesCount: (a.targetPost.likesCount ?? 0) + (currentlyLiked ? -1 : 1) } }
+          : a
+      )
+    );
+    try { await graphqlFetch(`mutation ToggleLike($postId: Int!) { toggleLike(postId: $postId) }`, { postId }); }
+    catch { /* rollback */ }
+  },
+  []
+);
+
+
+  const publish = useCallback(
+    async (content: string) => {
+      if (!content.trim()) return;
+      try {
+        await graphqlFetch(
+          `mutation AddPost($content: String!) {
+            addPost(content: $content) { id content createdAt user { id username followedByMe } likesCount likedByMe }
+          }`,
+          { content }
+        );
+        await refresh();
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [refresh]
+  );
+
+  const deletePost = useCallback(
+    async (postId: number) => {
+      try {
+        await graphqlFetch(`mutation DeletePost($postId: Int!) { deletePost(postId: $postId) }`, { postId });
+        await refresh();
+        return true;
+      } catch (err) {
+        console.error(err);
+        return false;
       }
     },
     [refresh]
@@ -106,44 +137,8 @@ export function useFeed(username?: string) {
     refresh,
     currentUserId,
     toggleFollowOptimistic,
-    publish: async (content: string) => {
-      if (!content.trim()) return;
-      try {
-        await graphqlFetch(
-          `
-          mutation AddPost($content: String!) {
-            addPost(content: $content) {
-              id
-              content
-              createdAt
-            }
-          }
-        `,
-          { content }
-        );
-        console.log("✅ Post published, refreshing feed...");
-        await refresh();
-      } catch (err) {
-        console.error("❌ Post publication failed:", err);
-        throw err;
-      }
-    },
-    deletePost: async (postId: number) => {
-      try {
-        await graphqlFetch(
-          `
-          mutation DeletePost($postId: Int!) {
-            deletePost(postId: $postId)
-          }
-        `,
-          { postId }
-        );
-        await refresh();
-        return true;
-      } catch (err) {
-        console.error('❌ Delete post failed:', err);
-        return false;
-      }
-    },
+    toggleLikeOptimistic,
+    publish,
+    deletePost,
   };
 }

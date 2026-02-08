@@ -8,24 +8,24 @@ type Props = {
   currentUserId: number | null;
   onDeletePost?: (postId: number) => void;
   onToggleFollow?: (username: string, follow: boolean) => void;
+  onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
 };
-export function FeedItem({
-  activity,
-  currentUserId,
-  onDeletePost,
-  onToggleFollow,
-}: Props) {
-  if (activity.targetPost) {
+
+export function FeedItem({ activity, currentUserId, onDeletePost, onToggleFollow, onToggleLike }: Props) {
+  // only render actual 'post' activities as PostItem
+  if (activity.type === "post" || activity.type === "share") {
     return (
       <PostItem
-        post={activity.targetPost}
+        post={activity.targetPost!}
         currentUserId={currentUserId}
         onDelete={onDeletePost ?? (() => {})}
-        onToggleFollow={onToggleFollow ?? (() => {})}
+        onToggleFollow={onToggleFollow}
+        onToggleLike={onToggleLike}
       />
     );
   }
 
+  // everything else (like/follow) is rendered as ActivityRow
   return (
     <ActivityRow
       activity={activity}

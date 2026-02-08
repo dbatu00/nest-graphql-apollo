@@ -20,7 +20,28 @@ export const feedStyles = StyleSheet.create({
     padding: 12,
   },
 
- 
+   likeButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#000",
+    backgroundColor: "#fff",
+  },
+
+  likeButtonLiked: {
+    borderColor: "#ef4444",
+    backgroundColor: "#fee2e2",
+  },
+
+  likeIcon: {
+    fontSize: 16,
+    color: "#000",
+  },
+
+  likeIconLiked: {
+    color: "#ef4444",
+  },
 
   separator: {
     height: 12,

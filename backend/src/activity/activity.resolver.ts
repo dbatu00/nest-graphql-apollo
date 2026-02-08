@@ -26,24 +26,7 @@ export class ActivityResolver {
         return this.activityService.getActivityFeed(username);
     }
 
-    @Query(() => [ActivityGQL])
-    @UseGuards(GqlAuthGuard)
-    homeFeed(@CurrentUser() user: User) {
-        if (!user) {
-            throw new Error("Authenticated user not found");
-        }
 
-        return this.activityService.getHomeFeed();
-    }
-
-    @Query(() => [ActivityGQL])
-    @UseGuards(GqlAuthGuard)
-    profileActivity(
-        @Args("username", { type: () => String }) username: string,
-        @CurrentUser() user?: User,
-    ) {
-        return this.activityService.getProfileActivity(username);
-    }
 
     @Mutation(() => Boolean)
     @UseGuards(GqlAuthGuard)
