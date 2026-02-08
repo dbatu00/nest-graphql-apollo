@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Int, ResolveField, Parent, Context } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { Post } from './post.entity';
@@ -6,6 +6,8 @@ import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { User } from '../users/user.entity';
 import { ActivityService } from 'src/activity/activity.service';
+
+
 
 @Resolver(() => Post)
 export class PostsResolver {
@@ -45,6 +47,23 @@ export class PostsResolver {
         @Args("username") username: string,
     ) {
         return this.postsService.getPostsByUsername(username);
+    }
+
+
+    @ResolveField('likesCount', () => Number)
+    @UseGuards(GqlAuthGuard)
+    async likesCount(@Parent() post: Post) {
+        const info = await this.postsService.getLikesInfo(post.id);
+        return info.likesCount;
+    }
+
+    @ResolveField('likedByMe', () => Boolean)
+    @UseGuards(GqlAuthGuard)
+    async likedByMe(@Parent() post: Post, @Context() ctx: any) {
+        const userId = ctx?.req?.user?.id;
+        if (!userId) return false;
+        const info = await this.postsService.getLikesInfo(post.id, userId);
+        return info.likedByMe;
     }
 
 }

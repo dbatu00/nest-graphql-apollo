@@ -10,6 +10,8 @@ import { Post } from './post.entity';
 import { User } from '../users/user.entity';
 import { ActivityService } from 'src/activity/activity.service';
 import { ACTIVITY_TYPE } from 'src/activity/activity.constants';
+import { Like } from './like.entity';
+
 
 @Injectable()
 export class PostsService {
@@ -18,6 +20,8 @@ export class PostsService {
         private readonly postsRepo: Repository<Post>,
         @InjectRepository(User)
         private readonly usersRepo: Repository<User>,
+        @InjectRepository(Like)
+        private readonly likesRepo: Repository<Like>, // NEW
         private readonly activityService: ActivityService,
     ) { }
 
@@ -86,4 +90,19 @@ export class PostsService {
         if (!user) return [];
         return this.getPostsByUserId(user.id);
     }
+
+    async getLikesInfo(postId: number, userId?: number) {
+        const [count, liked] = await Promise.all([
+            this.likesRepo.count({ where: { postId, active: true } }),
+            userId
+                ? this.likesRepo.findOne({ where: { postId, userId, active: true } })
+                : Promise.resolve(null),
+        ]);
+
+        return {
+            likesCount: count,
+            likedByMe: !!liked,
+        };
+    }
+
 }
