@@ -34,6 +34,7 @@ type Activity {
   actor: User!
   targetUser: User
   targetPost: Post
+  active: Boolean!
   createdAt: DateTime!
 }
 
@@ -48,10 +49,11 @@ type FollowerView {
 }
 
 type Query {
+  feed(username: String): [Activity!]!
   homeFeed: [Activity!]!
   profileActivity(username: String!): [Activity!]!
   userByUsername(username: String!): User
-  feed: [Post!]!
+  posts: [Post!]!
   postsByUsername(username: String!): [Post!]!
   me: User!
   followers(username: String!): [User!]!

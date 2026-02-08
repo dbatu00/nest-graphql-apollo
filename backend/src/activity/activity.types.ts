@@ -19,6 +19,12 @@ export class ActivityGQL {
     @Field(() => Post, { nullable: true })
     targetPost?: Post;
 
+    @Field()
+    active: boolean;
+
     @Field(() => Date)
     createdAt: Date;
+
+
+
 }

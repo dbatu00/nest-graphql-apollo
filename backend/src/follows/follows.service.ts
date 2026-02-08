@@ -46,12 +46,8 @@ export class FollowsService {
             throw err;
         }
 
-        // emit activity (event)
-        await this.activityService.createActivity({
-            type: ACTIVITY_TYPE.FOLLOW,
-            actor: follower,
-            targetUser: following,
-        });
+        // ensure follow activity is created or reactivated
+        await this.activityService.toggleFollow(follower.id, following.username, true);
 
         return true;
     }
@@ -62,14 +58,15 @@ export class FollowsService {
 
         if (!follower || !following) return false;
 
+        // Remove the follow relation
         await this.followRepo.delete({ follower, following });
 
-        // NOTE:
-        // we keep activity immutable for now
-        // (optional later: deactivate follow activity)
+        // DEACTIVATE follow activity
+        await this.activityService.deactivateFollowActivity(follower.id, following.id);
 
         return true;
     }
+
 
     // =========================
     // BASIC LISTS

@@ -66,6 +66,8 @@ export class PostsService {
         if (post.user.id !== userId) {
             throw new ForbiddenException('You cannot delete this post');
         }
+        // remove any activities that reference this post to avoid FK constraint errors
+        await this.activityService.deleteActivitiesForPost(postId);
 
         await this.postsRepo.remove(post);
         return true;

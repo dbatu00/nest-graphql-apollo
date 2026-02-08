@@ -16,6 +16,7 @@ export function useProfileActivity(username?: string) {
         query ProfileActivity($username: String!) {
           profileActivity(username: $username) {
             id
+            active
             type
             createdAt
             actor { id username displayName }
@@ -27,7 +28,8 @@ export function useProfileActivity(username?: string) {
         { username }
       );
       
-      setActivities(data.profileActivity ?? []);
+     setActivities(data.profileActivity?.filter(a => a.type !== "follow" || a.active) ?? []);
+
     } catch (err) {
       
       setActivities([]);

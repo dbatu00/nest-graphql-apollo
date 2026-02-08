@@ -57,37 +57,63 @@ export class ActivityService {
         });
     }
 
+    /* ----------------------------- follow ------------------------------ */
+
+    async deactivateFollowActivity(actorId: number, targetUserId: number) {
+        const activity = await this.activityRepo.findOne({
+            where: {
+                actorId,
+                targetUserId,
+                type: 'follow',
+                active: true,
+            },
+        });
+
+        if (activity) {
+            activity.active = false;
+            await this.activityRepo.save(activity);
+        }
+    }
+
+
     /* ------------------------------ feeds ------------------------------ */
 
+    /**
+     * Get activity feed (Twitter pattern).
+     * If username is provided, return activities from that user (profile feed).
+     * If username is not provided, return home feed (own + followed users' activities).
+     */
+    async getActivityFeed(username?: string, limit = 50) {
+        const qb = this.activityRepo
+            .createQueryBuilder("a")
+            .leftJoinAndSelect("a.actor", "actor")
+            .leftJoinAndSelect("a.targetPost", "targetPost")
+            .leftJoinAndSelect("targetPost.user", "targetPostUser")
+            .leftJoinAndSelect("a.targetUser", "targetUser")
+            .where("(a.type != 'follow' OR a.active = true)")
+            .orderBy("a.createdAt", "DESC")
+            .take(limit);
+
+        // Profile feed: filter by specific user
+        if (username) {
+            const user = await this.userRepo.findOneBy({ username });
+            if (!user) return [];
+            qb.andWhere("a.actor.id = :userId", { userId: user.id });
+        }
+
+        return qb.getMany();
+    }
+
+    // Backward-compat aliases
     async getProfileActivity(username: string, limit = 50) {
-        const user = await this.userRepo.findOneBy({ username });
-        if (!user) return [];
-
-        return this.buildBaseActivityQuery()
-            .andWhere("actor.id = :userId", { userId: user.id })
-            .orderBy("a.createdAt", "DESC")
-            .take(limit)
-            .getMany();
+        return this.getActivityFeed(username, limit);
     }
 
-    async getHomeFeed(username: string, limit = 50) {
-        const user = await this.userRepo.findOneBy({ username });
-        if (!user) return [];
-
-        return this.buildBaseActivityQuery()
-            .leftJoin(
-                Follow,
-                "f",
-                "f.followingId = actor.id AND f.followerId = :viewerId",
-                { viewerId: user.id }
-            )
-            .where("actor.id = :viewerId OR f.id IS NOT NULL", {
-                viewerId: user.id,
-            })
-            .orderBy("a.createdAt", "DESC")
-            .take(limit)
-            .getMany();
+    async getHomeFeed(limit = 50) {
+        return this.getActivityFeed(undefined, limit);
     }
+
+
 
     /* ----------------------------- follow ------------------------------ */
 
@@ -111,10 +137,15 @@ export class ActivityService {
                 targetUserId: targetUser.id,
                 type: "follow",
             },
+            order: { createdAt: "DESC" }, // get latest one
         });
 
         if (existing) {
             existing.active = shouldFollow;
+            // if re-activating a follow, bump its createdAt so it appears as most-recent
+            if (shouldFollow) {
+                existing.createdAt = new Date();
+            }
             await this.activityRepo.save(existing);
             return true;
         }
@@ -127,6 +158,15 @@ export class ActivityService {
             });
         }
 
+
         return true;
+    }
+
+    /**
+     * Hard-delete any activities that reference the given post.
+     * Used when removing a post to avoid foreign key constraint errors.
+     */
+    async deleteActivitiesForPost(postId: number) {
+        await this.activityRepo.delete({ targetPostId: postId });
     }
 }

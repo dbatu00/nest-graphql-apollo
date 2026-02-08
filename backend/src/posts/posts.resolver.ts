@@ -15,7 +15,7 @@ export class PostsResolver {
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [Post])
-    feed() {
+    posts() {
         return this.postsService.getFeed();
     }
 

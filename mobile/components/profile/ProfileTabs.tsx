@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from "react-native";
 
 // Add "activity" to tabs
-export const TABS = ["posts", "followers", "following", "likes", "shares", "activity"] as const;
+export const TABS = ["activity","following","followers", "likes", "shares"] as const;
 
 // Export Tab type for reuse
 export type Tab = typeof TABS[number];

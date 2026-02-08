@@ -5,17 +5,14 @@ export type Activity = {
   id: number;
   type: ActivityType;
   createdAt: string;
-  actor: {
-    id: number;
-    username: string;
-    displayName?: string;
-  };
-  targetUserId?: number;
+  active: boolean; // ✅ add
+  actor: { id: number; username: string; displayName?: string };
   targetUser?: {
     id: number;
     username: string;
     displayName?: string;
     followedByMe?: boolean;
+    active?: boolean;
   };
-  targetPost?: Post; // ✅ FIX
+  targetPost?: Post;
 };

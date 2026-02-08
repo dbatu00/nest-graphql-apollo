@@ -9,17 +9,13 @@ type Props = {
   onDeletePost?: (postId: number) => void;
   onToggleFollow?: (username: string, follow: boolean) => void;
 };
-
 export function FeedItem({
   activity,
   currentUserId,
   onDeletePost,
   onToggleFollow,
 }: Props) {
-  // Twitter rule:
-  // Posts are full cards, everything else is compact
-
-  if (activity.type === "post" && activity.targetPost) {
+  if (activity.targetPost) {
     return (
       <PostItem
         post={activity.targetPost}
@@ -33,6 +29,7 @@ export function FeedItem({
   return (
     <ActivityRow
       activity={activity}
+      currentUserId={currentUserId ?? undefined}
       onToggleFollow={onToggleFollow}
     />
   );

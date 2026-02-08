@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useProfile } from "@/hooks/useProfile";
 import { UserRow } from "@/components/user/UserRow";
-import { ActivityRow } from "@/components/feed/ActivityRow";
+import { FeedItem } from "@/components/feed/FeedItem";
 import { commonStyles } from "@/styles/common";
 import { getCurrentUser } from "@/utils/currentUser";
-import { useProfileActivity } from "@/hooks/useProfileActivity";
+import { useFeed } from "@/hooks/useFeed";
 import { ProfileTabs, Tab } from "@/components/profile/ProfileTabs";
 
 type User = {
@@ -20,18 +20,12 @@ type Follower = {
   followedByMe: boolean;
 };
 
-type Post = {
-  id: number;
-  content: string;
-  createdAt: string;
-};
 
 export default function Profile() {
   const { username } = useLocalSearchParams<{ username: string }>();
 
   const {
     profile,
-    posts = [] as Post[],
     followers = [] as Follower[],
     following = [] as Follower[],
     fetchFollowers,
@@ -40,7 +34,7 @@ export default function Profile() {
     loading,
   } = useProfile(username!);
 
-  const [activeTab, setActiveTab] = useState<Tab>("posts");
+  const [activeTab, setActiveTab] = useState<Tab>("activity");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   // Fetch current logged-in user
@@ -54,9 +48,9 @@ export default function Profile() {
     if (activeTab === "following") fetchFollowing();
   }, [activeTab, fetchFollowers, fetchFollowing]);
 
-  // Activity feed only when tab is active
-  const { activities, loading: activityLoading, refresh: refreshActivities, toggleFollowOptimistic } =
-    useProfileActivity(activeTab === "activity" ? username : undefined);
+  // Activity feed (unified hook, parameterized by username)
+  const { activities, loading: activityLoading, toggleFollowOptimistic, deletePost } =
+    useFeed(activeTab === "activity" ? username : undefined);
 
   if (loading || !currentUser) {
     return (
@@ -86,20 +80,6 @@ export default function Profile() {
 
       {/* TABS */}
       <ProfileTabs active={activeTab} onChange={setActiveTab} />
-
-      {/* POSTS */}
-      {activeTab === "posts" && posts.length === 0 && (
-        <Text style={{ color: "#999", marginTop: 12 }}>No posts yet</Text>
-      )}
-      {activeTab === "posts" &&
-        posts.map(post => (
-          <View key={post.id} style={{ marginBottom: 16 }}>
-            <Text>{post.content}</Text>
-            <Text style={{ fontSize: 12, color: "#999" }}>
-              {new Date(post.createdAt).toLocaleString()}
-            </Text>
-          </View>
-        ))}
 
       {/* FOLLOWERS */}
       {activeTab === "followers" && followers.length === 0 && (
@@ -140,18 +120,21 @@ export default function Profile() {
           {!activityLoading && activities.length === 0 && (
             <Text style={{ color: "#999", marginTop: 12 }}>No activity yet</Text>
           )}
-          {!activityLoading &&
-            activities.map(activity => (
-              <ActivityRow
-                key={activity.id}
-                activity={activity}
-                onToggleFollow={
-                  activity.type === "follow"
-                    ? toggleFollowOptimistic
-                    : undefined
-                }
-              />
-            ))}
+          {!activityLoading && (
+            <ScrollView>
+              {activities
+                .filter(a => a.type !== "follow" || a.active)
+                .map(activity => (
+                  <FeedItem
+                    key={activity.id}
+                    activity={activity}
+                    currentUserId={currentUser?.id ?? null}
+                    onToggleFollow={toggleFollowOptimistic}
+                    onDeletePost={deletePost}
+                  />
+                ))}
+            </ScrollView>
+          )}
         </>
       )}
     </View>
