@@ -13,6 +13,10 @@ import { Auth } from './auth/auth.entity';
 import { ConfigModule } from '@nestjs/config';
 import { FollowsModule } from './follows/follows.module';
 import { Follow } from './follows/follow.entity';
+import { ActivityResolver } from './activity/activity.resolver';
+import { ActivityModule } from './activity/activity.module';
+import { Activity } from './activity/activity.entity';
+
 
 
 @Module({
@@ -28,7 +32,7 @@ import { Follow } from './follows/follow.entity';
       username: 'postgres',
       password: 'qweasdzxc',
       database: 'nest_graphql',
-      entities: [User, Post, Auth, Follow],
+      entities: [User, Post, Auth, Follow, Activity],
       synchronize: true,
     }),
     ConfigModule.forRoot({
@@ -38,6 +42,8 @@ import { Follow } from './follows/follow.entity';
     PostsModule,
     AuthModule,
     FollowsModule,
-  ]
+    ActivityModule,
+  ],
+  providers: [ActivityResolver]
 })
 export class AppModule { }

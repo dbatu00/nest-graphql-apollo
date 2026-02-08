@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useProfile } from "@/hooks/useProfile";
-import { ProfileTabs } from "@/components/profile/ProfileTabs";
 import { UserRow } from "@/components/user/UserRow";
+import { FeedItem } from "@/components/feed/FeedItem";
 import { commonStyles } from "@/styles/common";
 import { getCurrentUser } from "@/utils/currentUser";
-
-type Tab = "posts" | "followers" | "following" | "likes" | "shares";
+import { useFeed } from "@/hooks/useFeed";
+import { ProfileTabs, Tab } from "@/components/profile/ProfileTabs";
 
 type User = {
   id: number;
@@ -20,18 +20,12 @@ type Follower = {
   followedByMe: boolean;
 };
 
-type Post = {
-  id: number;
-  content: string;
-  createdAt: string;
-};
 
 export default function Profile() {
   const { username } = useLocalSearchParams<{ username: string }>();
 
   const {
     profile,
-    posts = [] as Post[],
     followers = [] as Follower[],
     following = [] as Follower[],
     fetchFollowers,
@@ -40,17 +34,23 @@ export default function Profile() {
     loading,
   } = useProfile(username!);
 
-  const [activeTab, setActiveTab] = useState<Tab>("posts");
+  const [activeTab, setActiveTab] = useState<Tab>("activity");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
+  // Fetch current logged-in user
   useEffect(() => {
     getCurrentUser().then(user => setCurrentUser(user));
   }, []);
 
+  // Fetch followers/following when tab is active
   useEffect(() => {
     if (activeTab === "followers") fetchFollowers();
     if (activeTab === "following") fetchFollowing();
   }, [activeTab, fetchFollowers, fetchFollowing]);
+
+  // Activity feed (unified hook, parameterized by username)
+  const { activities, loading: activityLoading, toggleFollowOptimistic, deletePost } =
+    useFeed(activeTab === "activity" ? username : undefined);
 
   if (loading || !currentUser) {
     return (
@@ -74,7 +74,6 @@ export default function Profile() {
       <Text style={{ fontSize: 22, fontWeight: "bold" }}>
         {profile.displayName ?? profile.username}
       </Text>
-
       <Text style={{ color: "#666", marginBottom: 16 }}>
         @{profile.username}
       </Text>
@@ -82,56 +81,62 @@ export default function Profile() {
       {/* TABS */}
       <ProfileTabs active={activeTab} onChange={setActiveTab} />
 
-      {/* POSTS */}
-      {activeTab === "posts" && posts.length === 0 && (
-        <Text style={{ color: "#999", marginTop: 12 }}>No posts yet</Text>
-      )}
-
-      {activeTab === "posts" &&
-        posts.map((post: Post) => (
-          <View key={post.id} style={{ marginBottom: 16 }}>
-            <Text>{post.content}</Text>
-            <Text style={{ fontSize: 12, color: "#999" }}>
-              {new Date(post.createdAt).toLocaleString()}
-            </Text>
-          </View>
-        ))}
-
       {/* FOLLOWERS */}
       {activeTab === "followers" && followers.length === 0 && (
         <Text style={{ color: "#999", marginTop: 12 }}>No followers yet</Text>
       )}
-
-     {activeTab === "followers" &&
-  followers.map(f => {
-    const isSelf = f.user.username === currentUser.username;
-
-    return (
-      <UserRow
-        key={f.user.id}
-        user={{
-          ...f.user,
-          followedByMe: f.followedByMe, 
-        }}
-        onToggleFollow={isSelf ? undefined : toggleFollow}
-      />
-    );
-  })}
+      {activeTab === "followers" &&
+        followers.map(f => {
+          const isSelf = f.user.username === currentUser.username;
+          return (
+            <UserRow
+              key={f.user.id}
+              user={{ ...f.user, followedByMe: f.followedByMe }}
+              onToggleFollow={isSelf ? undefined : toggleFollow}
+            />
+          );
+        })}
 
       {/* FOLLOWING */}
+      {activeTab === "following" && following.length === 0 && (
+        <Text style={{ color: "#999", marginTop: 12 }}>No following yet</Text>
+      )}
       {activeTab === "following" &&
-  following.map(f => {
-    const isSelf = f.user.username === currentUser.username;
+        following.map(f => {
+          const isSelf = f.user.username === currentUser.username;
+          return (
+            <UserRow
+              key={f.user.id}
+              user={{ ...f.user, followedByMe: f.followedByMe }}
+              onToggleFollow={isSelf ? undefined : toggleFollow}
+            />
+          );
+        })}
 
-    return (
-      <UserRow
-        key={f.user.id}
-        user={{ ...f.user, followedByMe: f.followedByMe }}
-        onToggleFollow={isSelf ? undefined : toggleFollow}
-      />
-    );
-  })}
-
+      {/* ACTIVITY */}
+      {activeTab === "activity" && (
+        <>
+          {activityLoading && <Text>Loading…</Text>}
+          {!activityLoading && activities.length === 0 && (
+            <Text style={{ color: "#999", marginTop: 12 }}>No activity yet</Text>
+          )}
+          {!activityLoading && (
+            <ScrollView>
+              {activities
+                .filter(a => a.type !== "follow" || a.active)
+                .map(activity => (
+                  <FeedItem
+                    key={activity.id}
+                    activity={activity}
+                    currentUserId={currentUser?.id ?? null}
+                    onToggleFollow={toggleFollowOptimistic}
+                    onDeletePost={deletePost}
+                  />
+                ))}
+            </ScrollView>
+          )}
+        </>
+      )}
     </View>
   );
 }

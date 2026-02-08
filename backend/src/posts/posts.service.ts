@@ -8,6 +8,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Post } from './post.entity';
 import { User } from '../users/user.entity';
+import { ActivityService } from 'src/activity/activity.service';
+import { ACTIVITY_TYPE } from 'src/activity/activity.constants';
 
 @Injectable()
 export class PostsService {
@@ -16,6 +18,7 @@ export class PostsService {
         private readonly postsRepo: Repository<Post>,
         @InjectRepository(User)
         private readonly usersRepo: Repository<User>,
+        private readonly activityService: ActivityService,
     ) { }
 
     async getFeed(): Promise<Post[]> {
@@ -29,21 +32,26 @@ export class PostsService {
         }
     }
 
-    async addPost(userId: number, content: string): Promise<Post> {
-        const user = await this.usersRepo.findOne({ where: { id: userId } });
+    async addPost(userId: number, content: string) {
+        return this.postsRepo.manager.transaction(async manager => {
+            const post = await manager.save(Post, {
+                content,
+                user: { id: userId },
+            });
 
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
+            await this.activityService.createActivity(
+                {
+                    type: ACTIVITY_TYPE.POST,
+                    actor: { id: userId } as User,
+                    targetPost: post,
+                },
+                manager, // 🔴 THIS is the missing piece
+            );
 
-        const post = this.postsRepo.create({ content, user });
-
-        try {
-            return await this.postsRepo.save(post);
-        } catch {
-            throw new InternalServerErrorException('Failed to create post');
-        }
+            return post;
+        });
     }
+
 
     async deletePost(postId: number, userId: number): Promise<boolean> {
         const post = await this.postsRepo.findOne({
@@ -58,6 +66,8 @@ export class PostsService {
         if (post.user.id !== userId) {
             throw new ForbiddenException('You cannot delete this post');
         }
+        // remove any activities that reference this post to avoid FK constraint errors
+        await this.activityService.deleteActivitiesForPost(postId);
 
         await this.postsRepo.remove(post);
         return true;
@@ -72,14 +82,8 @@ export class PostsService {
     }
 
     async getPostsByUsername(username: string): Promise<Post[]> {
-        const user = await this.usersRepo.findOne({
-            where: { username },
-        });
-
+        const user = await this.usersRepo.findOne({ where: { username } });
         if (!user) return [];
-
         return this.getPostsByUserId(user.id);
     }
-
-
 }

@@ -1,127 +1,149 @@
 import { useEffect, useState, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { Post } from "@/types/Post";
+import { getCurrentUser } from "@/utils/currentUser";
+import { Activity } from "@/types/Activity";
 
-export function useFeed() {
-  const [posts, setPosts] = useState<Post[]>([]);
+export function useFeed(username?: string) {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-  const fetchPosts = useCallback(async () => {
+  // Fetch current user
+  useEffect(() => {
+    getCurrentUser().then(user => setCurrentUserId(user?.id ?? null));
+  }, []);
+
+  // Fetch feed activities (home or profile based on username)
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-
-      const data = await graphqlFetch<{ feed: Post[] }>
-      (`
-       query {
-          feed {
+      const data = await graphqlFetch<{ feed: Activity[] }>(
+        `
+        query Feed($username: String) {
+          feed(username: $username) {
             id
-            content
+            active
+            type
             createdAt
-            user {
-              id
-              username
-              followedByMe
-            }
+            actor { id username displayName }
+            targetUser { id username displayName followedByMe }
+            targetPost { id content user { id username followedByMe } createdAt }
           }
         }
-      `);
-
-      setPosts(data.feed);
-    } catch (err: any) {
-      setError(err.message);
+      `,
+        { username }
+      );
+      setActivities(data.feed ?? []);
+    } catch (e) {
+      setError("Failed to load feed");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [username]);
 
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    refresh();
+  }, [refresh]);
 
-  const publish = async (content: string) => {
-    await graphqlFetch(
-      `
-      mutation AddPost($content: String!) {
-        addPost(content: $content) {
-          id
-        }
-      }
-      `,
-      { content }
-    );
-
-    fetchPosts();
-  };
-
-  const remove = async (postId: number) => {
-    await graphqlFetch(
-      `
-      mutation DeletePost($postId: Int!) {
-        deletePost(postId: $postId)
-      }
-      `,
-      { postId }
-    );
-
-    fetchPosts();
-  };
-
-  const toggleFollowOptimistic = async (
-  username: string,
-  shouldFollow: boolean,
-) => {
-  // 1. Optimistic update
-  setPosts(prev =>
-    prev.map(post =>
-      post.user.username === username
-        ? {
-            ...post,
-            user: {
-              ...post.user,
-              followedByMe: shouldFollow,
-            },
+  // Optimistic follow/unfollow
+  const toggleFollowOptimistic = useCallback(
+    async (targetUsername: string, shouldFollow: boolean) => {
+      // Optimistic update
+      setActivities(prev =>
+        prev.map(a => {
+          if (a.type === "follow" && a.targetUser?.username === targetUsername) {
+            return {
+              ...a,
+              targetUser: { ...a.targetUser, followedByMe: shouldFollow },
+            };
           }
-        : post
-    )
+          return a;
+        })
+      );
+
+      // GraphQL call
+      try {
+        await graphqlFetch(
+          shouldFollow
+            ? `
+            mutation FollowUser($username: String!) {
+              followUser(username: $username)
+            }
+          `
+            : `
+            mutation UnfollowUser($username: String!) {
+              unfollowUser(username: $username)
+            }
+          `,
+          { username: targetUsername }
+        );
+        // re-sync from server
+        await refresh();
+      } catch {
+        // rollback
+        setActivities(prev =>
+          prev.map(a => {
+            if (a.type === "follow" && a.targetUser?.username === targetUsername) {
+              return {
+                ...a,
+                targetUser: { ...a.targetUser, followedByMe: !shouldFollow },
+              };
+            }
+            return a;
+          })
+        );
+      }
+    },
+    [refresh]
   );
 
-  // 2. Fire mutation (do NOT await for UI)
-  try {
-    await graphqlFetch(
-      `
-      mutation ToggleFollow($username: String!) {
-        ${shouldFollow ? "followUser" : "unfollowUser"}(username: $username)
-      }
-      `,
-      { username }
-    );
-  } catch {
-    // 3. Rollback if failed
-    setPosts(prev =>
-      prev.map(post =>
-        post.user.username === username
-          ? {
-              ...post,
-              user: {
-                ...post.user,
-                followedByMe: !shouldFollow,
-              },
-            }
-          : post
-      )
-    );
-  }
-};
-
-
   return {
-    posts,
+    activities,
     loading,
     error,
-    publish,
-    remove,
-    refresh: fetchPosts,
-    toggleFollowOptimistic
+    refresh,
+    currentUserId,
+    toggleFollowOptimistic,
+    publish: async (content: string) => {
+      if (!content.trim()) return;
+      try {
+        await graphqlFetch(
+          `
+          mutation AddPost($content: String!) {
+            addPost(content: $content) {
+              id
+              content
+              createdAt
+            }
+          }
+        `,
+          { content }
+        );
+        console.log("✅ Post published, refreshing feed...");
+        await refresh();
+      } catch (err) {
+        console.error("❌ Post publication failed:", err);
+        throw err;
+      }
+    },
+    deletePost: async (postId: number) => {
+      try {
+        await graphqlFetch(
+          `
+          mutation DeletePost($postId: Int!) {
+            deletePost(postId: $postId)
+          }
+        `,
+          { postId }
+        );
+        await refresh();
+        return true;
+      } catch (err) {
+        console.error('❌ Delete post failed:', err);
+        return false;
+      }
+    },
   };
 }

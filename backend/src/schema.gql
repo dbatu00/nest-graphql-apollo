@@ -28,6 +28,16 @@ type User {
   followingCount: Int!
 }
 
+type Activity {
+  id: Int!
+  type: String!
+  actor: User!
+  targetUser: User
+  targetPost: Post
+  active: Boolean!
+  createdAt: DateTime!
+}
+
 type AuthPayload {
   user: User!
   token: String!
@@ -39,8 +49,11 @@ type FollowerView {
 }
 
 type Query {
+  feed(username: String): [Activity!]!
+  homeFeed: [Activity!]!
+  profileActivity(username: String!): [Activity!]!
   userByUsername(username: String!): User
-  feed: [Post!]!
+  posts: [Post!]!
   postsByUsername(username: String!): [Post!]!
   me: User!
   followers(username: String!): [User!]!
@@ -50,6 +63,7 @@ type Query {
 }
 
 type Mutation {
+  toggleFollow(targetUsername: String!, shouldFollow: Boolean!): Boolean!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!
