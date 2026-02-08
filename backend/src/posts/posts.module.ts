@@ -5,10 +5,12 @@ import { PostsResolver } from './posts.resolver';
 import { Post } from './post.entity';
 import { User } from 'src/users/user.entity';
 import { ActivityModule } from 'src/activity/activity.module';
+import { Like } from './like.entity';
+
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User]),
+    TypeOrmModule.forFeature([Post, User, Like]),
     ActivityModule, // 👈 import the module, not the service
   ],
   providers: [PostsService, PostsResolver],
