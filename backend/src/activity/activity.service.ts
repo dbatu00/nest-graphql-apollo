@@ -3,10 +3,10 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, EntityManager } from "typeorm";
 
 import { Activity } from "./activity.entity";
-import { ActivityType } from "./activity.constants";
+import { ACTIVITY_TYPE, ActivityType } from "./activity.constants";
 import { User } from "src/users/user.entity";
 import { Post } from "src/posts/post.entity";
-import { Follow } from "src/follows/follow.entity";
+
 
 @Injectable()
 export class ActivityService {
@@ -169,4 +169,16 @@ export class ActivityService {
     async deleteActivitiesForPost(postId: number) {
         await this.activityRepo.delete({ targetPostId: postId });
     }
+
+    async deactivateLikeActivity(actorId: number, postId: number) {
+        const activity = await this.activityRepo.findOne({
+            where: { actorId, targetPostId: postId, type: ACTIVITY_TYPE.LIKE, active: true },
+        });
+
+        if (activity) {
+            activity.active = false;
+            await this.activityRepo.save(activity);
+        }
+    }
+
 }

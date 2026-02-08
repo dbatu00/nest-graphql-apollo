@@ -105,4 +105,46 @@ export class PostsService {
         };
     }
 
+    async toggleLike(userId: number, postId: number) {
+        // 1️⃣ Find the user and post
+        const user = await this.usersRepo.findOneBy({ id: userId });
+        const post = await this.postsRepo.findOneBy({ id: postId });
+        if (!user || !post) {
+            throw new Error('User or Post not found');
+        }
+
+        // 2️⃣ Find existing like
+        let like = await this.likesRepo.findOne({
+            where: { userId, postId },
+            order: { createdAt: 'DESC' },
+        });
+
+        let likedNow: boolean;
+
+        if (like) {
+            // Toggle active flag
+            like.active = !like.active;
+            likedNow = like.active;
+            await this.likesRepo.save(like);
+        } else {
+            // Create new like
+            like = await this.likesRepo.save({ user, userId, post, postId });
+            likedNow = true;
+        }
+
+        // 3️⃣ Create or deactivate Activity
+        if (likedNow) {
+            await this.activityService.createActivity({
+                type: ACTIVITY_TYPE.LIKE,
+                actor: user,
+                targetPost: post,
+            });
+        } else {
+            await this.activityService.deactivateLikeActivity(userId, postId);
+
+        }
+
+        return likedNow;
+    }
+
 }
