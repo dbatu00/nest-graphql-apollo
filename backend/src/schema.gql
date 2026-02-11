@@ -10,6 +10,7 @@ type Post {
   updatedAt: DateTime!
   likesCount: Float!
   likedByMe: Boolean!
+  likedUsers: [User!]!
 }
 
 """
@@ -54,6 +55,7 @@ type Query {
   feed(username: String): [Activity!]!
   userByUsername(username: String!): User
   posts: [Post!]!
+  post(id: Int!): Post!
   me: User!
   followers(username: String!): [User!]!
   following(username: String!): [User!]!

@@ -1,4 +1,5 @@
 export type ActivityType = "post" | "like" | "share" | "follow";
+
 import { Post } from "@/types/Post";
 
 export type Activity = {
@@ -6,7 +7,14 @@ export type Activity = {
   type: ActivityType;
   createdAt: string;
   active: boolean;
-  actor: { id: number; username: string; displayName?: string };
+
+  actor: {
+    id: number;
+    username: string;
+    displayName?: string;
+    followedByMe?: boolean;
+  };
+
   targetUser?: {
     id: number;
     username: string;
@@ -14,5 +22,6 @@ export type Activity = {
     followedByMe?: boolean;
     active?: boolean;
   };
-  targetPost?: Post; // now includes likesCount and likedByMe
+
+  targetPost?: Post;
 };

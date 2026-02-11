@@ -25,20 +25,39 @@ export function useFeed(username?: string) {
             active
             type
             createdAt
-            actor { id username displayName }
-            targetUser { id username displayName followedByMe }
+
+            actor {
+              id
+              username
+              displayName
+              followedByMe
+            }
+
+            targetUser {
+              id
+              username
+              displayName
+              followedByMe
+            }
+
             targetPost {
               id
               content
-              user { id username followedByMe }
+              user {
+                id
+                username
+                followedByMe
+              }
               createdAt
               likesCount
               likedByMe
             }
           }
-        }`,
+        }
+        `,
         { username }
       );
+
       setActivities(data.feed ?? []);
     } catch (e) {
       setError("Failed to load feed");
@@ -52,51 +71,91 @@ export function useFeed(username?: string) {
   }, [refresh]);
 
   const toggleFollowOptimistic = useCallback(
-    async (targetUsername: string, shouldFollow: boolean) => {
+  async (targetUsername: string, shouldFollow: boolean) => {
+    console.log("TOGGLE FOLLOW", targetUsername, shouldFollow);
+
+    // 1️⃣ optimistic update everywhere
+    setActivities(prev =>
+      prev.map(a => {
+        const updated = { ...a };
+
+        if (a.actor?.username === targetUsername) {
+          updated.actor = {
+            ...a.actor,
+            followedByMe: shouldFollow,
+          };
+        }
+
+        if (a.targetUser?.username === targetUsername) {
+          updated.targetUser = {
+            ...a.targetUser,
+            followedByMe: shouldFollow,
+          };
+        }
+
+        if (a.targetPost?.user?.username === targetUsername) {
+          updated.targetPost = {
+            ...a.targetPost,
+            user: {
+              ...a.targetPost.user,
+              followedByMe: shouldFollow,
+            },
+          };
+        }
+
+        return updated;
+      })
+    );
+
+    // 2️⃣ real mutation
+    try {
+      await graphqlFetch(
+        shouldFollow
+          ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
+          : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
+        { username: targetUsername }
+      );
+
+      await refresh(); // authoritative sync
+    } catch (err) {
+      console.error("Follow mutation failed", err);
+      await refresh(); // rollback via server truth
+    }
+  },
+  [refresh]
+);
+
+
+  const toggleLikeOptimistic = useCallback(
+    async (postId: number, currentlyLiked: boolean) => {
       setActivities(prev =>
         prev.map(a =>
-          a.type === "follow" && a.targetUser?.username === targetUsername
-            ? { ...a, targetUser: { ...a.targetUser, followedByMe: shouldFollow } }
+          a.targetPost?.id === postId
+            ? {
+                ...a,
+                targetPost: {
+                  ...a.targetPost,
+                  likedByMe: !currentlyLiked,
+                  likesCount:
+                    (a.targetPost.likesCount ?? 0) +
+                    (currentlyLiked ? -1 : 1),
+                },
+              }
             : a
         )
       );
 
       try {
         await graphqlFetch(
-          shouldFollow
-            ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
-            : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
-          { username: targetUsername }
+          `mutation ToggleLike($postId: Int!) { toggleLike(postId: $postId) }`,
+          { postId }
         );
-        await refresh();
       } catch {
-        setActivities(prev =>
-          prev.map(a =>
-            a.type === "follow" && a.targetUser?.username === targetUsername
-              ? { ...a, targetUser: { ...a.targetUser, followedByMe: !shouldFollow } }
-              : a
-          )
-        );
+        // optional rollback
       }
     },
-    [refresh]
+    []
   );
-
-  const toggleLikeOptimistic = useCallback(
-  async (postId: number, currentlyLiked: boolean) => {
-    setActivities(prev =>
-      prev.map(a =>
-        a.targetPost?.id === postId
-          ? { ...a, targetPost: { ...a.targetPost, likedByMe: !currentlyLiked, likesCount: (a.targetPost.likesCount ?? 0) + (currentlyLiked ? -1 : 1) } }
-          : a
-      )
-    );
-    try { await graphqlFetch(`mutation ToggleLike($postId: Int!) { toggleLike(postId: $postId) }`, { postId }); }
-    catch { /* rollback */ }
-  },
-  []
-);
-
 
   const publish = useCallback(
     async (content: string) => {
@@ -104,7 +163,14 @@ export function useFeed(username?: string) {
       try {
         await graphqlFetch(
           `mutation AddPost($content: String!) {
-            addPost(content: $content) { id content createdAt user { id username followedByMe } likesCount likedByMe }
+            addPost(content: $content) {
+              id
+              content
+              createdAt
+              user { id username followedByMe }
+              likesCount
+              likedByMe
+            }
           }`,
           { content }
         );
@@ -119,7 +185,10 @@ export function useFeed(username?: string) {
   const deletePost = useCallback(
     async (postId: number) => {
       try {
-        await graphqlFetch(`mutation DeletePost($postId: Int!) { deletePost(postId: $postId) }`, { postId });
+        await graphqlFetch(
+          `mutation DeletePost($postId: Int!) { deletePost(postId: $postId) }`,
+          { postId }
+        );
         await refresh();
         return true;
       } catch (err) {

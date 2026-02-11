@@ -21,6 +21,17 @@ export class PostsService {
         private readonly activityService: ActivityService,
     ) { }
 
+
+    async findById(id: number): Promise<Post> {
+        const post = await this.postsRepo.findOne({
+            where: { id },
+            relations: ['user'],
+        });
+
+        if (!post) throw new NotFoundException('Post not found');
+        return post;
+    }
+
     async getFeed(): Promise<Post[]> {
         return this.postsRepo.find({
             relations: ['user'],
@@ -66,6 +77,15 @@ export class PostsService {
         ]);
 
         return { likesCount: count, likedByMe: !!liked };
+    }
+
+    async getUsersWhoLiked(postId: number) {
+        const likes = await this.likesRepo.find({
+            where: { postId, active: true },
+            relations: ['user'],
+        });
+
+        return likes.map(like => like.user);
     }
 
     async toggleLike(userId: number, postId: number) {

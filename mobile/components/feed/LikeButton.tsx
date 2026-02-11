@@ -7,13 +7,25 @@ type Props = {
   likedByMe: boolean;
   likesCount: number;
   onToggleLike: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onPressCount: (postId: number) => void;
 };
 
-export function LikeButton({ postId, likedByMe, likesCount, onToggleLike }: Props) {
+export function LikeButton({
+  postId,
+  likedByMe,
+  likesCount,
+  onToggleLike,
+  onPressCount,
+}: Props) {
   return (
-    <TouchableOpacity style={feedStyles.likeButton} onPress={() => onToggleLike(postId, likedByMe)}>
-      <Text style={{ color: likedByMe ? 'red' : 'gray' }}>♥</Text>
-      <Text>{likesCount}</Text>
-    </TouchableOpacity>
+    <View style={feedStyles.likeButton}>
+      <TouchableOpacity onPress={() => onToggleLike(postId, likedByMe)}>
+        <Text style={{ color: likedByMe ? "red" : "gray" }}>♥</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => onPressCount(postId)}>
+        <Text>{likesCount}</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
