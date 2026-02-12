@@ -24,7 +24,7 @@ export class PostsResolver {
         return this.postsService.getFeed();
     }
 
-    // 🔹 Needed for likedUsers modal query
+    @UseGuards(GqlAuthGuard)
     @Query(() => Post)
     post(@Args('id', { type: () => Int }) id: number) {
         return this.postsService.findById(id);
