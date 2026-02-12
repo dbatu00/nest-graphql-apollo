@@ -55,6 +55,7 @@ type Query {
   feed(username: String): [Activity!]!
   userByUsername(username: String!): User
   posts: [Post!]!
+  likedPosts(username: String!): [Post!]!
   post(id: Int!): Post!
   me: User!
   followers(username: String!): [User!]!

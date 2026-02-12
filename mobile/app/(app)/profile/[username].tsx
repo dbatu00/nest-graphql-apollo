@@ -51,6 +51,9 @@ export default function Profile() {
     fetchFollowing,
     toggleFollow,
     loading,
+    likedPosts,
+    setLikedPosts, // ✅ required
+    fetchLikedPosts,
   } = useProfile(username!);
 
   const [activeTab, setActiveTab] = useState<Tab>("activity");
@@ -67,6 +70,40 @@ export default function Profile() {
     toggleLikeOptimistic,
     deletePost,
   } = useFeed(activeTab === "activity" ? username : undefined);
+
+  /* -------------------- */
+  /* FIX: LIKES TAB HEART */
+  /* -------------------- */
+
+  const handleToggleLikeInLikesTab = async (
+  postId: number,
+  currentlyLiked: boolean
+) => {
+  setLikedPosts(prev =>
+    prev.map(p =>
+      p.id === postId
+        ? {
+            ...p,
+            likedByMe: !currentlyLiked,
+            likesCount:
+              (p.likesCount ?? 0) + (currentlyLiked ? -1 : 1),
+          }
+        : p
+    )
+  );
+
+  // Only remove from list if viewing own likes
+  if (
+    currentlyLiked &&
+    currentUser?.username === profile?.username
+  ) {
+    setLikedPosts(prev => prev.filter(p => p.id !== postId));
+  }
+
+  await toggleLikeOptimistic(postId, currentlyLiked);
+};
+
+
 
   /* -------------------- */
   /* LIKES MODAL STATE    */
@@ -105,15 +142,10 @@ export default function Profile() {
     }
   }, []);
 
-  /* -------------------- */
-  /* FIX: MODAL FOLLOW    */
-  /* -------------------- */
-
   const handleToggleFollowInModal = async (
     username: string,
     shouldFollow: boolean
   ) => {
-    // 1️⃣ Optimistically update modal UI
     setLikedUsers(prev =>
       prev.map(u =>
         u.username === username
@@ -122,9 +154,17 @@ export default function Profile() {
       )
     );
 
-    // 2️⃣ Trigger global follow logic (updates feed + backend)
     await toggleFollowOptimistic(username, shouldFollow);
   };
+
+  const handleDeletePostInLikesTab = async (postId: number) => {
+  // 1️⃣ Optimistically remove from likes tab
+  setLikedPosts(prev => prev.filter(p => p.id !== postId));
+
+  // 2️⃣ Call global delete logic
+  await deletePost(postId);
+};
+
 
   /* -------------------- */
   /* EFFECTS              */
@@ -138,6 +178,12 @@ export default function Profile() {
     if (activeTab === "followers") fetchFollowers();
     if (activeTab === "following") fetchFollowing();
   }, [activeTab, fetchFollowers, fetchFollowing]);
+
+  useEffect(() => {
+    if (activeTab === "likes") {
+      fetchLikedPosts();
+    }
+  }, [activeTab, fetchLikedPosts]);
 
   /* -------------------- */
   /* GUARDS               */
@@ -165,8 +211,6 @@ export default function Profile() {
 
   return (
     <View style={commonStyles.container}>
-
-      {/* HEADER */}
       <Text style={{ fontSize: 22, fontWeight: "bold" }}>
         {profile.displayName ?? profile.username}
       </Text>
@@ -174,10 +218,10 @@ export default function Profile() {
         @{profile.username}
       </Text>
 
-      {/* TABS */}
       <ProfileTabs active={activeTab} onChange={setActiveTab} />
 
-      {/* FOLLOWERS TAB */}
+
+       {/* FOLLOWERS TAB */}
       {activeTab === "followers" && (
         <>
           {followers.length === 0 && (
@@ -254,6 +298,38 @@ export default function Profile() {
         </>
       )}
 
+      {/* LIKES TAB */}
+      {activeTab === "likes" && (
+        <>
+          {likedPosts.length === 0 && (
+            <Text style={{ color: "#999", marginTop: 12 }}>
+              No liked posts yet
+            </Text>
+          )}
+
+          <ScrollView>
+            {likedPosts.map(post => (
+  <FeedItem
+    key={`liked-${post.id}`}
+    activity={{
+      id: post.id,
+      type: "like", // ✅ important
+      actor: currentUser!, // ✅ YOU liked it
+      targetPost: post,
+      active: true,
+      createdAt: post.createdAt,
+    }}
+                currentUserId={currentUser.id}
+                onToggleFollow={toggleFollow}
+                onToggleLike={handleToggleLikeInLikesTab} // ✅ fixed
+                onDeletePost={handleDeletePostInLikesTab}
+                onPressLikes={openLikesModal}
+              />
+            ))}
+          </ScrollView>
+        </>
+      )}
+
       {/* LIKES MODAL */}
       <Modal visible={likesModalVisible} animationType="slide">
         <View style={{ flex: 1, padding: 16 }}>
@@ -287,7 +363,6 @@ export default function Profile() {
           </Text>
         </View>
       </Modal>
-
     </View>
   );
 }

@@ -25,6 +25,15 @@ export class PostsResolver {
     }
 
     @UseGuards(GqlAuthGuard)
+    @Query(() => [Post])
+    async likedPosts(
+        @Args('username') username: string,
+    ) {
+        return this.postsService.getLikedPostsByUsername(username);
+    }
+
+
+    @UseGuards(GqlAuthGuard)
     @Query(() => Post)
     post(@Args('id', { type: () => Int }) id: number) {
         return this.postsService.findById(id);

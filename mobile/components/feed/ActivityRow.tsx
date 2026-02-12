@@ -23,79 +23,73 @@ export const ActivityRow = ({
 }: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
 
-  let contentNode: React.ReactNode = null;
+  const isPost = type === "post";
+  const isNested = type === "like" || type === "share";
 
-  switch (type) {
-    case "post":
-      contentNode = (
-        <Text style={{ marginBottom: 8 }}>
-          <ProfileLink username={actor.username}>
-            {actor.displayName ?? actor.username}
-          </ProfileLink>
-          {" posted"}
-        </Text>
-      );
-      break;
+  /* ---------------- Header Rendering ---------------- */
 
-    case "like":
-      contentNode = (
-        <Text style={{ marginBottom: 8 }}>
-          <ProfileLink username={actor.username}>
-            {actor.displayName ?? actor.username}
-          </ProfileLink>
-          {" liked "}
-          <ProfileLink username={targetPost?.user.username ?? ""}>
-            {targetPost?.user.username}
-          </ProfileLink>
-          {"'s post"}
-        </Text>
-      );
-      break;
+  const renderHeader = () => {
+    if (type === "post") return null;
 
-    case "share":
-      contentNode = (
-        <Text style={{ marginBottom: 8 }}>
-          <ProfileLink username={actor.username}>
-            {actor.displayName ?? actor.username}
-          </ProfileLink>
-          {" shared "}
-          <ProfileLink username={targetPost?.user.username ?? ""}>
-            {targetPost?.user.username}
-          </ProfileLink>
-          {"'s post"}
-        </Text>
-      );
-      break;
+    switch (type) {
+      case "like":
+        return (
+          <Text style={styles.headerText}>
+            <ProfileLink username={actor.username}>
+              {actor.displayName ?? actor.username}
+            </ProfileLink>
+            {" liked "}
+            <ProfileLink username={targetPost?.user.username ?? ""}>
+              {
+                targetPost?.user.username}
+            </ProfileLink>
+            {"'s post"}
+          </Text>
+        );
 
-    case "follow":
-      contentNode = (
-        <Text style={{ marginBottom: 8 }}>
-          <ProfileLink username={actor.username}>
-            {actor.displayName ?? actor.username}
-          </ProfileLink>
-          {" followed "}
-          <ProfileLink username={targetUser?.username ?? ""}>
-            {targetUser?.displayName ?? targetUser?.username}
-          </ProfileLink>
-        </Text>
-      );
-      break;
-  }
+      case "share":
+        return (
+          <Text style={styles.headerText}>
+            <ProfileLink username={actor.username}>
+              {actor.displayName ?? actor.username}
+            </ProfileLink>
+            {" shared "}
+            <ProfileLink username={targetPost?.user.username ?? ""}>
+              {
+                targetPost?.user.username}
+            </ProfileLink>
+            {"'s post"}
+          </Text>
+        );
+
+      case "follow":
+        return (
+          <Text style={styles.headerText}>
+            <ProfileLink username={actor.username}>
+              {actor.displayName ?? actor.username}
+            </ProfileLink>
+            {" followed "}
+            <ProfileLink username={targetUser?.username ?? ""}>
+              {targetUser?.displayName ??
+                targetUser?.username}
+            </ProfileLink>
+          </Text>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  /* ---------------- Main Render ---------------- */
 
   return (
-    <View
-      style={{
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderBottomWidth: 1,
-        borderColor: "#eee",
-      }}
-    >
-      {contentNode}
+    <View style={styles.container}>
+      {renderHeader()}
 
-      {/* Nested post for post / like / share */}
-      {targetPost &&
-        (type === "post" || type === "like" || type === "share") && (
+      {/* Post rendering */}
+      {targetPost && (isPost || isNested) && (
+        <View style={isNested ? styles.nestedContainer : undefined}>
           <PostItem
             post={targetPost}
             currentUserId={currentUserId ?? null}
@@ -104,11 +98,40 @@ export const ActivityRow = ({
             onToggleLike={onToggleLike}
             onPressLikes={onPressLikes}
           />
-        )}
+        </View>
+      )}
 
-      <Text style={{ fontSize: 12, color: "#999", marginTop: 6 }}>
+      <Text style={styles.timestamp}>
         {new Date(createdAt).toLocaleString()}
       </Text>
     </View>
   );
+};
+
+/* ---------------- Styles ---------------- */
+
+const styles = {
+  container: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: "#eee",
+  },
+
+  headerText: {
+    marginBottom: 8,
+  },
+
+  nestedContainer: {
+    marginLeft: 12,
+    paddingLeft: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: "#eee",
+  },
+
+  timestamp: {
+    fontSize: 12,
+    color: "#999",
+    marginTop: 6,
+  },
 };

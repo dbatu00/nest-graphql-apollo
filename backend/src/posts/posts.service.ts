@@ -120,4 +120,28 @@ export class PostsService {
 
         return likedNow;
     }
+
+    async getLikedPostsByUsername(username: string): Promise<Post[]> {
+        const user = await this.usersRepo.findOne({
+            where: { username },
+        });
+
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+
+        const likes = await this.likesRepo.find({
+            where: {
+                userId: user.id,
+                active: true,
+            },
+            relations: ['post', 'post.user'],
+            order: {
+                createdAt: 'DESC',
+            },
+        });
+
+        return likes.map(like => like.post);
+    }
+
 }
