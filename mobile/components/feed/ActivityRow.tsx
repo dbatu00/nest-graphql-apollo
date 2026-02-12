@@ -2,57 +2,91 @@ import React from "react";
 import { View, Text } from "react-native";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { Activity } from "@/types/Activity";
-import { UserRow } from "@/components/user/UserRow";
+import { PostItem } from "@/components/feed/PostItem";
 
 type Props = {
   activity: Activity;
   currentUserId?: number;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
+  onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onPressLikes?: (postId: number) => void;
+  onDeletePost?: (postId: number) => void;
 };
 
-export const ActivityRow = ({ activity, currentUserId, onToggleFollow }: Props) => {
+export const ActivityRow = ({
+  activity,
+  currentUserId,
+  onToggleFollow,
+  onToggleLike,
+  onPressLikes,
+  onDeletePost,
+}: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
 
-  // Build display message based on activity type
-  // We render actor/target usernames as clickable links to profiles
   let contentNode: React.ReactNode = null;
+
   switch (type) {
-    case "post":
-      contentNode = (
-        <Text style={{ marginBottom: 6 }}>
-          <ProfileLink username={actor.username}>{actor.displayName ?? actor.username}</ProfileLink>
-          {` posted: "${targetPost?.content}"`}
-        </Text>
-      );
-      break;
     case "like":
       contentNode = (
-        <Text style={{ marginBottom: 6 }}>
-          <ProfileLink username={actor.username}>{actor.displayName ?? actor.username}</ProfileLink>
-          {` liked a post: "${targetPost?.content}"`}
-        </Text>
+        <>
+          <Text style={{ marginBottom: 6 }}>
+            <ProfileLink username={actor.username}>
+              {actor.displayName ?? actor.username}
+            </ProfileLink>
+            {" liked "}
+            {targetPost?.user && (
+              <>
+                <ProfileLink username={targetPost.user.username}>
+                  {targetPost.user.username}
+                </ProfileLink>
+                {"'s post"}
+              </>
+            )}
+          </Text>
+
+          {targetPost && onToggleLike && onPressLikes && (
+            <View
+              style={{
+                marginLeft: 12,
+                borderLeftWidth: 2,
+                borderColor: "#eee",
+                paddingLeft: 12,
+                marginTop: 8,
+              }}
+            >
+              <PostItem
+                post={targetPost}
+                currentUserId={currentUserId ?? null}
+                onDelete={onDeletePost ?? (() => {})}
+                onToggleFollow={onToggleFollow}
+                onToggleLike={onToggleLike}
+                onPressLikes={onPressLikes}
+              />
+            </View>
+          )}
+        </>
       );
       break;
-    case "share":
-      contentNode = (
-        <Text style={{ marginBottom: 6 }}>
-          <ProfileLink username={actor.username}>{actor.displayName ?? actor.username}</ProfileLink>
-          {` shared a post: "${targetPost?.content}"`}
-        </Text>
-      );
-      break;
+
     case "follow":
       contentNode = (
         <Text style={{ marginBottom: 6 }}>
-          <ProfileLink username={actor.username}>{actor.displayName ?? actor.username}</ProfileLink>
+          <ProfileLink username={actor.username}>
+            {actor.displayName ?? actor.username}
+          </ProfileLink>
           {" followed "}
-          <ProfileLink username={targetUser?.username ?? ""}>{targetUser?.displayName ?? targetUser?.username}</ProfileLink>
+          {targetUser && (
+            <ProfileLink username={targetUser.username}>
+              {targetUser.displayName ?? targetUser.username}
+            </ProfileLink>
+          )}
         </Text>
       );
       break;
-  }
 
-  
+    default:
+      return null;
+  }
 
   return (
     <View
@@ -63,12 +97,9 @@ export const ActivityRow = ({ activity, currentUserId, onToggleFollow }: Props) 
         borderColor: "#eee",
       }}
     >
-      {/* Message / follow display (with clickable profile links) */}
       {contentNode}
 
-
-      {/* Timestamp */}
-      <Text style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
+      <Text style={{ fontSize: 12, color: "#999", marginTop: 6 }}>
         {new Date(createdAt).toLocaleString()}
       </Text>
     </View>

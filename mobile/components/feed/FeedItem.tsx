@@ -38,6 +38,9 @@ export function FeedItem({
       activity={activity}
       currentUserId={currentUserId ?? undefined}
       onToggleFollow={onToggleFollow}
+      onToggleLike={onToggleLike}
+      onPressLikes={onPressLikes}
+      onDeletePost={onDeletePost}
     />
   );
 }
