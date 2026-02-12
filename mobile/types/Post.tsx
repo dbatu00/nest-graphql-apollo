@@ -7,4 +7,6 @@ export type Post = {
     username: string;
     followedByMe: boolean;
   };
+  likedByMe?: boolean; // ✅ optional for activity feed
+  likesCount?: number; // ✅ optional for activity feed
 };

@@ -16,6 +16,8 @@ import { Follow } from './follows/follow.entity';
 import { ActivityResolver } from './activity/activity.resolver';
 import { ActivityModule } from './activity/activity.module';
 import { Activity } from './activity/activity.entity';
+import { Like } from './posts/like.entity';
+
 
 
 
@@ -32,7 +34,7 @@ import { Activity } from './activity/activity.entity';
       username: 'postgres',
       password: 'qweasdzxc',
       database: 'nest_graphql',
-      entities: [User, Post, Auth, Follow, Activity],
+      entities: [User, Post, Auth, Follow, Activity, Like],
       synchronize: true,
     }),
     ConfigModule.forRoot({
