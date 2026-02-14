@@ -1,368 +1,238 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
-  Modal,
+  TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
-import { useProfile } from "@/hooks/useProfile";
+import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
-import { FeedItem } from "@/components/feed/FeedItem";
-import { commonStyles } from "@/styles/common";
-import { getCurrentUser } from "@/utils/currentUser";
-import { useFeed } from "@/hooks/useFeed";
-import { ProfileTabs, Tab } from "@/components/profile/ProfileTabs";
+import { ActivityRow } from "@/components/feed/ActivityRow";
+import { useActivities } from "@/hooks/useActivities";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 
-type User = {
-  id: number;
-  username: string;
-  displayName?: string;
-};
+type Tab =
+  | "posts"
+  | "likes"
+  | "activity"
+  | "followers"
+  | "following";
 
-type Follower = {
-  user: User;
-  followedByMe: boolean;
-};
+export default function UsernameScreen() {
+  const { username } =
+    useLocalSearchParams<{ username: string }>();
 
-type LikedUser = {
-  id: number;
-  username: string;
-  displayName?: string;
-  followedByMe?: boolean;
-};
+  const [tab, setTab] = useState<Tab>("posts");
 
-type LikedUsersResponse = {
-  post: {
-    likedUsers: LikedUser[];
-  };
-};
+  /* ---------------- ACTIVITY TYPES ---------------- */
 
-export default function Profile() {
-  const { username } = useLocalSearchParams<{ username: string }>();
+  const types = useMemo(() => {
+    if (tab === "posts") return ["post"];
+    if (tab === "likes") return ["like"];
+    if (tab === "activity") return undefined;
+    return undefined;
+  }, [tab]);
 
-  const {
-    profile,
-    followers = [] as Follower[],
-    following = [] as Follower[],
-    fetchFollowers,
-    fetchFollowing,
-    toggleFollow,
-    loading,
-    likedPosts,
-    setLikedPosts, // ✅ required
-    fetchLikedPosts,
-  } = useProfile(username!);
+  const feed = useActivities({
+    username,
+    types:
+      tab === "followers" || tab === "following"
+        ? undefined
+        : types,
+  });
 
-  const [activeTab, setActiveTab] = useState<Tab>("activity");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  /* ---------------- FOLLOW LIST STATE ---------------- */
 
-  /* -------------------- */
-  /* FEED (ACTIVITY TAB) */
-  /* -------------------- */
+  const [followUsers, setFollowUsers] = useState<any[]>([]);
+  const [followLoading, setFollowLoading] =
+    useState(false);
 
-  const {
-    activities,
-    loading: activityLoading,
-    toggleFollowOptimistic,
-    toggleLikeOptimistic,
-    deletePost,
-  } = useFeed(activeTab === "activity" ? username : undefined);
-
-  /* -------------------- */
-  /* FIX: LIKES TAB HEART */
-  /* -------------------- */
-
-  const handleToggleLikeInLikesTab = async (
-  postId: number,
-  currentlyLiked: boolean
-) => {
-  setLikedPosts(prev =>
-    prev.map(p =>
-      p.id === postId
-        ? {
-            ...p,
-            likedByMe: !currentlyLiked,
-            likesCount:
-              (p.likesCount ?? 0) + (currentlyLiked ? -1 : 1),
-          }
-        : p
+  useEffect(() => {
+    if (
+      tab !== "followers" &&
+      tab !== "following"
     )
-  );
+      return;
 
-  // Only remove from list if viewing own likes
-  if (
-    currentlyLiked &&
-    currentUser?.username === profile?.username
-  ) {
-    setLikedPosts(prev => prev.filter(p => p.id !== postId));
-  }
+    const load = async () => {
+      setFollowLoading(true);
 
-  await toggleLikeOptimistic(postId, currentlyLiked);
-};
-
-
-
-  /* -------------------- */
-  /* LIKES MODAL STATE    */
-  /* -------------------- */
-
-  const [likedUsers, setLikedUsers] = useState<LikedUser[]>([]);
-  const [likesModalVisible, setLikesModalVisible] = useState(false);
-  const [likesLoading, setLikesLoading] = useState(false);
-
-  const openLikesModal = useCallback(async (postId: number) => {
-    try {
-      setLikesLoading(true);
-      setLikesModalVisible(true);
-
-      const res = await graphqlFetch<LikedUsersResponse>(
-        `
-          query GetLikedUsers($postId: Int!) {
-            post(id: $postId) {
-              likedUsers {
-                id
-                username
-                displayName
-                followedByMe
+      try {
+        const data = await graphqlFetch<{
+          followers?: any[];
+          following?: any[];
+        }>(
+          tab === "followers"
+            ? `
+              query ($username: String!) {
+                followers(username: $username) {
+                  id
+                  username
+                  displayName
+                  followedByMe
+                }
               }
-            }
-          }
-        `,
-        { postId }
-      );
+            `
+            : `
+              query ($username: String!) {
+                following(username: $username) {
+                  id
+                  username
+                  displayName
+                  followedByMe
+                }
+              }
+            `,
+          { username }
+        );
 
-      setLikedUsers(res.post.likedUsers);
-    } catch (err) {
-      console.error("Failed fetching liked users", err);
-    } finally {
-      setLikesLoading(false);
-    }
-  }, []);
+        setFollowUsers(
+          tab === "followers"
+            ? data.followers ?? []
+            : data.following ?? []
+        );
+      } catch {
+        setFollowUsers([]);
+      } finally {
+        setFollowLoading(false);
+      }
+    };
 
-  const handleToggleFollowInModal = async (
-    username: string,
+    load();
+  }, [tab, username]);
+
+  const handleToggleFollowInList = async (
+    targetUsername: string,
     shouldFollow: boolean
   ) => {
-    setLikedUsers(prev =>
+    setFollowUsers(prev =>
       prev.map(u =>
-        u.username === username
+        u.username === targetUsername
           ? { ...u, followedByMe: shouldFollow }
           : u
       )
     );
 
-    await toggleFollowOptimistic(username, shouldFollow);
+    await feed.toggleFollowOptimistic(
+      targetUsername,
+      shouldFollow
+    );
   };
 
-  const handleDeletePostInLikesTab = async (postId: number) => {
-  // 1️⃣ Optimistically remove from likes tab
-  setLikedPosts(prev => prev.filter(p => p.id !== postId));
-
-  // 2️⃣ Call global delete logic
-  await deletePost(postId);
-};
-
-
-  /* -------------------- */
-  /* EFFECTS              */
-  /* -------------------- */
-
-  useEffect(() => {
-    getCurrentUser().then(user => setCurrentUser(user));
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "followers") fetchFollowers();
-    if (activeTab === "following") fetchFollowing();
-  }, [activeTab, fetchFollowers, fetchFollowing]);
-
-  useEffect(() => {
-    if (activeTab === "likes") {
-      fetchLikedPosts();
-    }
-  }, [activeTab, fetchLikedPosts]);
-
-  /* -------------------- */
-  /* GUARDS               */
-  /* -------------------- */
-
-  if (loading || !currentUser) {
-    return (
-      <View style={commonStyles.container}>
-        <Text>Loading…</Text>
-      </View>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <View style={commonStyles.container}>
-        <Text>User not found</Text>
-      </View>
-    );
-  }
-
-  /* -------------------- */
-  /* RENDER               */
-  /* -------------------- */
+  /* ---------------- RENDER ---------------- */
 
   return (
-    <View style={commonStyles.container}>
-      <Text style={{ fontSize: 22, fontWeight: "bold" }}>
-        {profile.displayName ?? profile.username}
-      </Text>
-      <Text style={{ color: "#666", marginBottom: 16 }}>
-        @{profile.username}
-      </Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={{ padding: 16 }}>
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: "600",
+          }}
+        >
+          @{username}
+        </Text>
+      </View>
 
-      <ProfileTabs active={activeTab} onChange={setActiveTab} />
-
-
-       {/* FOLLOWERS TAB */}
-      {activeTab === "followers" && (
-        <>
-          {followers.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No followers yet
+      {/* Tabs */}
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          justifyContent: "space-around",
+          paddingVertical: 8,
+        }}
+      >
+        {(
+          [
+            "posts",
+            "likes",
+            "activity",
+            "followers",
+            "following",
+          ] as Tab[]
+        ).map(t => (
+          <TouchableOpacity
+            key={t}
+            onPress={() => setTab(t)}
+            style={{ marginVertical: 4 }}
+          >
+            <Text
+              style={{
+                fontWeight:
+                  tab === t ? "700" : "400",
+              }}
+            >
+              {t.toUpperCase()}
             </Text>
-          )}
+          </TouchableOpacity>
+        ))}
+      </View>
 
-          {followers.map(f => {
-            const isSelf = f.user.username === currentUser.username;
-            return (
-              <UserRow
-                key={f.user.id}
-                user={{ ...f.user, followedByMe: f.followedByMe }}
-                currentUserId={currentUser.id}
-                onToggleFollow={isSelf ? undefined : toggleFollow}
-              />
-            );
-          })}
-        </>
-      )}
-
-      {/* FOLLOWING TAB */}
-      {activeTab === "following" && (
+      {/* Followers / Following */}
+      {(tab === "followers" ||
+        tab === "following") && (
         <>
-          {following.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No following yet
-            </Text>
-          )}
-
-          {following.map(f => {
-            const isSelf = f.user.username === currentUser.username;
-            return (
-              <UserRow
-                key={f.user.id}
-                user={{ ...f.user, followedByMe: f.followedByMe }}
-                currentUserId={currentUser.id}
-                onToggleFollow={isSelf ? undefined : toggleFollow}
-              />
-            );
-          })}
-        </>
-      )}
-
-      {/* ACTIVITY TAB */}
-      {activeTab === "activity" && (
-        <>
-          {activityLoading && <Text>Loading…</Text>}
-
-          {!activityLoading && activities.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No activity yet
-            </Text>
-          )}
-
-          {!activityLoading && (
-            <ScrollView>
-              {activities
-                .filter(a => a.type !== "follow" || a.active)
-                .map(activity => (
-                  <FeedItem
-                    key={activity.id}
-                    activity={activity}
-                    currentUserId={currentUser.id}
-                    onToggleFollow={toggleFollowOptimistic}
-                    onToggleLike={toggleLikeOptimistic}
-                    onDeletePost={deletePost}
-                    onPressLikes={openLikesModal}
-                  />
-                ))}
-            </ScrollView>
-          )}
-        </>
-      )}
-
-      {/* LIKES TAB */}
-      {activeTab === "likes" && (
-        <>
-          {likedPosts.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No liked posts yet
-            </Text>
+          {followLoading && (
+            <ActivityIndicator size="large" />
           )}
 
           <ScrollView>
-            {likedPosts.map(post => (
-  <FeedItem
-    key={`liked-${post.id}`}
-    activity={{
-      id: post.id,
-      type: "like", // ✅ important
-      actor: currentUser!, // ✅ YOU liked it
-      targetPost: post,
-      active: true,
-      createdAt: post.createdAt,
-    }}
-                currentUserId={currentUser.id}
-                onToggleFollow={toggleFollow}
-                onToggleLike={handleToggleLikeInLikesTab} // ✅ fixed
-                onDeletePost={handleDeletePostInLikesTab}
-                onPressLikes={openLikesModal}
-              />
-            ))}
-          </ScrollView>
-        </>
-      )}
-
-      {/* LIKES MODAL */}
-      <Modal visible={likesModalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
-            Liked by
-          </Text>
-
-          {likesLoading && <ActivityIndicator size="large" />}
-
-          <ScrollView>
-            {likedUsers.map(user => (
+            {followUsers.map(user => (
               <UserRow
                 key={user.id}
                 user={user}
-                currentUserId={currentUser.id}
-                onToggleFollow={handleToggleFollowInModal}
+                currentUserId={
+                  feed.currentUserId ??
+                  undefined
+                }
+                onToggleFollow={
+                  handleToggleFollowInList
+                }
               />
             ))}
           </ScrollView>
+        </>
+      )}
 
-          <Text
-            style={{
-              marginTop: 20,
-              textAlign: "center",
-              color: "blue",
-              fontWeight: "600",
-            }}
-            onPress={() => setLikesModalVisible(false)}
-          >
-            Close
-          </Text>
-        </View>
-      </Modal>
+      {/* Activity Based Tabs */}
+      {tab !== "followers" &&
+        tab !== "following" && (
+          <>
+            {feed.loading && (
+              <Text>Loading…</Text>
+            )}
+            {feed.error && (
+              <Text>{feed.error}</Text>
+            )}
+
+            <ScrollView>
+              {feed.activities.map(
+                activity => (
+                  <ActivityRow
+                    key={activity.id}
+                    activity={activity}
+                    currentUserId={
+                      feed.currentUserId ?? 0
+                    }
+                    onToggleFollow={
+                      feed.toggleFollowOptimistic
+                    }
+                    onToggleLike={
+                      feed.toggleLikeOptimistic
+                    }
+                    onDeletePost={
+                      feed.deletePost
+                    }
+                  />
+                )
+              )}
+            </ScrollView>
+          </>
+        )}
     </View>
   );
 }

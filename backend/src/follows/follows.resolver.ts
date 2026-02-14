@@ -29,6 +29,7 @@ export class FollowsResolver {
         return this.followsService.unfollow(user.id, username);
     }
 
+    @UseGuards(GqlAuthGuard)
     @Query(() => [User])
     followers(@Args("username") username: string) {
         return this.followsService
@@ -36,6 +37,7 @@ export class FollowsResolver {
             .then(rows => rows.map(r => r.follower));
     }
 
+    @UseGuards(GqlAuthGuard)
     @Query(() => [User])
     following(@Args("username") username: string) {
         return this.followsService

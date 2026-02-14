@@ -26,12 +26,9 @@ export class PostsResolver {
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [Post])
-    async likedPosts(
-        @Args('username') username: string,
-    ) {
+    likedPosts(@Args('username') username: string) {
         return this.postsService.getLikedPostsByUsername(username);
     }
-
 
     @UseGuards(GqlAuthGuard)
     @Query(() => Post)
@@ -45,7 +42,6 @@ export class PostsResolver {
         @CurrentUser() user: User,
         @Args('content') content: string,
     ) {
-        if (!user?.id) throw new Error('Not authenticated');
         return this.postsService.addPost(user.id, content);
     }
 
@@ -55,21 +51,26 @@ export class PostsResolver {
         @CurrentUser() user: User,
         @Args('postId', { type: () => Int }) postId: number,
     ) {
-        if (!user?.id) throw new Error('Not authenticated');
         return this.postsService.deletePost(postId, user.id);
     }
 
-    @ResolveField('likesCount', () => Number)
+    // ------------------------
+    // LIKE RESOLVERS
+    // ------------------------
+
+    @ResolveField(() => Int)
     async likesCount(@Parent() post: Post) {
-        return (await this.postsService.getLikesInfo(post.id)).likesCount;
+        const meta = await this.postsService.getLikeMeta(post.id);
+        return meta.likesCount;
     }
 
-    @ResolveField('likedByMe', () => Boolean)
+    @ResolveField(() => Boolean)
     async likedByMe(@Parent() post: Post, @Context() ctx: any) {
         const userId = ctx?.req?.user?.id;
         if (!userId) return false;
-        return (await this.postsService.getLikesInfo(post.id, userId))
-            .likedByMe;
+
+        const meta = await this.postsService.getLikeMeta(post.id, userId);
+        return meta.likedByMe;
     }
 
     @ResolveField(() => [User])
@@ -77,13 +78,25 @@ export class PostsResolver {
         return this.postsService.getUsersWhoLiked(post.id);
     }
 
+    // ------------------------
+    // EXPLICIT LIKE MUTATIONS
+    // ------------------------
+
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
-    async toggleLike(
+    async likePost(
         @CurrentUser() user: User,
         @Args('postId', { type: () => Int }) postId: number,
     ) {
-        if (!user?.id) throw new Error('Not authenticated');
-        return this.postsService.toggleLike(user.id, postId);
+        return this.postsService.likePost(user.id, postId);
+    }
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    async unlikePost(
+        @CurrentUser() user: User,
+        @Args('postId', { type: () => Int }) postId: number,
+    ) {
+        return this.postsService.unlikePost(user.id, postId);
     }
 }
