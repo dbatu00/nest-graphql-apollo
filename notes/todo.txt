@@ -14,4 +14,5 @@
 23-) like entity: is active flag necessary?
 24-) post service delete post is not a transaction, could fail
 25-) likedbyme can be checked by client instead of gql queried
+26-) reconcoliation jobs for activities on derived entries such as likes & follows
 */

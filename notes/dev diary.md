@@ -183,3 +183,10 @@ In GraphQL, addPost returns a Post!, but the client does not need the returned p
 
 Answer:
 Because returning Boolean weakens the API contract and undermines GraphQL’s design. GraphQL mutations are meant to return the resulting domain object, not just signal success. Returning Post preserves flexibility for current and future clients, allows immediate UI updates without refetching, exposes server-generated fields (such as id and createdAt), and enables clearer error handling. Even if one client does not need the data today, the schema should remain expressive and composable. Returning the created object is the idiomatic and future-proof GraphQL approach.
+
+
+13.02.2026
+
+Today I decided to favor cohesive, larger files over premature component splitting. The goal is clarity over artificial modularity: if a file represents one responsibility (like rendering activities), its line count is not a problem. Splitting purely for smaller files adds navigation overhead and hides logic across too many wrappers. I will only split when a file contains multiple reasons to change or when reuse is proven across distinct contexts.
+
+I also decided to keep the data tables as-is: User, Auth, Post, Like, Follow, Activity. Likes remain the source of truth for interactions, and Activities remain a denormalized, indexed view for fast feed queries. This preserves integrity constraints (like uniqueness of likes), keeps writes clean, and avoids overloading the Activities table with transactional responsibilities. The result is a balanced design that supports performance without sacrificing correctness or maintainability.

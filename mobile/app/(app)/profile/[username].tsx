@@ -120,7 +120,7 @@ export default function Profile() {
 
       const res = await graphqlFetch<LikedUsersResponse>(
         `
-          query LikedUsers($postId: Int!) {
+          query GetLikedUsers($postId: Int!) {
             post(id: $postId) {
               likedUsers {
                 id
