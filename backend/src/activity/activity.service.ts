@@ -16,35 +16,57 @@ export class ActivityService {
         @InjectRepository(Post) private readonly postRepo: Repository<Post>,
     ) { }
 
-    async createActivity(
-        input: { type: ActivityType; actor: User; targetPost?: Post; targetUser?: User; active?: boolean },
+    /**
+     * Unified event logging: creates or updates activity records.
+     * Handles deduplication for likes/follows (reactivates if exists).
+     * Posts are always inserted (no reuse).
+     */
+    async logActivity(
+        input: {
+            type: ActivityType;
+            actor: User;
+            targetPost?: Post;
+            targetUser?: User;
+            active?: boolean;
+        },
         manager?: EntityManager,
     ) {
         const repo = manager ? manager.getRepository(Activity) : this.activityRepo;
+        const active = input.active ?? true;
 
-        // prevent duplicates for likes/follows
+        // For likes: check if exists, update active flag if so
         if (input.type === 'like' && input.targetPost) {
-            let exists = await repo.findOne({
-                where: { actorId: input.actor.id, targetPostId: input.targetPost.id, type: 'like' },
+            const existing = await repo.findOne({
+                where: {
+                    actorId: input.actor.id,
+                    targetPostId: input.targetPost.id,
+                    type: 'like',
+                },
             });
-            if (exists) {
-                exists.active = input.active ?? true;  // reactivate
-                exists.createdAt = new Date();         // optional: show as recent
-                return repo.save(exists);
+            if (existing) {
+                existing.active = active;
+                existing.createdAt = new Date(); // show as recent if reactivated
+                return repo.save(existing);
             }
         }
 
+        // For follows: check if exists, update active flag if so
         if (input.type === 'follow' && input.targetUser) {
-            const exists = await repo.findOne({
-                where: { actorId: input.actor.id, targetUserId: input.targetUser.id, type: 'follow' },
+            const existing = await repo.findOne({
+                where: {
+                    actorId: input.actor.id,
+                    targetUserId: input.targetUser.id,
+                    type: 'follow',
+                },
             });
-            if (exists) {
-                exists.active = input.active ?? true;
-                exists.createdAt = new Date();
-                return repo.save(exists);
+            if (existing) {
+                existing.active = active;
+                existing.createdAt = new Date();
+                return repo.save(existing);
             }
         }
 
+        // For posts or new likes/follows: create new entry
         return repo.save({
             type: input.type,
             actor: input.actor,
@@ -53,56 +75,15 @@ export class ActivityService {
             targetPostId: input.targetPost?.id,
             targetUser: input.targetUser,
             targetUserId: input.targetUser?.id,
-            active: input.active ?? true,
+            active,
         });
-    }
-
-    async deactivateLikeActivity(actorId: number, postId: number) {
-        const activity = await this.activityRepo.findOne({
-            where: { actorId, targetPostId: postId, type: 'like', active: true },
-        });
-        if (activity) {
-            activity.active = false;
-            await this.activityRepo.save(activity);
-        }
-    }
-
-    async deactivateFollowActivity(actorId: number, targetUserId: number) {
-        const activity = await this.activityRepo.findOne({
-            where: { actorId, targetUserId, type: 'follow', active: true },
-        });
-        if (activity) {
-            activity.active = false;
-            await this.activityRepo.save(activity);
-        }
     }
 
     async deleteActivitiesForPost(postId: number) {
         await this.activityRepo.delete({ targetPostId: postId });
     }
 
-    async toggleFollow(userId: number, targetUsername: string, shouldFollow: boolean) {
-        const actor = await this.userRepo.findOneBy({ id: userId });
-        const targetUser = await this.userRepo.findOneBy({ username: targetUsername });
-        if (!actor || !targetUser || actor.id === targetUser.id) return false;
-
-        const existing = await this.activityRepo.findOne({
-            where: { actorId: actor.id, targetUserId: targetUser.id, type: 'follow' },
-        });
-        if (existing) {
-            existing.active = shouldFollow;
-            if (shouldFollow) existing.createdAt = new Date();
-            await this.activityRepo.save(existing);
-            return true;
-        }
-
-        if (shouldFollow) {
-            await this.createActivity({ type: 'follow', actor, targetUser });
-        }
-        return true;
-    }
-
-    async getActivityFeed(username?: string, limit = 50) {
+    async getActivityFeed(username?: string, types?: string[], limit = 50) {
         const qb = this.activityRepo
             .createQueryBuilder('a')
             .leftJoinAndSelect('a.actor', 'actor')
@@ -114,6 +95,9 @@ export class ActivityService {
             .orderBy('a.createdAt', 'DESC')
             .take(limit);
 
+        if (types && types.length > 0) {
+            qb.andWhere('a.type IN (:...types)', { types });
+        }
 
         if (username) {
             const user = await this.userRepo.findOneBy({ username });

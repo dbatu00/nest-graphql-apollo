@@ -18,27 +18,12 @@ export class ActivityResolver {
     @UseGuards(GqlAuthGuard)
     feed(
         @Args("username", { type: () => String, nullable: true }) username?: string,
+        @Args("types", { type: () => [String], nullable: true }) types?: string[],
         @CurrentUser() user?: User,
     ) {
         if (!user) {
             throw new Error("Authenticated user not found");
         }
-        return this.activityService.getActivityFeed(username);
-    }
-
-
-
-    @Mutation(() => Boolean)
-    @UseGuards(GqlAuthGuard)
-    toggleFollow(
-        @CurrentUser() user: User,
-        @Args("targetUsername") targetUsername: string,
-        @Args("shouldFollow") shouldFollow: boolean,
-    ) {
-        return this.activityService.toggleFollow(
-            user.id,
-            targetUsername,
-            shouldFollow,
-        );
+        return this.activityService.getActivityFeed(username, types);
     }
 }
