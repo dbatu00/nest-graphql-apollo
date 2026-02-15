@@ -8,7 +8,7 @@ type Post {
   user: User!
   createdAt: DateTime!
   updatedAt: DateTime!
-  likesCount: Float!
+  likesCount: Int!
   likedByMe: Boolean!
   likedUsers: [User!]!
 }
@@ -52,7 +52,7 @@ type FollowerView {
 }
 
 type Query {
-  feed(username: String): [Activity!]!
+  feed(username: String, types: [String!]): [Activity!]!
   userByUsername(username: String!): User
   posts: [Post!]!
   likedPosts(username: String!): [Post!]!
@@ -65,10 +65,10 @@ type Query {
 }
 
 type Mutation {
-  toggleFollow(targetUsername: String!, shouldFollow: Boolean!): Boolean!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
-  toggleLike(postId: Int!): Boolean!
+  likePost(postId: Int!): Boolean!
+  unlikePost(postId: Int!): Boolean!
   signUp(username: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
   followUser(username: String!): Boolean!

@@ -2,7 +2,7 @@
 import { StyleSheet, Platform } from 'react-native';
 
 export const commonStyles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
+  container: { flex: 1, padding: 0 },
 
   title: {
     fontSize: 24,
@@ -18,10 +18,11 @@ export const commonStyles = StyleSheet.create({
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#d1d5db',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     marginRight: 10,
+    backgroundColor: '#f5f5f5',
   },
 
   card: {

@@ -1,4 +1,4 @@
-import { View, TextInput, TouchableOpacity, Text } from "react-native";
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
 
 type Props = {
   value: string;
@@ -10,9 +10,9 @@ export function Composer({ value, onChange, onPublish }: Props) {
   return (
     <View
       style={{
-        padding: 12,
-        borderBottomWidth: 2,
-        borderColor: "#000",
+        flex: 1,
+        paddingTop: 25,
+        paddingBottom: 0,
       }}
     >
       <TextInput
@@ -20,12 +20,26 @@ export function Composer({ value, onChange, onPublish }: Props) {
         value={value}
         onChangeText={onChange}
         placeholder="What's happening?"
+        placeholderTextColor="#d1d5db"
         style={{
-          borderWidth: 1,
-          borderColor: "#000",
+          flex: 1,
+          borderWidth: 0,
+          borderColor: "transparent",
+          borderRadius: 8,
           padding: 10,
-          minHeight: 120,
           textAlignVertical: "top",
+          backgroundColor: "#eff6ff",
+          color: "#1f2937",
+          fontSize: 15,
+          ...Platform.select({
+            ios: {
+              shadowColor: "#3b82f6",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.08,
+              shadowRadius: 2,
+            },
+            android: { elevation: 1 },
+          }),
         }}
       />
 
@@ -33,14 +47,16 @@ export function Composer({ value, onChange, onPublish }: Props) {
         onPress={onPublish}
         style={{
           alignSelf: "flex-end",
-          marginTop: 10,
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderWidth: 1,
-          borderColor: "#000",
+          marginTop: 4,
+          paddingHorizontal: 12,
+          paddingVertical: 4,
+          borderWidth: 0,
+          borderColor: "transparent",
+          borderRadius: 8,
+          backgroundColor: "#2563eb",
         }}
       >
-        <Text style={{ fontWeight: "700" }}>Publish</Text>
+        <Text style={{ fontWeight: "600", color: "#fff", fontSize: 12 }}>Publish</Text>
       </TouchableOpacity>
     </View>
   );

@@ -11,8 +11,41 @@
 20-) resolver async
 21-) follow service  async getFollowersWithFollowStat is there a better way than to return user and raw arrays
 22-) user profile activity follow activity shows follow button that is inaccurate and does nothing
-23-) like entity: is active flag necessary?
+23-) like/follow entities: is active flag necessary?
 24-) post service delete post is not a transaction, could fail
 25-) likedbyme can be checked by client instead of gql queried
 26-) reconcoliation jobs for activities on derived entries such as likes & follows
-*/
+27-)User profile loading: Move posts loading from findByUsername into a dedicated @ResolveField() to avoid implicit over-fetching.
+28-)Profile query coupling: Decouple UsersService.findByUsername() from post ordering logic; keep it strictly user-focused.
+29-)get rid of redundant reads and unncessary defensive checks in services
+#
+  async getLikedPostsByUsername(username: string): Promise<Post[]> {
+        const user = await this.usersRepo.findOne({ where: { username } });
+        if (!user) throw new NotFoundException('User not found');
+
+        const likes = await this.likesRepo.find({
+            where: { userId: user.id, active: true },
+            relations: ['post', 'post.user'],
+            order: { createdAt: 'DESC' },
+        });
+
+        return likes.map(l => l.post);
+    }
+    
+
+    could be:
+
+    const likes = await this.likesRepo
+    .createQueryBuilder('like')
+    .innerJoin('like.user', 'user')
+    .innerJoinAndSelect('like.post', 'post')
+    .innerJoinAndSelect('post.user', 'postUser')
+    .where('user.username = :username', { username })
+    .andWhere('like.active = true')
+    .orderBy('like.createdAt', 'DESC')
+    .getMany();
+
+return likes.map(l => l.post);
+30-) very edge case: what happens when all tables are deleted #auth is dropped but user tries to log in: throws auth doesnt exist error
+31-) logout and homepage buttons on profile 
+32-) infinite scroll

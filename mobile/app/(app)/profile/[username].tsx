@@ -1,368 +1,349 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
-  Modal,
+  TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { useProfile } from "@/hooks/useProfile";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
-import { FeedItem } from "@/components/feed/FeedItem";
-import { commonStyles } from "@/styles/common";
-import { getCurrentUser } from "@/utils/currentUser";
-import { useFeed } from "@/hooks/useFeed";
-import { ProfileTabs, Tab } from "@/components/profile/ProfileTabs";
+import { ActivityRow } from "@/components/feed/ActivityRow";
+import { useActivities } from "@/hooks/useActivities";
 import { graphqlFetch } from "@/utils/graphqlFetch";
+import { logout } from "@/utils/logout";
 
-type User = {
-  id: number;
-  username: string;
-  displayName?: string;
-};
+type Tab =
+  | "posts"
+  | "likes"
+  | "activity"
+  | "followers"
+  | "following";
 
-type Follower = {
-  user: User;
-  followedByMe: boolean;
-};
+export default function UsernameScreen() {
+  const { username } =
+    useLocalSearchParams<{ username: string }>();
+  const router = useRouter();
 
-type LikedUser = {
-  id: number;
-  username: string;
-  displayName?: string;
-  followedByMe?: boolean;
-};
+  const [tab, setTab] = useState<Tab>("posts");
 
-type LikedUsersResponse = {
-  post: {
-    likedUsers: LikedUser[];
-  };
-};
+  /* ---------------- ACTIVITY TYPES ---------------- */
 
-export default function Profile() {
-  const { username } = useLocalSearchParams<{ username: string }>();
+  const types = useMemo(() => {
+    if (tab === "posts") return ["post"];
+    if (tab === "likes") return ["like"];
+    if (tab === "activity") return undefined;
+    return undefined;
+  }, [tab]);
 
-  const {
-    profile,
-    followers = [] as Follower[],
-    following = [] as Follower[],
-    fetchFollowers,
-    fetchFollowing,
-    toggleFollow,
-    loading,
-    likedPosts,
-    setLikedPosts, // ✅ required
-    fetchLikedPosts,
-  } = useProfile(username!);
+  const feed = useActivities({
+    username,
+    types:
+      tab === "followers" || tab === "following"
+        ? undefined
+        : types,
+  });
 
-  const [activeTab, setActiveTab] = useState<Tab>("activity");
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  /* ---------------- FOLLOW LIST STATE ---------------- */
 
-  /* -------------------- */
-  /* FEED (ACTIVITY TAB) */
-  /* -------------------- */
+  const [followUsers, setFollowUsers] = useState<any[]>([]);
+  const [followLoading, setFollowLoading] =
+    useState(false);
 
-  const {
-    activities,
-    loading: activityLoading,
-    toggleFollowOptimistic,
-    toggleLikeOptimistic,
-    deletePost,
-  } = useFeed(activeTab === "activity" ? username : undefined);
-
-  /* -------------------- */
-  /* FIX: LIKES TAB HEART */
-  /* -------------------- */
-
-  const handleToggleLikeInLikesTab = async (
-  postId: number,
-  currentlyLiked: boolean
-) => {
-  setLikedPosts(prev =>
-    prev.map(p =>
-      p.id === postId
-        ? {
-            ...p,
-            likedByMe: !currentlyLiked,
-            likesCount:
-              (p.likesCount ?? 0) + (currentlyLiked ? -1 : 1),
-          }
-        : p
+  useEffect(() => {
+    if (
+      tab !== "followers" &&
+      tab !== "following"
     )
-  );
+      return;
 
-  // Only remove from list if viewing own likes
-  if (
-    currentlyLiked &&
-    currentUser?.username === profile?.username
-  ) {
-    setLikedPosts(prev => prev.filter(p => p.id !== postId));
-  }
+    const load = async () => {
+      setFollowLoading(true);
 
-  await toggleLikeOptimistic(postId, currentlyLiked);
-};
-
-
-
-  /* -------------------- */
-  /* LIKES MODAL STATE    */
-  /* -------------------- */
-
-  const [likedUsers, setLikedUsers] = useState<LikedUser[]>([]);
-  const [likesModalVisible, setLikesModalVisible] = useState(false);
-  const [likesLoading, setLikesLoading] = useState(false);
-
-  const openLikesModal = useCallback(async (postId: number) => {
-    try {
-      setLikesLoading(true);
-      setLikesModalVisible(true);
-
-      const res = await graphqlFetch<LikedUsersResponse>(
-        `
-          query GetLikedUsers($postId: Int!) {
-            post(id: $postId) {
-              likedUsers {
-                id
-                username
-                displayName
-                followedByMe
+      try {
+        const data = await graphqlFetch<{
+          followers?: any[];
+          following?: any[];
+        }>(
+          tab === "followers"
+            ? `
+              query ($username: String!) {
+                followers(username: $username) {
+                  id
+                  username
+                  displayName
+                  followedByMe
+                }
               }
-            }
-          }
-        `,
-        { postId }
-      );
+            `
+            : `
+              query ($username: String!) {
+                following(username: $username) {
+                  id
+                  username
+                  displayName
+                  followedByMe
+                }
+              }
+            `,
+          { username }
+        );
 
-      setLikedUsers(res.post.likedUsers);
-    } catch (err) {
-      console.error("Failed fetching liked users", err);
-    } finally {
-      setLikesLoading(false);
-    }
-  }, []);
+        setFollowUsers(
+          tab === "followers"
+            ? data.followers ?? []
+            : data.following ?? []
+        );
+      } catch {
+        setFollowUsers([]);
+      } finally {
+        setFollowLoading(false);
+      }
+    };
 
-  const handleToggleFollowInModal = async (
-    username: string,
+    load();
+  }, [tab, username]);
+
+  const handleToggleFollowInList = async (
+    targetUsername: string,
     shouldFollow: boolean
   ) => {
-    setLikedUsers(prev =>
+    setFollowUsers(prev =>
       prev.map(u =>
-        u.username === username
+        u.username === targetUsername
           ? { ...u, followedByMe: shouldFollow }
           : u
       )
     );
 
-    await toggleFollowOptimistic(username, shouldFollow);
+    await feed.toggleFollowOptimistic(
+      targetUsername,
+      shouldFollow
+    );
   };
 
-  const handleDeletePostInLikesTab = async (postId: number) => {
-  // 1️⃣ Optimistically remove from likes tab
-  setLikedPosts(prev => prev.filter(p => p.id !== postId));
-
-  // 2️⃣ Call global delete logic
-  await deletePost(postId);
-};
-
-
-  /* -------------------- */
-  /* EFFECTS              */
-  /* -------------------- */
-
-  useEffect(() => {
-    getCurrentUser().then(user => setCurrentUser(user));
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "followers") fetchFollowers();
-    if (activeTab === "following") fetchFollowing();
-  }, [activeTab, fetchFollowers, fetchFollowing]);
-
-  useEffect(() => {
-    if (activeTab === "likes") {
-      fetchLikedPosts();
-    }
-  }, [activeTab, fetchLikedPosts]);
-
-  /* -------------------- */
-  /* GUARDS               */
-  /* -------------------- */
-
-  if (loading || !currentUser) {
-    return (
-      <View style={commonStyles.container}>
-        <Text>Loading…</Text>
-      </View>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <View style={commonStyles.container}>
-        <Text>User not found</Text>
-      </View>
-    );
-  }
-
-  /* -------------------- */
-  /* RENDER               */
-  /* -------------------- */
+  /* ---------------- RENDER ---------------- */
 
   return (
-    <View style={commonStyles.container}>
-      <Text style={{ fontSize: 22, fontWeight: "bold" }}>
-        {profile.displayName ?? profile.username}
-      </Text>
-      <Text style={{ color: "#666", marginBottom: 16 }}>
-        @{profile.username}
-      </Text>
-
-      <ProfileTabs active={activeTab} onChange={setActiveTab} />
-
-
-       {/* FOLLOWERS TAB */}
-      {activeTab === "followers" && (
-        <>
-          {followers.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No followers yet
-            </Text>
-          )}
-
-          {followers.map(f => {
-            const isSelf = f.user.username === currentUser.username;
-            return (
-              <UserRow
-                key={f.user.id}
-                user={{ ...f.user, followedByMe: f.followedByMe }}
-                currentUserId={currentUser.id}
-                onToggleFollow={isSelf ? undefined : toggleFollow}
-              />
-            );
-          })}
-        </>
-      )}
-
-      {/* FOLLOWING TAB */}
-      {activeTab === "following" && (
-        <>
-          {following.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No following yet
-            </Text>
-          )}
-
-          {following.map(f => {
-            const isSelf = f.user.username === currentUser.username;
-            return (
-              <UserRow
-                key={f.user.id}
-                user={{ ...f.user, followedByMe: f.followedByMe }}
-                currentUserId={currentUser.id}
-                onToggleFollow={isSelf ? undefined : toggleFollow}
-              />
-            );
-          })}
-        </>
-      )}
-
-      {/* ACTIVITY TAB */}
-      {activeTab === "activity" && (
-        <>
-          {activityLoading && <Text>Loading…</Text>}
-
-          {!activityLoading && activities.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No activity yet
-            </Text>
-          )}
-
-          {!activityLoading && (
-            <ScrollView>
-              {activities
-                .filter(a => a.type !== "follow" || a.active)
-                .map(activity => (
-                  <FeedItem
-                    key={activity.id}
-                    activity={activity}
-                    currentUserId={currentUser.id}
-                    onToggleFollow={toggleFollowOptimistic}
-                    onToggleLike={toggleLikeOptimistic}
-                    onDeletePost={deletePost}
-                    onPressLikes={openLikesModal}
-                  />
-                ))}
-            </ScrollView>
-          )}
-        </>
-      )}
-
-      {/* LIKES TAB */}
-      {activeTab === "likes" && (
-        <>
-          {likedPosts.length === 0 && (
-            <Text style={{ color: "#999", marginTop: 12 }}>
-              No liked posts yet
-            </Text>
-          )}
-
-          <ScrollView>
-            {likedPosts.map(post => (
-  <FeedItem
-    key={`liked-${post.id}`}
-    activity={{
-      id: post.id,
-      type: "like", // ✅ important
-      actor: currentUser!, // ✅ YOU liked it
-      targetPost: post,
-      active: true,
-      createdAt: post.createdAt,
-    }}
-                currentUserId={currentUser.id}
-                onToggleFollow={toggleFollow}
-                onToggleLike={handleToggleLikeInLikesTab} // ✅ fixed
-                onDeletePost={handleDeletePostInLikesTab}
-                onPressLikes={openLikesModal}
-              />
-            ))}
-          </ScrollView>
-        </>
-      )}
-
-      {/* LIKES MODAL */}
-      <Modal visible={likesModalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
-            Liked by
-          </Text>
-
-          {likesLoading && <ActivityIndicator size="large" />}
-
-          <ScrollView>
-            {likedUsers.map(user => (
-              <UserRow
-                key={user.id}
-                user={user}
-                currentUserId={currentUser.id}
-                onToggleFollow={handleToggleFollowInModal}
-              />
-            ))}
-          </ScrollView>
-
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={{ 
+        paddingHorizontal: 16, 
+        paddingVertical: 14,
+        backgroundColor: "#fff",
+        borderBottomWidth: 0,
+        marginBottom: 12,
+        ...Platform.select({
+          ios: {
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 3,
+          },
+          android: { elevation: 1 },
+        }),
+      }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text
             style={{
-              marginTop: 20,
-              textAlign: "center",
-              color: "blue",
-              fontWeight: "600",
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1f2937",
             }}
-            onPress={() => setLikesModalVisible(false)}
           >
-            Close
+            @{username}
           </Text>
+          
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => router.push("/feed")}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: "transparent",
+                borderRadius: 8,
+                backgroundColor: "#2563eb",
+                minWidth: 70,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13 }}>Home</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={logout}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: "transparent",
+                borderRadius: 8,
+                backgroundColor: "rgba(37, 99, 235, 0.2)",
+                minWidth: 70,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "600", color: "#2563eb", fontSize: 13 }}>Logout</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </Modal>
+      </View>
+
+      {/* Tabs */}
+      <View
+        style={{
+          marginHorizontal: 12,
+          marginBottom: 16,
+          backgroundColor: "#f9fafb",
+          borderRadius: 10,
+          padding: 4,
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 3,
+            },
+            android: { elevation: 1 },
+          }),
+        }}
+      >
+        <View style={{ flexDirection: "row", gap: 4 }}>
+          {(
+            [
+              "posts",
+              "likes",
+              "activity",
+              "followers",
+              "following",
+            ] as Tab[]
+          ).map(t => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 8,
+                backgroundColor: tab === t ? "#fff" : "transparent",
+                ...(tab === t ? {
+                  ...Platform.select({
+                    ios: {
+                      shadowColor: "#2563eb",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 2,
+                    },
+                    android: { elevation: 2 },
+                  }),
+                } : {}),
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontWeight:
+                    tab === t ? "600" : "500",
+                  color: tab === t ? "#2563eb" : "#9ca3af",
+                  fontSize: 11,
+                  textAlign: "center",
+                }}
+              >
+                {t}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Followers / Following */}
+      {(tab === "followers" ||
+        tab === "following") && (
+        <View style={{ flex: 1 }}>
+          {followLoading && (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <ActivityIndicator size="large" color="#2563eb" />
+            </View>
+          )}
+
+          {!followLoading && (
+            <ScrollView style={{ paddingTop: 8 }}>
+              {followUsers.map(user => (
+                <View
+                  key={user.id}
+                  style={{
+                    backgroundColor: "#fff",
+                    marginHorizontal: 12,
+                    marginVertical: 6,
+                    borderRadius: 10,
+                    ...Platform.select({
+                      ios: {
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 2,
+                      },
+                      android: { elevation: 1 },
+                    }),
+                  }}
+                >
+                  <UserRow
+                    user={user}
+                    currentUserId={
+                      feed.currentUserId ??
+                      undefined
+                    }
+                    onToggleFollow={
+                      handleToggleFollowInList
+                    }
+                    isCompact={false}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
+
+      {/* Activity Based Tabs */}
+      {tab !== "followers" &&
+        tab !== "following" && (
+          <>
+            {feed.loading && (
+              <Text>Loading…</Text>
+            )}
+            {feed.error && (
+              <Text>{feed.error}</Text>
+            )}
+
+            <ScrollView>
+              {feed.activities.map(
+                activity => (
+                  <ActivityRow
+                    key={activity.id}
+                    activity={activity}
+                    currentUserId={
+                      feed.currentUserId ?? 0
+                    }
+                    onToggleFollow={
+                      feed.toggleFollowOptimistic
+                    }
+                    onToggleLike={
+                      feed.toggleLikeOptimistic
+                    }
+                    onDeletePost={
+                      feed.deletePost
+                    }
+                  />
+                )
+              )}
+            </ScrollView>
+          </>
+        )}
     </View>
   );
 }

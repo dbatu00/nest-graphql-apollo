@@ -4,7 +4,6 @@ import { Repository } from "typeorm";
 import { Follow } from "./follow.entity";
 import { User } from "../users/user.entity";
 import { ActivityService } from "src/activity/activity.service";
-import { ACTIVITY_TYPE } from "src/activity/activity.constants";
 
 @Injectable()
 export class FollowsService {
@@ -17,56 +16,100 @@ export class FollowsService {
     ) { }
 
     // =========================
-    // FOLLOW / UNFOLLOW (STATE)
+    // FOLLOW (IDEMPOTENT + TX)
     // =========================
 
-    async follow(followerId: number, username: string) {
-        const follower = await this.userRepo.findOneBy({ id: followerId });
-        const following = await this.userRepo.findOneBy({ username });
+    async follow(followerId: number, username: string): Promise<boolean> {
+        return this.followRepo.manager.transaction(async manager => {
+            const follower = await manager.findOne(User, {
+                where: { id: followerId },
+            });
 
-        if (!follower || !following || follower.id === following.id) {
-            return false;
-        }
+            const following = await manager.findOne(User, {
+                where: { username },
+            });
 
-        const exists = await this.followRepo.findOne({
-            where: { follower, following },
-        });
+            if (!follower || !following) return false;
+            if (follower.id === following.id) return false;
 
-        if (exists) return true;
+            const existing = await manager.findOne(Follow, {
+                where: {
+                    follower: { id: follower.id },
+                    following: { id: following.id },
+                },
+            });
 
-        try {
-            await this.followRepo.save({ follower, following });
-        } catch (err: any) {
-            // concurrent insert may cause unique constraint violation
-            // treat as success if the follow already exists
-            const code = err?.code ?? err?.driverError?.code;
-            if (code === "23505") {
-                return true;
+            // Already following → idempotent success
+            if (existing) return true;
+
+            try {
+                await manager.save(Follow, {
+                    follower,
+                    following,
+                });
+            } catch (err: any) {
+                const code = err?.code ?? err?.driverError?.code;
+                if (code === "23505") {
+                    return true;
+                }
+                throw err;
             }
-            throw err;
-        }
 
-        // ensure follow activity is created or reactivated
-        await this.activityService.toggleFollow(follower.id, following.username, true);
+            await this.activityService.logActivity(
+                {
+                    type: "follow",
+                    actor: follower,
+                    targetUser: following,
+                    active: true,
+                },
+                manager,
+            );
 
-        return true;
+            return true;
+        });
     }
 
-    async unfollow(followerId: number, username: string) {
-        const follower = await this.userRepo.findOneBy({ id: followerId });
-        const following = await this.userRepo.findOneBy({ username });
+    // =========================
+    // UNFOLLOW (IDEMPOTENT + TX)
+    // =========================
 
-        if (!follower || !following) return false;
+    async unfollow(followerId: number, username: string): Promise<boolean> {
+        return this.followRepo.manager.transaction(async manager => {
+            const follower = await manager.findOne(User, {
+                where: { id: followerId },
+            });
 
-        // Remove the follow relation
-        await this.followRepo.delete({ follower, following });
+            const following = await manager.findOne(User, {
+                where: { username },
+            });
 
-        // DEACTIVATE follow activity
-        await this.activityService.deactivateFollowActivity(follower.id, following.id);
+            if (!follower || !following) return false;
 
-        return true;
+            const existing = await manager.findOne(Follow, {
+                where: {
+                    follower: { id: follower.id },
+                    following: { id: following.id },
+                },
+            });
+
+            // Already not following → idempotent success
+            if (!existing) return true;
+
+            await manager.remove(existing);
+
+            await this.activityService.logActivity(
+                {
+                    type: "follow",
+                    actor: follower,
+                    targetUser: following,
+                    active: false,
+                },
+                manager,
+            );
+
+            return true;
+        });
     }
-
 
     // =========================
     // BASIC LISTS
@@ -95,17 +138,9 @@ export class FollowsService {
         viewerId: number,
     ) {
         const qb = this.userRepo
-            .createQueryBuilder("u") // u = follower
-            .innerJoin(
-                Follow,
-                "f",
-                "f.followerId = u.id",
-            )
-            .innerJoin(
-                "users",
-                "profile",
-                "profile.id = f.followingId",
-            )
+            .createQueryBuilder("u")
+            .innerJoin(Follow, "f", "f.followerId = u.id")
+            .innerJoin("users", "profile", "profile.id = f.followingId")
             .leftJoin(
                 Follow,
                 "f2",
@@ -135,17 +170,9 @@ export class FollowsService {
         viewerId: number,
     ) {
         const qb = this.userRepo
-            .createQueryBuilder("u") // u = user being followed
-            .innerJoin(
-                Follow,
-                "f",
-                "f.followingId = u.id",
-            )
-            .innerJoin(
-                "users",
-                "profile",
-                "profile.id = f.followerId",
-            )
+            .createQueryBuilder("u")
+            .innerJoin(Follow, "f", "f.followingId = u.id")
+            .innerJoin("users", "profile", "profile.id = f.followerId")
             .leftJoin(
                 Follow,
                 "f2",

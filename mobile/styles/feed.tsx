@@ -1,4 +1,4 @@
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform } from "react-native";
 
 export const feedStyles = StyleSheet.create({
   feedOuter: {
@@ -11,27 +11,28 @@ export const feedStyles = StyleSheet.create({
     flex: 1,
     width: "100%",
     maxWidth: 520,          // Twitter-like column
-    borderWidth: 2,
-    borderColor: "#000",    // HARD LINE
-    backgroundColor: "#fff",
+    backgroundColor: "#f9f9f9",
   },
 
   feedContent: {
     padding: 12,
+    gap: 12,
   },
 
    likeButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#000",
-    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 0,
+    borderColor: "transparent",
+    backgroundColor: "#f0f0f0",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 
   likeButtonLiked: {
-    borderColor: "#ef4444",
-    backgroundColor: "#fee2e2",
+    backgroundColor: "#fecaca",
   },
 
   likeIcon: {
@@ -54,25 +55,28 @@ export const feedStyles = StyleSheet.create({
   },
 
   content: {
-    marginTop: 6,
-    marginBottom: 10,
+    marginTop: 0,
+    marginBottom: 0,
     fontSize: 14,
     lineHeight: 20,
-    color: "#000",
+    color: "#1f2937",
+    paddingLeft: 0,
+    paddingTop: 0,
   },
 
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-    paddingTop: 6,
+    borderTopWidth: 0,
+    borderTopColor: "transparent",
+    paddingTop: 2,
+    marginTop: 2,
   },
 
   timestamp: {
     fontSize: 11,
-    color: "#000",
+    color: "#d1d5db",
   },
 
   stats: {
@@ -82,41 +86,74 @@ export const feedStyles = StyleSheet.create({
 
   stat: {
     fontSize: 12,
-    color: "#000",
+    color: "#6b7280",
   },
 
   error: {
     marginTop: 10,
-    color: "red",
-  },postCard: {
-  position: "relative",
-  borderWidth: 2,
-  borderColor: "#000",
-  padding: 12,
-  backgroundColor: "#fff",
-},
+    color: "#ef4444",
+  },
 
-deleteButton: {
-  position: "absolute",
-  top: 6,
-  right: 6,
+  postCard: {
+    position: "relative",
+    borderWidth: 0,
+    borderColor: "transparent",
+    borderRadius: 12,
+    padding: 8,
+    backgroundColor: "#fff",
+    marginVertical: 0,
+    marginHorizontal: 0,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
+  },
 
-  paddingHorizontal: 12,
-  paddingVertical: 6,
+  deleteButton: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: "flex-start",
+    borderWidth: 0,
+    borderColor: "transparent",
+    borderRadius: 8,
+    backgroundColor: "#000",
+    zIndex: 10,
+  },
 
-  alignSelf: "flex-start",
+  deleteText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#fff",
+  },
 
-  borderWidth: 1,
-  borderColor: "#000",
-  backgroundColor: "#fff",
-
-  zIndex: 10,
-},
-
-deleteText: {
-  fontSize: 12,
-  fontWeight: "700",
-  color: "#000",
-},
+  activityCard: {
+    marginHorizontal: 12,
+    marginVertical: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 0,
+    borderColor: "transparent",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+      },
+      android: { elevation: 1 },
+      default: {},
+    }),
+  },
 
 });

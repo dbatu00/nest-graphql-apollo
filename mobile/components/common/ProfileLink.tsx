@@ -4,19 +4,28 @@ import { useRouter, usePathname } from "expo-router";
 type Props = {
   username: string;
   children?: React.ReactNode;
+  onNavigate?: () => void;
 };
 
-export function ProfileLink({ username, children }: Props) {
+export function ProfileLink({ username, children, onNavigate }: Props) {
   const router = useRouter();
   const pathname = usePathname();
 
   const handlePress = () => {
-    if (pathname === `/profile/${username}`) return;
+    // Call onNavigate immediately (closes modal)
+    if (onNavigate) {
+      onNavigate();
+    }
 
-    router.push({
-      pathname: "/profile/[username]",
-      params: { username },
-    });
+    // Navigate after a brief moment
+    setTimeout(() => {
+      if (pathname !== `/profile/${username}`) {
+        router.push({
+          pathname: "/profile/[username]",
+          params: { username },
+        });
+      }
+    }, 100);
   };
 
   return (

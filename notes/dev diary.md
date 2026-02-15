@@ -190,3 +190,43 @@ Because returning Boolean weakens the API contract and undermines GraphQL’s de
 Today I decided to favor cohesive, larger files over premature component splitting. The goal is clarity over artificial modularity: if a file represents one responsibility (like rendering activities), its line count is not a problem. Splitting purely for smaller files adds navigation overhead and hides logic across too many wrappers. I will only split when a file contains multiple reasons to change or when reuse is proven across distinct contexts.
 
 I also decided to keep the data tables as-is: User, Auth, Post, Like, Follow, Activity. Likes remain the source of truth for interactions, and Activities remain a denormalized, indexed view for fast feed queries. This preserves integrity constraints (like uniqueness of likes), keeps writes clean, and avoids overloading the Activities table with transactional responsibilities. The result is a balanced design that supports performance without sacrificing correctness or maintainability.
+
+
+14.02.2026 keep using username in api contracts for readability
+
+14.02.2026
+Dev Diary — Activity Refactor Decision
+
+Revisited separation of concerns between domain modules (Posts, Follows, Likes) and Activity.
+
+Two options:
+
+Make ActivityService dumb and push all branching into domain services.
+
+Keep domain services thin and allow ActivityService to handle type-based logic (like, follow).
+
+Since:
+
+The project scope is fixed.
+
+No new activity types are planned.
+
+Activity is the unified read model for main feed, profile activity, and likes tab.
+
+There is no need for CQRS or event-driven projections.
+
+I decided to keep the current structure.
+
+ActivityService retains controlled type branching for storage and feed behavior. Domain services remain simple and delegate activity updates.
+
+This is a pragmatic choice: minimal refactor risk, adequate separation for scope, and no unnecessary architectural ceremony.
+
+If the system grows significantly, this would be the first place to re-evaluate.
+
+14.02.2026
+follow resolver: 
+Explicit follow/unfollow is clearer and safer.
+
+Do not collapse for the sake of symmetry.
+
+Readability > theoretical DRY here.
