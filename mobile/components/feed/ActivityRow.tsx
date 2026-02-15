@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, Modal, ActivityIndicator, ScrollView, Platform } from "react-native";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
@@ -87,30 +87,40 @@ export const ActivityRow = ({
 
     if (type === "like") {
       return (
-        <Text style={styles.headerText}>
-          <ProfileLink username={actor.username}>
-            {actor.displayName ?? actor.username}
-          </ProfileLink>
-          {" liked "}
-          <ProfileLink username={targetPost?.user.username ?? ""}>
-            {targetPost?.user.username}
-          </ProfileLink>
-          {"'s post"}
-        </Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={styles.headerText}>
+            <ProfileLink username={actor.username}>
+              {actor.username}
+            </ProfileLink>
+            {" liked "}
+            <ProfileLink username={targetPost?.user.username ?? ""}>
+              {targetPost?.user.username}
+            </ProfileLink>
+            {"'s post"}
+          </Text>
+          <Text style={styles.timestamp}>
+            {new Date(createdAt).toLocaleString()}
+          </Text>
+        </View>
       );
     }
 
     if (type === "follow") {
       return (
-        <Text style={styles.headerText}>
-          <ProfileLink username={actor.username}>
-            {actor.displayName ?? actor.username}
-          </ProfileLink>
-          {" followed "}
-          <ProfileLink username={targetUser?.username ?? ""}>
-            {targetUser?.displayName ?? targetUser?.username}
-          </ProfileLink>
-        </Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={styles.headerText}>
+            <ProfileLink username={actor.username}>
+              {actor.username}
+            </ProfileLink>
+            {" followed "}
+            <ProfileLink username={targetUser?.username ?? ""}>
+              {targetUser?.username}
+            </ProfileLink>
+          </Text>
+          <Text style={styles.timestamp}>
+            {new Date(createdAt).toLocaleString()}
+          </Text>
+        </View>
       );
     }
 
@@ -138,16 +148,55 @@ export const ActivityRow = ({
               : undefined
           }
           onToggleFollow={!isOwner ? onToggleFollow : undefined}
+          isCompact={true}
         />
 
-        <Text style={feedStyles.content}>{targetPost.content}</Text>
-
-        <View style={feedStyles.footer}>
-          <Text style={feedStyles.timestamp}>
+        <View 
+          style={{
+            backgroundColor: "#f9fafb",
+            borderRadius: 8,
+            padding: 10,
+            minHeight: 110,
+            marginVertical: 4,
+            marginHorizontal: 0,
+            flexDirection: "column",
+            justifyContent: "space-between",
+            ...Platform.select({
+              ios: {
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 2,
+              },
+              android: { elevation: 1 },
+            }),
+          }}
+        >
+          <Text style={feedStyles.content}>{targetPost.content}</Text>
+          
+          <Text style={{ fontSize: 12, color: "#d1d5db", marginTop: 4, alignSelf: "flex-end" }}>
             {new Date(targetPost.createdAt).toLocaleString()}
           </Text>
+        </View>
+      </View>
+    );
+  };
 
-          {onToggleLike && (
+  /* ---------- MAIN ---------- */
+
+  return (
+    <>
+      <View style={styles.container}>
+        {renderHeader()}
+
+        {targetPost && (
+          <View style={isNested ? styles.nestedContainer : undefined}>
+            {renderPost()}
+          </View>
+        )}
+
+        {targetPost && onToggleLike && (
+          <View style={{ marginTop: 4, flexDirection: "row", justifyContent: "flex-end" }}>
             <View style={feedStyles.likeButton}>
               <TouchableOpacity
                 onPress={() =>
@@ -169,58 +218,78 @@ export const ActivityRow = ({
                 <Text>{targetPost.likesCount ?? 0}</Text>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  /* ---------- MAIN ---------- */
-
-  return (
-    <>
-      <View style={styles.container}>
-        {renderHeader()}
-
-        {targetPost && (
-          <View style={isNested ? styles.nestedContainer : undefined}>
-            {renderPost()}
           </View>
         )}
-
-        <Text style={styles.timestamp}>
-          {new Date(createdAt).toLocaleString()}
-        </Text>
       </View>
 
       {/* Liked Users Modal */}
       <Modal visible={likedModalVisible} animationType="slide">
-        <View style={{ flex: 1, padding: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 16 }}>
-            Liked by
-          </Text>
+        <View style={{ flex: 1, backgroundColor: "#f9fafb" }}>
+          <View style={{ 
+            paddingHorizontal: 16, 
+            paddingVertical: 16,
+            backgroundColor: "#fff",
+            borderBottomWidth: 0,
+            ...Platform.select({
+              ios: {
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+              },
+              android: { elevation: 1 },
+            }),
+          }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+              <Text style={{ fontSize: 18, fontWeight: "700", color: "#1f2937" }}>
+                Liked by
+              </Text>
+              <TouchableOpacity
+                onPress={() => setLikedModalVisible(false)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 6,
+                  backgroundColor: "#f3f4f6",
+                }}
+              >
+                <Text style={{ fontWeight: "600", color: "#374151", fontSize: 13 }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-          {likedLoading && <ActivityIndicator size="large" />}
-
-          <ScrollView>
-            {likedUsers.map(user => (
-              <UserRow
-                key={user.id}
-                user={user}
-                currentUserId={currentUserId}
-                onToggleFollow={handleToggleFollowInModal}
-              />
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity
-            style={{ marginTop: 20 }}
-            onPress={() => setLikedModalVisible(false)}
-          >
-            <Text style={{ textAlign: "center", color: "blue" }}>
-              Close
-            </Text>
-          </TouchableOpacity>
+          {!likedLoading && (
+            <ScrollView style={{ flex: 1, paddingTop: 8 }}>
+              {likedUsers.map(user => (
+                <View
+                  key={user.id}
+                  style={{
+                    backgroundColor: "#fff",
+                    marginHorizontal: 12,
+                    marginVertical: 6,
+                    borderRadius: 10,
+                    ...Platform.select({
+                      ios: {
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 2,
+                      },
+                      android: { elevation: 1 },
+                    }),
+                  }}
+                >
+                  <UserRow
+                    user={user}
+                    currentUserId={currentUserId}
+                    onToggleFollow={handleToggleFollowInModal}
+                    isCompact={false}
+                    onProfileNavigate={() => setLikedModalVisible(false)}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </Modal>
     </>
@@ -229,23 +298,40 @@ export const ActivityRow = ({
 
 const styles = {
   container: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    marginVertical: 6,
+    paddingVertical: 6,
+    paddingLeft: 10,
+    paddingRight: 10,
+    borderBottomWidth: 0,
+    borderColor: "transparent",
+    borderRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+      },
+      android: { elevation: 1 },
+    }),
   },
   headerText: {
-    marginBottom: 8,
+    marginBottom: 2,
+    fontSize: 12,
+    color: "#6b7280",
   },
   nestedContainer: {
-    marginLeft: 12,
+    marginLeft: 8,
     paddingLeft: 12,
     borderLeftWidth: 2,
-    borderLeftColor: "#eee",
+    borderLeftColor: "#e5e7eb",
+    marginTop: 4,
   },
   timestamp: {
     fontSize: 12,
-    color: "#999",
-    marginTop: 6,
+    color: "#d1d5db",
+    marginTop: 2,
   },
 };

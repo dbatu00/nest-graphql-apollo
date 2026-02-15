@@ -47,4 +47,5 @@
 
 return likes.map(l => l.post);
 30-) very edge case: what happens when all tables are deleted #auth is dropped but user tries to log in: throws auth doesnt exist error
-    */
+31-) logout and homepage buttons on profile 
+32-) infinite scroll

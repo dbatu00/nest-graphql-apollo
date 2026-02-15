@@ -62,6 +62,7 @@ export default function SignUp() {
       <View style={{ width: 260 }}>
         <TextInput
           placeholder="Username"
+          placeholderTextColor="#d1d5db"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -70,38 +71,42 @@ export default function SignUp() {
 
         <TextInput
           placeholder="Password"
+          placeholderTextColor="#d1d5db"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={commonStyles.input}
+          style={[commonStyles.input, { marginTop: 12 }]}
         />
 
         <TextInput
           placeholder="Confirm Password"
+          placeholderTextColor="#d1d5db"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
-          style={commonStyles.input}
+          style={[commonStyles.input, { marginTop: 12 }]}
         />
 
-        <Pressable
-          style={commonStyles.button}
-          onPress={handleSignUp}
-          disabled={loading}
-        >
-          <Text style={commonStyles.buttonText}>
-            {loading ? "Signing up..." : "Sign Up"}
-          </Text>
-        </Pressable>
+        <View style={{ alignItems: "center", marginTop: 20 }}>
+          <Pressable
+            style={[commonStyles.button, { width: 180, paddingVertical: 14 }]}
+            onPress={handleSignUp}
+            disabled={loading}
+          >
+            <Text style={commonStyles.buttonText}>
+              {loading ? "Signing up..." : "Sign Up"}
+            </Text>
+          </Pressable>
+        </View>
 
         {error ? (
-          <Text style={{ color: "red", marginTop: 10, textAlign: "center" }}>
+          <Text style={{ color: "#dc2626", marginTop: 10, textAlign: "center", fontSize: 14 }}>
             {error}
           </Text>
         ) : null}
 
         {success ? (
-          <Text style={{ color: "green", marginTop: 10, textAlign: "center" }}>
+          <Text style={{ color: "#059669", marginTop: 10, textAlign: "center", fontSize: 14 }}>
             Signup successful. Redirecting to login…
           </Text>
         ) : null}

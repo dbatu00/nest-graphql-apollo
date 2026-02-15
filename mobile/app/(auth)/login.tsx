@@ -64,35 +64,25 @@ router.replace("/(app)/feed");
       <View style={{ width: 260 }}>
         <TextInput
           placeholder="Username"
+          placeholderTextColor="#d1d5db"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
-          style={{
-            borderWidth: 1,
-            borderColor: "#ccc",
-            borderRadius: 6,
-            padding: 10,
-            marginBottom: 12,
-          }}
+          style={commonStyles.input}
         />
 
         <TextInput
           placeholder="Password"
+          placeholderTextColor="#d1d5db"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={{
-            borderWidth: 1,
-            borderColor: "#ccc",
-            borderRadius: 6,
-            padding: 10,
-            marginBottom: 16,
-          }}
+          style={[commonStyles.input, { marginTop: 12 }]}
         />
 
-        <View style={{ alignItems: "center" }}>
+        <View style={{ alignItems: "center", marginTop: 20 }}>
           <Pressable
-            style={commonStyles.button}
+            style={[commonStyles.button, { width: 180, paddingVertical: 14 }]}
             onPress={handleLogin}
             disabled={loading}
           >
@@ -105,9 +95,10 @@ router.replace("/(app)/feed");
         {error ? (
           <Text
             style={{
-              color: "red",
+              color: "#dc2626",
               marginTop: 10,
               textAlign: "center",
+              fontSize: 14,
             }}
           >
             {error}
@@ -118,7 +109,7 @@ router.replace("/(app)/feed");
           onPress={() => router.push("/(auth)/signUp")}
           style={{ marginTop: 16 }}
         >
-          <Text style={{ textAlign: "center" }}>Sign up</Text>
+          <Text style={{ textAlign: "center", color: "#2563eb", fontWeight: "500" }}>Sign up</Text>
         </Pressable>
       </View>
     </View>

@@ -5,13 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
 import { useActivities } from "@/hooks/useActivities";
 import { graphqlFetch } from "@/utils/graphqlFetch";
+import { logout } from "@/utils/logout";
 
 type Tab =
   | "posts"
@@ -23,6 +25,7 @@ type Tab =
 export default function UsernameScreen() {
   const { username } =
     useLocalSearchParams<{ username: string }>();
+  const router = useRouter();
 
   const [tab, setTab] = useState<Tab>("posts");
 
@@ -126,76 +129,184 @@ export default function UsernameScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={{ padding: 16 }}>
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "600",
-          }}
-        >
-          @{username}
-        </Text>
+      <View style={{ 
+        paddingHorizontal: 16, 
+        paddingVertical: 14,
+        backgroundColor: "#fff",
+        borderBottomWidth: 0,
+        marginBottom: 12,
+        ...Platform.select({
+          ios: {
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.04,
+            shadowRadius: 3,
+          },
+          android: { elevation: 1 },
+        }),
+      }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1f2937",
+            }}
+          >
+            @{username}
+          </Text>
+          
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => router.push("/feed")}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: "transparent",
+                borderRadius: 8,
+                backgroundColor: "#2563eb",
+                minWidth: 70,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13 }}>Home</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={logout}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: "transparent",
+                borderRadius: 8,
+                backgroundColor: "rgba(37, 99, 235, 0.2)",
+                minWidth: 70,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "600", color: "#2563eb", fontSize: 13 }}>Logout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {/* Tabs */}
       <View
         style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          justifyContent: "space-around",
-          paddingVertical: 8,
+          marginHorizontal: 12,
+          marginBottom: 16,
+          backgroundColor: "#f9fafb",
+          borderRadius: 10,
+          padding: 4,
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 3,
+            },
+            android: { elevation: 1 },
+          }),
         }}
       >
-        {(
-          [
-            "posts",
-            "likes",
-            "activity",
-            "followers",
-            "following",
-          ] as Tab[]
-        ).map(t => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setTab(t)}
-            style={{ marginVertical: 4 }}
-          >
-            <Text
+        <View style={{ flexDirection: "row", gap: 4 }}>
+          {(
+            [
+              "posts",
+              "likes",
+              "activity",
+              "followers",
+              "following",
+            ] as Tab[]
+          ).map(t => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
               style={{
-                fontWeight:
-                  tab === t ? "700" : "400",
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 8,
+                backgroundColor: tab === t ? "#fff" : "transparent",
+                ...(tab === t ? {
+                  ...Platform.select({
+                    ios: {
+                      shadowColor: "#2563eb",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 2,
+                    },
+                    android: { elevation: 2 },
+                  }),
+                } : {}),
+                alignItems: "center",
               }}
             >
-              {t.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={{
+                  fontWeight:
+                    tab === t ? "600" : "500",
+                  color: tab === t ? "#2563eb" : "#9ca3af",
+                  fontSize: 11,
+                  textAlign: "center",
+                }}
+              >
+                {t}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       {/* Followers / Following */}
       {(tab === "followers" ||
         tab === "following") && (
-        <>
+        <View style={{ flex: 1 }}>
           {followLoading && (
-            <ActivityIndicator size="large" />
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <ActivityIndicator size="large" color="#2563eb" />
+            </View>
           )}
 
-          <ScrollView>
-            {followUsers.map(user => (
-              <UserRow
-                key={user.id}
-                user={user}
-                currentUserId={
-                  feed.currentUserId ??
-                  undefined
-                }
-                onToggleFollow={
-                  handleToggleFollowInList
-                }
-              />
-            ))}
-          </ScrollView>
-        </>
+          {!followLoading && (
+            <ScrollView style={{ paddingTop: 8 }}>
+              {followUsers.map(user => (
+                <View
+                  key={user.id}
+                  style={{
+                    backgroundColor: "#fff",
+                    marginHorizontal: 12,
+                    marginVertical: 6,
+                    borderRadius: 10,
+                    ...Platform.select({
+                      ios: {
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.04,
+                        shadowRadius: 2,
+                      },
+                      android: { elevation: 1 },
+                    }),
+                  }}
+                >
+                  <UserRow
+                    user={user}
+                    currentUserId={
+                      feed.currentUserId ??
+                      undefined
+                    }
+                    onToggleFollow={
+                      handleToggleFollowInList
+                    }
+                    isCompact={false}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
       )}
 
       {/* Activity Based Tabs */}
