@@ -1,19 +1,19 @@
+# Notes
+
 ## Nullable field semantics
 
 ```ts
 @Column({ nullable: true }) // TypeORM: DB allows NULL
 @Field(() => String, { nullable: true }) // GraphQL: API allows null
-nickname?: string | null; // TypeScript: optional property, can be null
+nickname?: string | null; // TypeScript: optional property and can be null
 ```
 
 ## Why not allow variable types at field level?
 
-Several reasons:
-
-- **Single type check per operation**: Type checking happens at operation entry.
-- **Less complexity**: Field-level type declarations would require recursive per-field validation.
-- **Variable reusability**: One variable can be reused across multiple fields.
-- **Cleaner contract**: The operation signature clearly defines required inputs.
+- Single type check per operation at the operation entry point.
+- Field-level typing would add recursive validation complexity.
+- Variables can be reused across multiple fields.
+- Operation signatures provide a cleaner client contract.
 
 Example:
 
@@ -29,13 +29,9 @@ query ($id: Int!) {
 }
 ```
 
-If types were defined at field level, sharing variables across fields would be much harder.
-
 ## Why both `user.entity` and `DeleteUserOutput`?
 
-Even if they look similar, they serve different boundaries:
-
-- **Entities are DB-centric**: may include sensitive/internal fields.
-- **DTO/Output types are API-centric**: expose only what clients should see.
-- **Operation-specific shapes**: different use cases can return different payloads.
-- **Decoupling**: avoids tying API contracts directly to DB schema.
+- Entities are DB-centric and may include internal/sensitive fields.
+- DTO/output types are API-centric and intentionally scoped.
+- Different operations can return different shapes.
+- This avoids coupling public API contracts directly to DB schema.

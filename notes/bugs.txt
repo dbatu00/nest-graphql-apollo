@@ -1,3 +1,13 @@
+# Bugs
 
-No active bug notes yet.
+Status: no active bug notes.
 
+When adding bugs, use this format:
+
+- Title:
+- Area:
+- Repro steps:
+- Expected:
+- Actual:
+- Severity:
+- Status:

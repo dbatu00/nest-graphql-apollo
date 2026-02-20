@@ -2,17 +2,17 @@
 
 Full-stack social feed MVP built as a monorepo:
 
-- **Backend:** NestJS + Apollo GraphQL + TypeORM + PostgreSQL
-- **Mobile:** Expo React Native app (Expo Router)
+- Backend: NestJS + Apollo GraphQL + TypeORM + PostgreSQL
+- Mobile: Expo React Native app (Expo Router)
 
-The product domain is Twitter-like behavior: auth, profiles, posts, likes, follows, and an activity feed.
+The domain is Twitter-like behavior: auth, profiles, posts, likes, follows, and an activity feed.
 
 ## Monorepo Layout
 
 ```text
 backend/   NestJS GraphQL API + PostgreSQL persistence
 mobile/    Expo app (auth + feed + profile flows)
-notes/     project scratchpad (bugs/dev diary/todo)
+notes/     scratchpad docs (bugs/dev diary/todo/notes)
 ```
 
 ## Docs Map
@@ -20,7 +20,11 @@ notes/     project scratchpad (bugs/dev diary/todo)
 - Root overview: [./readme.md](./readme.md)
 - Backend details: [./backend/README.md](./backend/README.md)
 - Mobile details: [./mobile/README.md](./mobile/README.md)
-- Working notes: [./notes/todo.txt](./notes/todo.txt), [./notes/dev diary.md](./notes/dev%20diary.md), [./notes/notes.txt](./notes/notes.txt), [./notes/bugs.txt](./notes/bugs.txt)
+- Working notes:
+  - [./notes/todo.txt](./notes/todo.txt)
+  - [./notes/dev diary.md](./notes/dev%20diary.md)
+  - [./notes/notes.txt](./notes/notes.txt)
+  - [./notes/bugs.txt](./notes/bugs.txt)
 
 ## Quick Start
 
@@ -47,19 +51,22 @@ cd ../mobile && npm install
 
 ### 2) Configure environment
 
-Backend reads `JWT_SECRET` (and `PORT` optionally) from env.
+Backend requires:
+
+- `JWT_SECRET`
+- `PORT` (optional, defaults to `3000`)
 
 Mobile requires:
 
 - `EXPO_PUBLIC_API_URL` (GraphQL endpoint URL)
 
-Example GraphQL endpoint for local dev:
+Example local endpoint:
 
 ```text
 http://localhost:3000/graphql
 ```
 
-### 3) Run both apps together
+### 3) Run both apps
 
 From root:
 
@@ -67,7 +74,7 @@ From root:
 npm run dev
 ```
 
-This runs backend + Expo concurrently.
+This starts backend and mobile concurrently.
 
 ## Root Scripts
 
@@ -75,7 +82,7 @@ This runs backend + Expo concurrently.
 - `npm run dev:backend` — run Nest backend in watch mode
 - `npm run dev:mobile` — run Expo dev server
 
-## Backend Overview (`backend/`)
+## Backend Overview
 
 ### Stack
 
@@ -92,15 +99,7 @@ This runs backend + Expo concurrently.
 - `follows`
 - `activity`
 
-### Domain model
-
-- **User**: unique username, optional profile fields, post/follow relations
-- **Post**: text content + author relation
-- **Like**: unique (user, post) with `active` soft-toggle semantics
-- **Follow**: unique (follower, following)
-- **Activity**: denormalized feed event model (`post`, `follow`, `like`, `share`) with `active`
-
-### GraphQL surface (high level)
+### GraphQL Surface (High-Level)
 
 - Auth: `signUp`, `login`, `me`
 - Posts: `posts`, `post`, `likedPosts`, `addPost`, `deletePost`, `likePost`, `unlikePost`
@@ -108,14 +107,14 @@ This runs backend + Expo concurrently.
 - Follows: `followUser`, `unfollowUser`, follower/following queries (+ follow-state variants)
 - Feed: `feed(username?, types?)`
 
-### Current behavior notes
+### Behavior Notes
 
 - Like/unlike and follow/unfollow are idempotent.
-- Activity entries are updated transactionally during like/follow/post operations.
-- Feed excludes inactive like/follow events.
-- Post deletion clears associated activity entries.
+- Activity entries are updated during post/like/follow writes.
+- Feed excludes inactive follow/like events.
+- Post deletion clears related activity entries.
 
-## Mobile Overview (`mobile/`)
+## Mobile Overview
 
 ### Navigation
 
@@ -123,22 +122,22 @@ This runs backend + Expo concurrently.
   - `(auth)`: login, sign-up
   - `(app)`: feed and profile
 
-### State/data flow
+### State/Data Flow
 
 - Hook-driven state (`useActivities`, `useProfile`, `useAuth`)
-- `graphqlFetch` utility with bearer token injection
-- Optimistic UI updates for like/follow/delete; refresh-on-error fallback
+- `graphqlFetch` wrapper with bearer token injection
+- Optimistic updates for follow/like/delete with refresh-on-error fallback
 
-### Core user flows
+### Core User Flows
 
 - Login / sign-up
-- Feed compose + activity interactions
+- Feed compose + interactions
 - Profile tabs (posts, likes, activity, followers, following)
 
 ## Testing
 
 - Backend: Jest setup + coverage scripts
-- Mobile: Jest tests (currently utility-focused, e.g. GraphQL fetch)
+- Mobile: Jest tests (currently utility-focused)
 
 Common commands:
 
@@ -151,16 +150,15 @@ cd mobile && npm test
 ## Known Gaps / Tech Debt
 
 - Passwords are currently plaintext (must be hashed).
-- JWT secret is logged during auth module init (should be removed).
+- JWT secret is currently logged during auth module init.
 - DB credentials are currently hardcoded in backend config.
-- Token storage approach is acceptable for web, weaker for native device security.
-- Some docs/files are still being aligned with implementation.
+- Token storage is acceptable for web, weaker for native device security.
 
-## Practical Status
+## Status
 
-This is a strong MVP with clean domain boundaries and working optimistic UX.
+This is a solid social-graph + activity-feed MVP.
 
-Current phase is **active development**, not production hardening.
+Current phase is active development, not production hardening.
 
 If the next milestone is ship-ready, prioritize:
 

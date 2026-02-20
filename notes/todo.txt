@@ -1,18 +1,18 @@
 # TODO Roadmap
 
-## P0 — Security & Configuration (Ship blocker)
+## P0 — Security & Configuration (Ship Blockers)
 
-- [ ] Hash passwords (e.g., bcrypt/argon2) instead of storing plain text.
+- [ ] Hash passwords (bcrypt/argon2) instead of storing plain text.
 - [ ] Remove JWT secret logging from auth module startup.
-- [ ] Move hardcoded DB credentials into environment variables.
-- [ ] Add env validation for required secrets/URLs (backend + mobile).
+- [ ] Move hardcoded DB credentials to environment variables.
+- [ ] Add environment validation for required secrets/URLs.
 - [ ] Revisit token storage strategy for native mobile targets.
 
 ## P1 — Auth & State Consistency
 
-- [ ] Make auth state single-source-of-truth (replace simulated root auth flow).
-- [ ] Stop passing `currentUserId` around in the client; centralize identity.
-- [ ] Handle deleted logged-in user gracefully (feed/auth fallback behavior).
+- [ ] Make auth state single source of truth (replace simulated root auth flow).
+- [ ] Stop passing `currentUserId` around in client hooks.
+- [ ] Handle deleted logged-in user gracefully (auth/feed fallback).
 - [ ] Add logout and homepage actions on profile.
 
 ## P1 — Data Integrity & Backend Robustness
@@ -20,25 +20,25 @@
 - [ ] Make post deletion transactional.
 - [ ] Add reconciliation jobs for derived activity entries (likes/follows).
 - [ ] Cover empty-database edge cases (including missing `auth` table).
-- [ ] Introduce custom error classes and map them to GraphQL-safe responses.
-- [ ] Use `try/catch` only where meaningful error conversion is needed.
+- [ ] Introduce custom error classes and map to GraphQL-safe responses.
+- [ ] Use `try/catch` only for meaningful error conversion.
 
 ## P2 — API/Service Cleanup
 
-- [ ] Extract GraphQL query strings for readability/maintainability.
-- [ ] Review resolver `async` usage for consistency.
-- [ ] Revisit `getFollowersWithFollowStat` return shape (user + arrays).
+- [ ] Extract GraphQL query strings for readability.
+- [ ] Review resolver `async` usage consistency.
+- [ ] Revisit `getFollowersWithFollowStat` return shape.
 - [ ] Move profile post loading from `findByUsername` to `@ResolveField()`.
-- [ ] Decouple `UsersService.findByUsername()` from post ordering logic.
-- [ ] Remove redundant reads and unnecessary defensive checks in services.
+- [ ] Decouple `UsersService.findByUsername()` from post ordering.
+- [ ] Remove redundant reads and unnecessary defensive checks.
 - [ ] Re-evaluate whether `likedByMe` should be client-derived.
-- [ ] Re-evaluate whether `active` flag is necessary in like/follow entities.
+- [ ] Re-evaluate whether `active` is necessary in like/follow entities.
 
 ## P2 — Mobile UX/Behavior
 
 - [ ] Tighten `postItem` `isOwner` and `canFollow` checks.
 - [ ] Fix profile activity follow button accuracy/behavior.
-- [ ] Verify tab refresh behavior on page refresh vs tab switch.
+- [ ] Verify tab refresh behavior on refresh vs tab switch.
 - [ ] Add infinite scroll.
 
 ## P3 — Optional Architecture Refactor
@@ -51,16 +51,16 @@ Current pattern:
 
 ```ts
 async getLikedPostsByUsername(username: string): Promise<Post[]> {
-    const user = await this.usersRepo.findOne({ where: { username } });
-    if (!user) throw new NotFoundException('User not found');
+  const user = await this.usersRepo.findOne({ where: { username } });
+  if (!user) throw new NotFoundException('User not found');
 
-    const likes = await this.likesRepo.find({
-        where: { userId: user.id, active: true },
-        relations: ['post', 'post.user'],
-        order: { createdAt: 'DESC' },
-    });
+  const likes = await this.likesRepo.find({
+    where: { userId: user.id, active: true },
+    relations: ['post', 'post.user'],
+    order: { createdAt: 'DESC' },
+  });
 
-    return likes.map(l => l.post);
+  return likes.map(l => l.post);
 }
 ```
 
@@ -68,14 +68,14 @@ Potential alternative:
 
 ```ts
 const likes = await this.likesRepo
-    .createQueryBuilder('like')
-    .innerJoin('like.user', 'user')
-    .innerJoinAndSelect('like.post', 'post')
-    .innerJoinAndSelect('post.user', 'postUser')
-    .where('user.username = :username', { username })
-    .andWhere('like.active = true')
-    .orderBy('like.createdAt', 'DESC')
-    .getMany();
+  .createQueryBuilder('like')
+  .innerJoin('like.user', 'user')
+  .innerJoinAndSelect('like.post', 'post')
+  .innerJoinAndSelect('post.user', 'postUser')
+  .where('user.username = :username', { username })
+  .andWhere('like.active = true')
+  .orderBy('like.createdAt', 'DESC')
+  .getMany();
 
 return likes.map(l => l.post);
 ```
