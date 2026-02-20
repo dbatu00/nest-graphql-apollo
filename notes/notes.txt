@@ -1,48 +1,41 @@
-// TypeScript
-@Column({ nullable: true })                     // TypeORM → DB allows NULL
-@Field(() => String, { nullable: true })        // GraphQL → API allows null
-nickname?: string | null;                       // TS → property optional, can be null
+## Nullable field semantics
 
-///////////////////////////////////////////
-2. Why not allow types at field level?
+```ts
+@Column({ nullable: true }) // TypeORM: DB allows NULL
+@Field(() => String, { nullable: true }) // GraphQL: API allows null
+nickname?: string | null; // TypeScript: optional property, can be null
+```
+
+## Why not allow variable types at field level?
 
 Several reasons:
 
-Single type check per operation
+- **Single type check per operation**: Type checking happens at operation entry.
+- **Less complexity**: Field-level type declarations would require recursive per-field validation.
+- **Variable reusability**: One variable can be reused across multiple fields.
+- **Cleaner contract**: The operation signature clearly defines required inputs.
 
-All type checking happens at the operation entry point.
+Example:
 
-If you declared types inside fields, the server would have to recursively type-check every field — unnecessarily complicated and inconsistent.
-
-Variables are reusable
-
-You can pass the same variable to multiple fields:
-
-query ($id: Int!) { // operation level
-  getUser(id: $id) { id, name }//field level
-  getPosts(authorId: $id) { title }
+```graphql
+query ($id: Int!) {
+  getUser(id: $id) {
+    id
+    name
+  }
+  getPosts(authorId: $id) {
+    title
+  }
 }
+```
 
+If types were defined at field level, sharing variables across fields would be much harder.
 
-If types were defined at the field level, sharing variables across fields would be impossible.
+## Why both `user.entity` and `DeleteUserOutput`?
 
-Cleaner API contract
+Even if they look similar, they serve different boundaries:
 
-The operation signature (query ($id: Int!)) tells clients exactly what they must provide.
-
-Field arguments just use those variables — no type ambiguity.
-
-
-///////////////////////////////////////////
-
-user.entity and deleteuserOutput are almost the same. why two of the same objects? 
-
-
-
-Entities are DB-centric: They can have sensitive fields (passwords, roles, internal flags) that you don’t want to expose over GraphQL.
-
-Outputs/DTOs are API-centric: You can control exactly what GraphQL clients see.
-
-Different operations might need different shapes (e.g., User for fetch, DeleteUserOutput for deletion).
-
-It avoids accidental coupling between your DB schema and API responses.
+- **Entities are DB-centric**: may include sensitive/internal fields.
+- **DTO/Output types are API-centric**: expose only what clients should see.
+- **Operation-specific shapes**: different use cases can return different payloads.
+- **Decoupling**: avoids tying API contracts directly to DB schema.

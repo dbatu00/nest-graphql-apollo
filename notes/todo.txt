@@ -1,41 +1,73 @@
-/* TODO:
-3-) may want to introduce custom error classes - e.g. UserNotFoundError) and map them to GraphQL errors later.
-5-) make a global db access module(@Global()  -https://docs.nestjs.com/modules) 
-9-) Use try/catch only for meaningful error conversion
-14-) get all cases when db is empty
-15-) extract query strings for readability
-16-) logged in user gets deleted, feed says user not found
-17-) postItem isowner and canfollow checks are sloppy
-18-) currentUserId is passed around in client. its unneccesary. centralize auth and identity
-19-) make sure you check which profile tabs refresh on page refresh vs tab change
-20-) resolver async
-21-) follow service  async getFollowersWithFollowStat is there a better way than to return user and raw arrays
-22-) user profile activity follow activity shows follow button that is inaccurate and does nothing
-23-) like/follow entities: is active flag necessary?
-24-) post service delete post is not a transaction, could fail
-25-) likedbyme can be checked by client instead of gql queried
-26-) reconcoliation jobs for activities on derived entries such as likes & follows
-27-)User profile loading: Move posts loading from findByUsername into a dedicated @ResolveField() to avoid implicit over-fetching.
-28-)Profile query coupling: Decouple UsersService.findByUsername() from post ordering logic; keep it strictly user-focused.
-29-)get rid of redundant reads and unncessary defensive checks in services
-#
-  async getLikedPostsByUsername(username: string): Promise<Post[]> {
-        const user = await this.usersRepo.findOne({ where: { username } });
-        if (!user) throw new NotFoundException('User not found');
+# TODO Roadmap
 
-        const likes = await this.likesRepo.find({
-            where: { userId: user.id, active: true },
-            relations: ['post', 'post.user'],
-            order: { createdAt: 'DESC' },
-        });
+## P0 — Security & Configuration (Ship blocker)
 
-        return likes.map(l => l.post);
-    }
-    
+- [ ] Hash passwords (e.g., bcrypt/argon2) instead of storing plain text.
+- [ ] Remove JWT secret logging from auth module startup.
+- [ ] Move hardcoded DB credentials into environment variables.
+- [ ] Add env validation for required secrets/URLs (backend + mobile).
+- [ ] Revisit token storage strategy for native mobile targets.
 
-    could be:
+## P1 — Auth & State Consistency
 
-    const likes = await this.likesRepo
+- [ ] Make auth state single-source-of-truth (replace simulated root auth flow).
+- [ ] Stop passing `currentUserId` around in the client; centralize identity.
+- [ ] Handle deleted logged-in user gracefully (feed/auth fallback behavior).
+- [ ] Add logout and homepage actions on profile.
+
+## P1 — Data Integrity & Backend Robustness
+
+- [ ] Make post deletion transactional.
+- [ ] Add reconciliation jobs for derived activity entries (likes/follows).
+- [ ] Cover empty-database edge cases (including missing `auth` table).
+- [ ] Introduce custom error classes and map them to GraphQL-safe responses.
+- [ ] Use `try/catch` only where meaningful error conversion is needed.
+
+## P2 — API/Service Cleanup
+
+- [ ] Extract GraphQL query strings for readability/maintainability.
+- [ ] Review resolver `async` usage for consistency.
+- [ ] Revisit `getFollowersWithFollowStat` return shape (user + arrays).
+- [ ] Move profile post loading from `findByUsername` to `@ResolveField()`.
+- [ ] Decouple `UsersService.findByUsername()` from post ordering logic.
+- [ ] Remove redundant reads and unnecessary defensive checks in services.
+- [ ] Re-evaluate whether `likedByMe` should be client-derived.
+- [ ] Re-evaluate whether `active` flag is necessary in like/follow entities.
+
+## P2 — Mobile UX/Behavior
+
+- [ ] Tighten `postItem` `isOwner` and `canFollow` checks.
+- [ ] Fix profile activity follow button accuracy/behavior.
+- [ ] Verify tab refresh behavior on page refresh vs tab switch.
+- [ ] Add infinite scroll.
+
+## P3 — Optional Architecture Refactor
+
+- [ ] Consider global DB access module (`@Global()`): https://docs.nestjs.com/modules
+
+## Query optimization note (`getLikedPostsByUsername`)
+
+Current pattern:
+
+```ts
+async getLikedPostsByUsername(username: string): Promise<Post[]> {
+    const user = await this.usersRepo.findOne({ where: { username } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const likes = await this.likesRepo.find({
+        where: { userId: user.id, active: true },
+        relations: ['post', 'post.user'],
+        order: { createdAt: 'DESC' },
+    });
+
+    return likes.map(l => l.post);
+}
+```
+
+Potential alternative:
+
+```ts
+const likes = await this.likesRepo
     .createQueryBuilder('like')
     .innerJoin('like.user', 'user')
     .innerJoinAndSelect('like.post', 'post')
@@ -46,6 +78,4 @@
     .getMany();
 
 return likes.map(l => l.post);
-30-) very edge case: what happens when all tables are deleted #auth is dropped but user tries to log in: throws auth doesnt exist error
-31-) logout and homepage buttons on profile 
-32-) infinite scroll
+```

@@ -1,232 +1,151 @@
-“Resolver Test → Architecture Cleanup”
+# Dev Diary
 
-Date: 2025-11-27
-Topic: Resolver error-handling & the “god function” refactor
+## 2025-11-27 — Resolver Test → Architecture Cleanup
 
-1. What I Tried
+**Topic:** Resolver error handling and the “god function” refactor.
 
-I started with something simple:
-writing a resolver unit test.
+### 1) What I tried
 
-The positive test passed.
+I started with a resolver unit test.
 
-The negative test (error scenario) failed, but not for the reason I expected.
+- Positive scenario passed.
+- Negative scenario failed for an unexpected reason.
+- Resolver threw a different error than the test expected.
 
-The resolver was throwing a different error than what I had in my test case.
+### 2) What I found (root cause)
 
-2. What I Found (Root Cause Discovery)
+- Resolvers made raw direct DB calls (inconsistent behavior, duplicated logic).
+- Some resolver methods lacked `try/catch` and leaked internal errors.
+- `findUser(idOrName)` in the service was a design trap:
+	- type-based branching (`number => id`, `string => name`)
+	- divergent behavior paths
+	- hardcoded assumptions
+	- limited extensibility
+	- ambiguous responsibility
 
-I dug into it and realized several things:
+Unit tests exposed that resolver error behavior depended on internal quirks of `findUser()`.
 
-Resolvers were making raw direct DB calls.
-→ That means inconsistent behavior + duplicated logic.
+### 3) Insight
 
-Some resolver methods didn’t have try/catch.
-→ They leaked internal errors instead of throwing the API-safe NestJS exceptions.
+Patching `findUser(idOrName)` with more conditions would compound technical debt.
 
-findUser(idOrName) in the service
-looked clever but turned out to be a design trap:
+I considered a transitional pattern:
 
-boolean logic based on type (“number = id, string = name”)
+- Add `findUserById` and `findUserByName`
+- Keep old `findUser` as wrapper
+- Deprecate later
 
-slightly different behavior paths
+But this project is still early, and the caller surface was small, so I chose the cleaner break now.
 
-hardcoded assumptions
+### 4) Decision
 
-no flexibility for future changes
+Removed ambiguous `findUser(idOrName)`.
 
-ambiguous responsibility (overloaded function)
+Replaced with:
 
-a silent “god function” smell
+- `findUserById(id: number)`
+- `findUserByName(name: string)`
 
-Unit tests exposed the fact that resolver error behavior
-depended on internal quirks of findUser().
+Also removed direct DB calls from resolvers.
 
-This is very subtle technical debt — the exact kind that unit tests reveal early.
+### 5) Why now
 
-3. Moment of Insight
+Small codebase = low refactor cost. In a larger org, this kind of change usually becomes expensive and delayed.
 
-I realized:
+### 6) Outcome
 
-If I leave findUser(idOrName) as-is
-and just patch it with more conditions,
-I’ll be building architecture rot on top of architecture rot.
+- Predictable resolver tests
+- Consistent error scenarios
+- Explicit service layer
+- Better readability
+- Less long-term architecture risk
 
-I considered a “safe” enterprise pattern:
+---
 
-Add findUserById and findUserByName
+## 2025-11-30 — Unit test mock typing
 
-Keep old findUser as a wrapper to avoid breaking callers
+`findOne: jest.Mock<Promise<T | null>, [any]>;`
 
-Deprecate old one later
+Advantages:
 
-But then I also realized:
+- TypeScript validates mock argument shape.
+- Wrong argument usage gets flagged early.
+- Helps avoid mistakes in larger test suites.
 
-I’m early in the project
+---
 
-The only caller is this resolver
+## 2026-01-12 — GraphQL post author shape
 
-I can safely break it right now
+### Question
 
-A wrapper adds indirection + future confusion
+Should posts return only `user_id`, or expose `user` directly?
 
-Overloaded functions with secret branching logic become silent bombs
+### Decision
 
-So instead, I did the clean thing:
+Expose `user` directly on posts in GraphQL.
 
-4. The Decision
+### Reasoning
 
-Delete the ambiguous findUser(idOrName).
+- GraphQL models domain relationships, not DB foreign keys.
+- Backend should compose related data.
+- Clients can request exactly needed author fields in one query.
+- Keeps DB internals out of public API contracts.
 
-Replace it with:
+---
 
-findUserById(id: number)
+## 2026-01-14 — `addPost` return type
 
-findUserByName(name: string)
+### Question
 
-And remove direct DB calls from resolvers entirely.
+Client doesn’t need returned post now. Why not return `Boolean` instead of `Post!`?
 
-This gives:
+### Answer
 
-✔ Clear separation of concerns
-✔ No magic branching logic
-✔ Actual service-level abstraction
-✔ Predictable error behavior
-✔ Tests that reflect real contract
-✔ No future “enterprise-style hacks” to work around god functions
+Returning `Boolean` weakens the API contract. GraphQL mutations should return the resulting domain object when possible.
 
-And most importantly:
+Returning `Post`:
 
-✔ Avoids the exact architectural rot I’ve been studying.
+- preserves flexibility for future clients,
+- supports immediate UI updates,
+- exposes server-generated fields (`id`, `createdAt`),
+- improves composability and error handling.
 
-5. Why I Chose to Do It Now
+---
 
-Because this is still a small codebase.
+## 2026-02-13 — File cohesion and data model choice
 
-If this were a real company:
+I chose cohesive, larger files over premature splitting. If a file has one clear responsibility, line count alone is not a problem.
 
-findUser(idOrName) might be called from 40+ places.
+I also kept core tables unchanged: `User`, `Auth`, `Post`, `Like`, `Follow`, `Activity`.
 
-Rewriting it would require a multi-team refactor.
+- `Like` remains source of truth for interactions.
+- `Activity` remains denormalized/indexed read model for feed performance.
 
-People would hack around it instead.
+This balances performance with correctness and maintainability.
 
-The function would rot and grow even more logic.
+---
 
-Eventually it becomes a “blast radius” feature that nobody wants to touch.
+## 2026-02-14 — Contract and activity refactor decisions
 
-Right now, I have the luxury to keep the codebase clean.
+- Keep using `username` in API contracts for readability.
 
-So I took it.
+### Activity refactor decision
 
-6. Outcome
+Revisited responsibilities between domain modules (`Posts`, `Follows`, `Likes`) and `Activity`.
 
-Resolver tests are predictable
+Options:
 
-Error scenarios behave consistently
+1. Make `ActivityService` dumb and push branching into domain services.
+2. Keep domain services thin and let `ActivityService` handle limited type branching.
 
-Future features won’t rely on hidden branching logic
+Given fixed scope, no planned new activity types, and no CQRS/event-projection need, I kept the current structure.
 
-Service layer is now explicit instead of magical
+`ActivityService` keeps controlled branching; domain services delegate activity updates.
 
-Code readability drastically improved
+### Follow resolver note
 
-This was a small test issue that turned into a very meaningful architectural cleanup.
+Explicit follow/unfollow remains clearer and safer.
 
+Do not collapse purely for symmetry.
 
-
-
-"Unit test mock func type args tuple - the Y"
-
-2025/11/30
-
-3️⃣ Advantages of keeping it
-findOne: jest.Mock<Promise<T | null>, [any]>;
-
-
-Helps TypeScript check that you call the mock with the correct arguments.
-
-If you do repo.findOne('wrong type'), TS will warn.
-
-Useful for catching mistakes in larger test suites.
-
-
-Date 12.01.2026
-
-Question
-
-When exposing posts over GraphQL, should the API return only a user_id and let the client fetch user data separately, or should the post directly expose its associated user object?
-
-Problem
-
-At the database level, posts reference users via a foreign key (user_id). However, exposing only this identifier at the API layer shifts responsibility to the client to resolve related user data. This forces clients to coordinate multiple requests, introduces unnecessary coupling between client logic and backend structure, and treats persistence details as part of the public API contract.
-
-Additionally, frontend requirements (e.g., displaying username, profile picture, or verification status) naturally require user data alongside posts, making separate fetches both repetitive and error-prone.
-
-Decision
-
-Posts should expose their associated user directly in the GraphQL schema rather than exposing only user_id.
-
-GraphQL APIs are designed to model domain relationships, not database foreign keys. By exposing user, the backend remains responsible for composing related data, and clients can declaratively request exactly the author information they need in a single query. This results in a cleaner API contract, better separation of concerns, and improved flexibility as user-related fields evolve over time.
-
-Foreign keys remain an internal database concern and are intentionally not reflected directly in the public GraphQL schema.
-
-
-
-
-
-
-
-14.01.2026
-
-In GraphQL, addPost returns a Post!, but the client does not need the returned post data. Why not change the mutation to return Boolean instead?
-
-Answer:
-Because returning Boolean weakens the API contract and undermines GraphQL’s design. GraphQL mutations are meant to return the resulting domain object, not just signal success. Returning Post preserves flexibility for current and future clients, allows immediate UI updates without refetching, exposes server-generated fields (such as id and createdAt), and enables clearer error handling. Even if one client does not need the data today, the schema should remain expressive and composable. Returning the created object is the idiomatic and future-proof GraphQL approach.
-
-
-13.02.2026
-
-Today I decided to favor cohesive, larger files over premature component splitting. The goal is clarity over artificial modularity: if a file represents one responsibility (like rendering activities), its line count is not a problem. Splitting purely for smaller files adds navigation overhead and hides logic across too many wrappers. I will only split when a file contains multiple reasons to change or when reuse is proven across distinct contexts.
-
-I also decided to keep the data tables as-is: User, Auth, Post, Like, Follow, Activity. Likes remain the source of truth for interactions, and Activities remain a denormalized, indexed view for fast feed queries. This preserves integrity constraints (like uniqueness of likes), keeps writes clean, and avoids overloading the Activities table with transactional responsibilities. The result is a balanced design that supports performance without sacrificing correctness or maintainability.
-
-
-14.02.2026 keep using username in api contracts for readability
-
-14.02.2026
-Dev Diary — Activity Refactor Decision
-
-Revisited separation of concerns between domain modules (Posts, Follows, Likes) and Activity.
-
-Two options:
-
-Make ActivityService dumb and push all branching into domain services.
-
-Keep domain services thin and allow ActivityService to handle type-based logic (like, follow).
-
-Since:
-
-The project scope is fixed.
-
-No new activity types are planned.
-
-Activity is the unified read model for main feed, profile activity, and likes tab.
-
-There is no need for CQRS or event-driven projections.
-
-I decided to keep the current structure.
-
-ActivityService retains controlled type branching for storage and feed behavior. Domain services remain simple and delegate activity updates.
-
-This is a pragmatic choice: minimal refactor risk, adequate separation for scope, and no unnecessary architectural ceremony.
-
-If the system grows significantly, this would be the first place to re-evaluate.
-
-14.02.2026
-follow resolver: 
-Explicit follow/unfollow is clearer and safer.
-
-Do not collapse for the sake of symmetry.
-
-Readability > theoretical DRY here.
+Readability > theoretical DRY in this case.

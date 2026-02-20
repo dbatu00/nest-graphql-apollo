@@ -1,50 +1,110 @@
-# Welcome to your Expo app 👋
+# Mobile App (Expo Router)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+React Native client for the social feed app.
 
-## Get started
+- Framework: Expo + React Native + Expo Router
+- Data layer: GraphQL via `graphqlFetch`
+- State style: hook-driven (`useActivities`, `useProfile`, `useAuth`)
 
-1. Install dependencies
+## Quick Start (Monorepo)
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+From repository root:
 
 ```bash
-npm run reset-project
+npm install
+npm run dev
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+This starts backend + mobile together. See [../readme.md](../readme.md) for full monorepo setup.
 
-## Learn more
+## Features
 
-To learn more about developing your project with Expo, look at the following resources:
+- Auth screens: login + sign-up
+- Feed screen: compose, like/unlike, follow/unfollow, delete own posts
+- Profile screen by username with tabs:
+   - posts
+   - likes
+   - activity
+   - followers
+   - following
+- Optimistic updates in activity feed actions with fallback refresh on errors
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Routing
 
-## Join the community
+```text
+app/
+   (auth)/
+      login.tsx
+      signUp.tsx
+   (app)/
+      feed.tsx
+      profile/[username].tsx
+```
 
-Join our community of developers creating universal apps.
+## Local Setup
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### Prerequisites
+
+- Node.js 18+
+- Expo tooling (installed via npm scripts)
+- Backend API running locally
+
+### Install
+
+```bash
+npm install
+```
+
+### Environment
+
+Required:
+
+- `EXPO_PUBLIC_API_URL` (GraphQL endpoint)
+
+Example:
+
+```text
+http://localhost:3000/graphql
+```
+
+### Run
+
+```bash
+npm run start
+```
+
+Platform shortcuts:
+
+```bash
+npm run android
+npm run ios
+npm run web
+```
+
+## Scripts
+
+- `npm run start`
+- `npm run android`
+- `npm run ios`
+- `npm run web`
+- `npm run lint`
+- `npm run test`
+
+## App Architecture Notes
+
+- Navigation is file-based with Expo Router route groups.
+- Client GraphQL calls are centralized in `utils/graphqlFetch.tsx`.
+- Token is attached as bearer auth when present.
+- Current-user identity is fetched using the `me` query helper.
+
+## Current Caveats
+
+- Token persistence currently uses `localStorage` (`utils/token.tsx`), which is weaker for native device security than platform-secure stores.
+- Root-level `useAuth` includes simulated behavior and is not yet a hardened production auth source of truth.
+- Some UI styles are still inline/hardcoded and not fully centralized.
+
+## Suggested Next Steps
+
+1. Migrate token storage to secure platform storage.
+2. Unify auth state flow across hooks/routes.
+3. Expand tests beyond utility-level behavior into flow-level coverage.
