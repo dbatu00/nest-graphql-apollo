@@ -12,20 +12,26 @@ export async function graphqlFetch<T>(
 
   const token = getToken();
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ query, variables }),
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (data.errors) {
-    throw new Error(data.errors[0]?.message || "GraphQL request failed");
+    // GraphQL can return HTTP 200 while still carrying resolver errors.
+    if (data.errors) {
+      throw new Error(data.errors[0]?.message || "GraphQL request failed");
+    }
+
+    return data.data as T;
+  } catch (err) {
+    console.error("[graphqlFetch] request failed", err);
+    throw err;
   }
-
-  return data.data as T;
 }

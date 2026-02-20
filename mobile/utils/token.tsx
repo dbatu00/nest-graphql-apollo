@@ -1,13 +1,26 @@
 const TOKEN_KEY = "auth_token";
 
 export function saveToken(token: string) {
-  localStorage.setItem(TOKEN_KEY, token);
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+  } catch (err) {
+    console.error('[token] save failed', err);
+  }
 }
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  try {
+    return localStorage.getItem(TOKEN_KEY);
+  } catch (err) {
+    console.warn('[token] read failed', err);
+    return null;
+  }
 }
 
 export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+  } catch (err) {
+    console.error('[token] clear failed', err);
+  }
 }

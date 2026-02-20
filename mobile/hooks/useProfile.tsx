@@ -41,7 +41,7 @@ export function useProfile(username: string) {
   /* CURRENT USER */
   useEffect(() => {
     getCurrentUser()
-      .then(user => setCurrentUsername(user.username))
+      .then(user => setCurrentUsername(user?.username ?? null))
       .catch(() => setCurrentUsername(null));
   }, []);
 
@@ -82,7 +82,8 @@ export function useProfile(username: string) {
 
         setProfile(data.userByUsername);
         setPosts(data.userByUsername.posts ?? []);
-      } catch {
+      } catch (err) {
+        console.error("[useProfile] profile fetch failed", err);
         if (!cancelled) {
           setProfile(null);
           setPosts([]);
@@ -104,141 +105,118 @@ export function useProfile(username: string) {
   const fetchLikedPosts = useCallback(async () => {
     if (!username) return;
 
-    const data = await graphqlFetch<{ likedPosts: Post[] }>(
-      `
-      query LikedPosts($username: String!) {
-        likedPosts(username: $username) {
-          id
-          content
-          createdAt
-          user {
+    try {
+      const data = await graphqlFetch<{ likedPosts: Post[] }>(
+        `
+        query LikedPosts($username: String!) {
+          likedPosts(username: $username) {
             id
-            username
-            displayName
-            followedByMe
+            content
+            createdAt
+            user {
+              id
+              username
+              displayName
+              followedByMe
+            }
+            likesCount
+            likedByMe
           }
-          likesCount
-          likedByMe
         }
-      }
-      `,
-      { username }
-    );
+        `,
+        { username }
+      );
 
-    setLikedPosts(data.likedPosts ?? []);
+      setLikedPosts(data.likedPosts ?? []);
+    } catch (err) {
+      console.error("[useProfile] liked posts fetch failed", err);
+    }
   }, [username]);
 
   /* FOLLOWERS */
   const fetchFollowers = useCallback(async () => {
     if (!username) return;
 
-    const data = await graphqlFetch<{
-      followersWithFollowState: FollowerViewAPI[];
-    }>(
-      `
-      query FollowersWithFollowState($username: String!) {
-        followersWithFollowState(username: $username) {
-          followedByMe
-          user {
-            id
-            username
-            displayName
+    try {
+      const data = await graphqlFetch<{
+        followersWithFollowState: FollowerViewAPI[];
+      }>(
+        `
+        query FollowersWithFollowState($username: String!) {
+          followersWithFollowState(username: $username) {
+            followedByMe
+            user {
+              id
+              username
+              displayName
+            }
           }
         }
-      }
-    `,
-      { username }
-    );
+      `,
+        { username }
+      );
 
-    setFollowers(
-      (data.followersWithFollowState ?? []).map(f => ({
-        user: f.user,
-        followedByMe: f.followedByMe,
-      }))
-    );
+      setFollowers(
+        (data.followersWithFollowState ?? []).map(f => ({
+          user: f.user,
+          followedByMe: f.followedByMe,
+        }))
+      );
+    } catch (err) {
+      console.error("[useProfile] followers fetch failed", err);
+    }
   }, [username]);
 
   /* FOLLOWING */
   const fetchFollowing = useCallback(async () => {
     if (!username) return;
 
-    const data = await graphqlFetch<{
-      followingWithFollowState: FollowerViewAPI[];
-    }>(
-      `
-      query FollowingWithFollowState($username: String!) {
-        followingWithFollowState(username: $username) {
-          followedByMe
-          user {
-            id
-            username
-            displayName
+    try {
+      const data = await graphqlFetch<{
+        followingWithFollowState: FollowerViewAPI[];
+      }>(
+        `
+        query FollowingWithFollowState($username: String!) {
+          followingWithFollowState(username: $username) {
+            followedByMe
+            user {
+              id
+              username
+              displayName
+            }
           }
         }
-      }
-      `,
-      { username }
-    );
+        `,
+        { username }
+      );
 
-    setFollowing(
-      (data.followingWithFollowState ?? []).map(f => ({
-        user: f.user,
-        followedByMe: f.followedByMe,
-      }))
-    );
+      setFollowing(
+        (data.followingWithFollowState ?? []).map(f => ({
+          user: f.user,
+          followedByMe: f.followedByMe,
+        }))
+      );
+    } catch (err) {
+      console.error("[useProfile] following fetch failed", err);
+    }
   }, [username]);
 
   const toggleFollow = useCallback(
-  async (targetUsername: string, shouldFollow: boolean) => {
-    if (!currentUsername || currentUsername === targetUsername) return;
+    async (targetUsername: string, shouldFollow: boolean) => {
+      if (!currentUsername || currentUsername === targetUsername) return;
 
-    // update followers / following
-    setFollowers(prev =>
-      prev.map(f =>
-        f.user.username === targetUsername
-          ? { ...f, followedByMe: shouldFollow }
-          : f
-      )
-    );
-    setFollowing(prev =>
-      prev.map(f =>
-        f.user.username === targetUsername
-          ? { ...f, followedByMe: shouldFollow }
-          : f
-      )
-    );
-
-    // ✅ update Likes tab immediately
-    setLikedPosts(prev =>
-      prev.map(p => ({
-        ...p,
-        user:
-          p.user.username === targetUsername
-            ? { ...p.user, followedByMe: shouldFollow }
-            : p.user,
-      }))
-    );
-
-    try {
-      await graphqlFetch(
-        shouldFollow
-          ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
-          : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
-        { username: targetUsername }
-      );
-    } catch {
-      // rollback if backend fails
+      // Optimistically sync follow state across followers/following/likes views.
       setFollowers(prev =>
         prev.map(f =>
           f.user.username === targetUsername
-            ? { ...f, followedByMe: !shouldFollow }
+            ? { ...f, followedByMe: shouldFollow }
             : f
         )
       );
       setFollowing(prev =>
         prev.map(f =>
           f.user.username === targetUsername
-            ? { ...f, followedByMe: !shouldFollow }
+            ? { ...f, followedByMe: shouldFollow }
             : f
         )
       );
@@ -247,14 +225,48 @@ export function useProfile(username: string) {
           ...p,
           user:
             p.user.username === targetUsername
-              ? { ...p.user, followedByMe: !shouldFollow }
+              ? { ...p.user, followedByMe: shouldFollow }
               : p.user,
         }))
       );
-    }
-  },
-  [currentUsername]
-);
+
+      try {
+        await graphqlFetch(
+          shouldFollow
+            ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
+            : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
+          { username: targetUsername }
+        );
+      } catch (err) {
+        console.error("[useProfile] follow toggle failed", err);
+        // Roll back all optimistic surfaces if mutation fails.
+        setFollowers(prev =>
+          prev.map(f =>
+            f.user.username === targetUsername
+              ? { ...f, followedByMe: !shouldFollow }
+              : f
+          )
+        );
+        setFollowing(prev =>
+          prev.map(f =>
+            f.user.username === targetUsername
+              ? { ...f, followedByMe: !shouldFollow }
+              : f
+          )
+        );
+        setLikedPosts(prev =>
+          prev.map(p => ({
+            ...p,
+            user:
+              p.user.username === targetUsername
+                ? { ...p.user, followedByMe: !shouldFollow }
+                : p.user,
+          }))
+        );
+      }
+    },
+    [currentUsername]
+  );
 
 
   return {
@@ -267,7 +279,7 @@ export function useProfile(username: string) {
     toggleFollow,
     loading,
     likedPosts,
-    setLikedPosts, // ✅ REQUIRED FIX
+    setLikedPosts,
     fetchLikedPosts,
   };
 }

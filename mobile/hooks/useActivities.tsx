@@ -17,9 +17,12 @@ export function useActivities(params: Params = {}) {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
-    getCurrentUser().then(user =>
-      setCurrentUserId(user?.id ?? null)
-    );
+    getCurrentUser()
+      .then(user => setCurrentUserId(user?.id ?? null))
+      .catch(err => {
+        console.warn("[useActivities] failed to resolve current user", err);
+        setCurrentUserId(null);
+      });
   }, []);
 
   const refresh = useCallback(async () => {
@@ -70,7 +73,8 @@ export function useActivities(params: Params = {}) {
       );
 
       setActivities(data.feed ?? []);
-    } catch {
+    } catch (err) {
+      console.error("[useActivities] feed refresh failed", err);
       setError("Failed to load feed");
     } finally {
       setLoading(false);
@@ -85,6 +89,7 @@ export function useActivities(params: Params = {}) {
 
   const toggleFollowOptimistic = useCallback(
     async (targetUsername: string, shouldFollow: boolean) => {
+      // Optimistically propagate follow state through every user reference in feed rows.
       setActivities(prev =>
         prev.map(a => {
           const updated = { ...a };
@@ -124,7 +129,8 @@ export function useActivities(params: Params = {}) {
             : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
           { username: targetUsername }
         );
-      } catch {
+      } catch (err) {
+        console.error("[useActivities] follow toggle failed", err);
         refresh(); // rollback via truth
       }
     },
@@ -135,6 +141,7 @@ export function useActivities(params: Params = {}) {
 
   const toggleLikeOptimistic = useCallback(
     async (postId: number, currentlyLiked: boolean) => {
+      // Optimistically flip like state and count locally before server confirmation.
       setActivities(prev =>
         prev
           .map(a => {
@@ -161,18 +168,18 @@ export function useActivities(params: Params = {}) {
       );
 
       try {
-       await graphqlFetch(
-  currentlyLiked
-    ? `mutation UnlikePost($postId: Int!) {
-        unlikePost(postId: $postId)
-      }`
-    : `mutation LikePost($postId: Int!) {
-        likePost(postId: $postId)
-      }`,
-  { postId }
-);
-
-      } catch {
+        await graphqlFetch(
+          currentlyLiked
+            ? `mutation UnlikePost($postId: Int!) {
+                unlikePost(postId: $postId)
+              }`
+            : `mutation LikePost($postId: Int!) {
+                likePost(postId: $postId)
+              }`,
+          { postId }
+        );
+      } catch (err) {
+        console.error("[useActivities] like toggle failed", err);
         refresh();
       }
     },
@@ -183,6 +190,7 @@ export function useActivities(params: Params = {}) {
 
   const deletePost = useCallback(
     async (postId: number) => {
+      // Optimistically remove related rows, then rely on refresh if backend rejects.
       setActivities(prev =>
         prev.filter(a => a.targetPost?.id !== postId)
       );
@@ -194,7 +202,8 @@ export function useActivities(params: Params = {}) {
           }`,
           { postId }
         );
-      } catch {
+      } catch (err) {
+        console.error("[useActivities] delete post failed", err);
         refresh();
       }
     },
@@ -216,7 +225,8 @@ export function useActivities(params: Params = {}) {
         );
 
         refresh();
-      } catch {
+      } catch (err) {
+        console.error("[useActivities] publish failed", err);
         refresh();
       }
     },

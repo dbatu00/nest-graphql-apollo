@@ -11,11 +11,13 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // TEMP: simulate async auth check
-    setTimeout(() => {
-      setUser(null); // not logged in
+    // Temporary async auth simulation until token-backed auth state is unified.
+    const timeoutId = setTimeout(() => {
+      setUser(null);
       setLoading(false);
     }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return {

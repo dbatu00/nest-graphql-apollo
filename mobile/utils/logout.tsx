@@ -2,6 +2,11 @@ import { clearToken } from '@/utils/token';
 import { router } from 'expo-router';
 
 export async function logout() {
-  await clearToken();
-  router.replace('/login');
+  try {
+    clearToken();
+  } catch (err) {
+    console.error('[logout] token clear failed', err);
+  } finally {
+    router.replace('/login');
+  }
 }
