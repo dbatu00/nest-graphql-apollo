@@ -1,3 +1,4 @@
+// GraphQL resolver for auth mutations and current-user query.
 import { Resolver, Mutation, Args, Query } from "@nestjs/graphql";
 import { AuthService } from "./auth.service";
 import { AuthPayload } from "./auth.types";

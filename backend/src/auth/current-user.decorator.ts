@@ -1,4 +1,4 @@
-// auth/current-user.decorator.ts
+// Custom decorator for extracting authenticated user from GraphQL context.
 import { createParamDecorator, ExecutionContext } from "@nestjs/common";
 import { GqlExecutionContext } from "@nestjs/graphql";
 

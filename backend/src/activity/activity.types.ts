@@ -1,3 +1,4 @@
+// GraphQL output type for activity items.
 import { ObjectType, Field, Int } from "@nestjs/graphql";
 import { User } from "../users/user.entity";
 import { Post } from "../posts/post.entity";

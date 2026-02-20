@@ -1,4 +1,4 @@
-// src/follows/follow.entity.ts
+// Database entity for follower/following relationships.
 
 import {
     Entity,

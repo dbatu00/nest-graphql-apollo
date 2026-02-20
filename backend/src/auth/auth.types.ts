@@ -1,3 +1,4 @@
+// GraphQL payload returned by auth mutations.
 import { ObjectType, Field } from "@nestjs/graphql";
 import { User } from "../users/user.entity";
 

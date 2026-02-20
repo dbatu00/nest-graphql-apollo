@@ -1,4 +1,5 @@
-import { Resolver, Query, Mutation, Args, Int, ResolveField, Parent } from '@nestjs/graphql';
+// GraphQL resolver for user profile and follow-state fields.
+import { Resolver, Query, Args, Int, ResolveField, Parent } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
 import { CurrentUser } from 'src/auth/current-user.decorator';
@@ -23,6 +24,7 @@ export class UsersResolver {
     @Parent() user: User,
     @CurrentUser() currentUser?: User,
   ) {
+    // No viewer or self-profile should always resolve to false.
     if (!currentUser) return false;
     if (currentUser.id === user.id) return false;
 

@@ -1,3 +1,4 @@
+// Root module wiring GraphQL, TypeORM, and domain modules.
 import 'dotenv/config';
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';

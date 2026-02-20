@@ -1,3 +1,4 @@
+// Database entity for post likes with active toggle.
 import {
     Entity,
     PrimaryGeneratedColumn,

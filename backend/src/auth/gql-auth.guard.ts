@@ -1,3 +1,4 @@
+// Passport JWT guard adapted for GraphQL requests.
 import { ExecutionContext, Injectable } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { GqlExecutionContext } from "@nestjs/graphql";

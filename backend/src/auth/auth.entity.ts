@@ -1,3 +1,4 @@
+// Persisted auth credential record linked to user.
 import {
     Entity,
     PrimaryGeneratedColumn,

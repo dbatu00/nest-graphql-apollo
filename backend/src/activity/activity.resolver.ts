@@ -1,4 +1,5 @@
-import { Args, Mutation, Query, Resolver } from "@nestjs/graphql";
+// GraphQL resolver for activity feed queries.
+import { Args, Query, Resolver } from "@nestjs/graphql";
 import { UseGuards } from "@nestjs/common";
 
 import { ActivityService } from "./activity.service";

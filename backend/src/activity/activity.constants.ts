@@ -1,3 +1,4 @@
+// Shared activity type constants.
 export const ACTIVITY_TYPE = {
     POST: "post",
     FOLLOW: "follow",

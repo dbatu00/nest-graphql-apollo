@@ -1,3 +1,4 @@
+// Core user entity with profile and relation fields.
 import {
   Entity,
   PrimaryGeneratedColumn,

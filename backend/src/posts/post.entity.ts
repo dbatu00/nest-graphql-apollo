@@ -1,3 +1,4 @@
+// Database entity representing user-authored posts.
 import {
     Entity,
     PrimaryGeneratedColumn,

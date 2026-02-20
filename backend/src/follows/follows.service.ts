@@ -1,4 +1,5 @@
-import { Injectable } from "@nestjs/common";
+// Follow relationship business logic and list builders.
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Follow } from "./follow.entity";
@@ -7,6 +8,8 @@ import { ActivityService } from "src/activity/activity.service";
 
 @Injectable()
 export class FollowsService {
+    private readonly logger = new Logger(FollowsService.name);
+
     constructor(
         @InjectRepository(Follow)
         private readonly followRepo: Repository<Follow>,
@@ -20,53 +23,60 @@ export class FollowsService {
     // =========================
 
     async follow(followerId: number, username: string): Promise<boolean> {
-        return this.followRepo.manager.transaction(async manager => {
-            const follower = await manager.findOne(User, {
-                where: { id: followerId },
-            });
-
-            const following = await manager.findOne(User, {
-                where: { username },
-            });
-
-            if (!follower || !following) return false;
-            if (follower.id === following.id) return false;
-
-            const existing = await manager.findOne(Follow, {
-                where: {
-                    follower: { id: follower.id },
-                    following: { id: following.id },
-                },
-            });
-
-            // Already following → idempotent success
-            if (existing) return true;
-
-            try {
-                await manager.save(Follow, {
-                    follower,
-                    following,
+        try {
+            return await this.followRepo.manager.transaction(async manager => {
+                const follower = await manager.findOne(User, {
+                    where: { id: followerId },
                 });
-            } catch (err: any) {
-                const code = err?.code ?? err?.driverError?.code;
-                if (code === "23505") {
-                    return true;
+
+                const following = await manager.findOne(User, {
+                    where: { username },
+                });
+
+                if (!follower || !following) return false;
+                if (follower.id === following.id) return false;
+
+                const existing = await manager.findOne(Follow, {
+                    where: {
+                        follower: { id: follower.id },
+                        following: { id: following.id },
+                    },
+                });
+
+                // Idempotent: if relation already exists, treat as success.
+                if (existing) return true;
+
+                try {
+                    await manager.save(Follow, {
+                        follower,
+                        following,
+                    });
+                } catch (err: any) {
+                    // Concurrent duplicate inserts can hit unique violation; treat as success.
+                    const code = err?.code ?? err?.driverError?.code;
+                    if (code === "23505") {
+                        return true;
+                    }
+                    throw err;
                 }
-                throw err;
-            }
 
-            await this.activityService.logActivity(
-                {
-                    type: "follow",
-                    actor: follower,
-                    targetUser: following,
-                    active: true,
-                },
-                manager,
-            );
+                await this.activityService.logActivity(
+                    {
+                        type: "follow",
+                        actor: follower,
+                        targetUser: following,
+                        active: true,
+                    },
+                    manager,
+                );
 
-            return true;
-        });
+                this.logger.log(`User ${followerId} followed ${username}`);
+                return true;
+            });
+        } catch (error) {
+            this.logger.error(`follow failed: followerId=${followerId}, username=${username}`, error instanceof Error ? error.stack : undefined);
+            throw error;
+        }
     }
 
     // =========================
@@ -74,41 +84,47 @@ export class FollowsService {
     // =========================
 
     async unfollow(followerId: number, username: string): Promise<boolean> {
-        return this.followRepo.manager.transaction(async manager => {
-            const follower = await manager.findOne(User, {
-                where: { id: followerId },
+        try {
+            return await this.followRepo.manager.transaction(async manager => {
+                const follower = await manager.findOne(User, {
+                    where: { id: followerId },
+                });
+
+                const following = await manager.findOne(User, {
+                    where: { username },
+                });
+
+                if (!follower || !following) return false;
+
+                const existing = await manager.findOne(Follow, {
+                    where: {
+                        follower: { id: follower.id },
+                        following: { id: following.id },
+                    },
+                });
+
+                // Idempotent: already unfollowed is still a successful outcome.
+                if (!existing) return true;
+
+                await manager.remove(existing);
+
+                await this.activityService.logActivity(
+                    {
+                        type: "follow",
+                        actor: follower,
+                        targetUser: following,
+                        active: false,
+                    },
+                    manager,
+                );
+
+                this.logger.log(`User ${followerId} unfollowed ${username}`);
+                return true;
             });
-
-            const following = await manager.findOne(User, {
-                where: { username },
-            });
-
-            if (!follower || !following) return false;
-
-            const existing = await manager.findOne(Follow, {
-                where: {
-                    follower: { id: follower.id },
-                    following: { id: following.id },
-                },
-            });
-
-            // Already not following → idempotent success
-            if (!existing) return true;
-
-            await manager.remove(existing);
-
-            await this.activityService.logActivity(
-                {
-                    type: "follow",
-                    actor: follower,
-                    targetUser: following,
-                    active: false,
-                },
-                manager,
-            );
-
-            return true;
-        });
+        } catch (error) {
+            this.logger.error(`unfollow failed: followerId=${followerId}, username=${username}`, error instanceof Error ? error.stack : undefined);
+            throw error;
+        }
     }
 
     // =========================

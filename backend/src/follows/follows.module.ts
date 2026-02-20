@@ -1,3 +1,4 @@
+// Follows module registration.
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Follow } from "./follow.entity";
@@ -9,7 +10,7 @@ import { ActivityModule } from "src/activity/activity.module";
 @Module({
   imports: [
     TypeOrmModule.forFeature([Follow, User]),
-    ActivityModule, // 👈 for follow activities
+    ActivityModule,
   ],
   providers: [FollowsService, FollowsResolver],
 })

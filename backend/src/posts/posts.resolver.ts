@@ -1,3 +1,4 @@
+// GraphQL resolver for posts and like interactions.
 import {
     Resolver,
     Query,
@@ -66,6 +67,7 @@ export class PostsResolver {
 
     @ResolveField(() => Boolean)
     async likedByMe(@Parent() post: Post, @Context() ctx: any) {
+        // This field can be resolved in contexts where no authenticated user is present.
         const userId = ctx?.req?.user?.id;
         if (!userId) return false;
 

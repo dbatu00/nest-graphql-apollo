@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, BadRequestException } from "@nestjs/common";
+// Auth business logic: sign-up, login, and token issuing.
+import { Injectable, UnauthorizedException, BadRequestException, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
 import { Auth } from "./auth.entity";
@@ -7,6 +8,8 @@ import { JwtService } from "@nestjs/jwt";
 
 @Injectable()
 export class AuthService {
+    private readonly logger = new Logger(AuthService.name);
+
     constructor(
         @InjectRepository(Auth)
         private readonly authRepo: Repository<Auth>,
@@ -16,53 +19,68 @@ export class AuthService {
     ) { }
 
     async signUp(username: string, password: string) {
-        const existingUser = await this.dataSource
-            .getRepository(User)
-            .findOne({ where: { username } });
+        try {
+            const existingUser = await this.dataSource
+                .getRepository(User)
+                .findOne({ where: { username } });
 
-        if (existingUser) {
-            throw new BadRequestException("Username already exists");
-        }
+            if (existingUser) {
+                throw new BadRequestException("Username already exists");
+            }
 
-        const user = await this.dataSource.transaction(async (manager) => {
-            const user = manager.create(User, {
-                username,
-                displayName: username,
+            const user = await this.dataSource.transaction(async (manager) => {
+                const user = manager.create(User, {
+                    username,
+                    displayName: username,
+                });
+
+                await manager.save(user);
+
+                const auth = manager.create(Auth, {
+                    password,
+                    user,
+                });
+
+                await manager.save(auth);
+
+                return user;
             });
 
-            await manager.save(user);
+            this.logger.log(`User signed up: ${username}`);
 
-            const auth = manager.create(Auth, {
-                password,
+            return {
                 user,
-            });
-
-            await manager.save(auth);
-
-            return user;
-        });
-
-        return {
-            user,
-            token: this.issueAccessToken(user),
-        };
+                token: this.issueAccessToken(user),
+            };
+        } catch (error) {
+            this.logger.error(`Sign-up failed for username: ${username}`, error instanceof Error ? error.stack : undefined);
+            throw error;
+        }
     }
 
     async login(username: string, password: string) {
-        const credential = await this.authRepo
-            .createQueryBuilder("auth")
-            .innerJoinAndSelect("auth.user", "user")
-            .where("user.username = :username", { username })
-            .getOne();
+        try {
+            const credential = await this.authRepo
+                .createQueryBuilder("auth")
+                .innerJoinAndSelect("auth.user", "user")
+                .where("user.username = :username", { username })
+                .getOne();
 
-        if (!credential || credential.password !== password) {
-            throw new UnauthorizedException("Invalid credentials");
+            if (!credential || credential.password !== password) {
+                this.logger.warn(`Invalid login attempt for username: ${username}`);
+                throw new UnauthorizedException("Invalid credentials");
+            }
+
+            this.logger.log(`User logged in: ${username}`);
+
+            return {
+                user: credential.user,
+                token: this.issueAccessToken(credential.user),
+            };
+        } catch (error) {
+            this.logger.error(`Login failed for username: ${username}`, error instanceof Error ? error.stack : undefined);
+            throw error;
         }
-
-        return {
-            user: credential.user,
-            token: this.issueAccessToken(credential.user),
-        };
     }
 
     private issueAccessToken(user: User): string {

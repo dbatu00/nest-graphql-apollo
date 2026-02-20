@@ -1,3 +1,4 @@
+// Database entity for timeline activity rows.
 import {
     Entity,
     PrimaryGeneratedColumn,

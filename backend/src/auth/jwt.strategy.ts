@@ -1,4 +1,4 @@
-// src/auth/jwt.strategy.ts
+// JWT strategy resolving request user from token payload.
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
@@ -21,6 +21,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             throw new UnauthorizedException("User not found");
         }
 
-        return user; // 🔴 becomes req.user
+        return user;
     }
 }

@@ -1,7 +1,7 @@
+// GraphQL resolver for follow/unfollow and follower list queries.
 import { Resolver, Mutation, Args, Query } from "@nestjs/graphql";
 import { UseGuards } from "@nestjs/common";
 import { FollowsService } from "./follows.service";
-import { Follow } from "./follow.entity";
 import { GqlAuthGuard } from "../auth/gql-auth.guard";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { User } from "../users/user.entity";
@@ -59,6 +59,7 @@ export class FollowsResolver {
                 user.id,
             );
 
+        // Raw SQL CASE can arrive as boolean or string depending on driver/config.
         return entities.map((u, i) => ({
             user: u,
             followedByMe:
@@ -79,6 +80,7 @@ export class FollowsResolver {
                 user.id
             );
 
+        // Normalize both boolean and string representations from raw projection.
         return entities.map((u, i) => ({
             user: u,
             followedByMe: raw[i].followedByMe === true || raw[i].followedByMe === "true",

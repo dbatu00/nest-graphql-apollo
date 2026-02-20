@@ -1,3 +1,4 @@
+// GraphQL DTO for follower rows with viewer follow state.
 import { ObjectType, Field } from "@nestjs/graphql";
 import { User } from "../../users/user.entity";
 

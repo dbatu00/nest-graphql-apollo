@@ -1,3 +1,4 @@
+// Posts module registration.
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PostsService } from './posts.service';
@@ -11,7 +12,7 @@ import { Like } from './like.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Post, User, Like]),
-    ActivityModule, // 👈 import the module, not the service
+    ActivityModule,
   ],
   providers: [PostsService, PostsResolver],
 })

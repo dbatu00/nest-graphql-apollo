@@ -1,3 +1,4 @@
+// Users business logic for profile and follow counters.
 import {
   Injectable,
 } from "@nestjs/common";
@@ -23,7 +24,7 @@ export class UsersService {
   async findByUsername(username: string) {
     return this.userRepo.findOne({
       where: { username },
-      relations: ["posts"], // 🔴 REQUIRED
+      relations: ["posts"],
       order: {
         posts: {
           createdAt: "DESC",
