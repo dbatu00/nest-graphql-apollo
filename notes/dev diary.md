@@ -86,3 +86,29 @@ Reasoning:
 - Keep `username` in API contracts for readability.
 - Keep controlled type branching in `ActivityService` for current scope.
 - Keep explicit follow/unfollow mutations for clarity.
+
+---
+
+## 2026-02-21 — Activity feed vs post feed, and hard-delete cleanup
+
+Question: keep both `getActivityFeed` and `getFeed`, and can hard-delete cleanup be merged into `logActivity`?
+
+Decision:
+
+- Keep both read methods because they represent different read models.
+  - `getFeed` = canonical post list.
+  - `getActivityFeed` = event timeline (post/follow/like) with activity-specific filters.
+- Keep hard-delete cleanup separate from event logging.
+  - `logActivity` handles append/upsert semantics (including soft-delete flips for like/follow via `active`).
+  - hard-delete entities (like post deletion) should use explicit purge behavior.
+
+`getPosts` / `getFeed` decision:
+
+- Keep a dedicated post-list read path (`getFeed` now; `getPosts` naming is acceptable if you want endpoint naming symmetry).
+- Do not replace post reads with activity reads.
+- Reason: post screens need a stable canonical source independent from activity-specific filtering and event semantics.
+
+Implementation note:
+
+- If more hard-delete entities are added later (for example comments), prefer a typed purge helper (example: `purgeActivitiesByTarget`) and keep `deleteActivitiesForPost` as a thin wrapper.
+- Do not merge purge and logging into one “super” write method; it makes intent less clear and tests harder to reason about.

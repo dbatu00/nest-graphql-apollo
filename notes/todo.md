@@ -7,6 +7,7 @@
 - [ ] Move hardcoded DB credentials to environment variables.
 - [ ] Add environment validation for required secrets/URLs.
 - [ ] Revisit token storage strategy for native mobile targets.
+- [ ] Disable `synchronize: true` outside local dev and move to migrations workflow.
 
 ## P1 — Auth & State Consistency
 
@@ -22,6 +23,9 @@
 - [ ] Cover empty-database edge cases (including missing `auth` table).
 - [ ] Introduce custom error classes and map to GraphQL-safe responses.
 - [ ] Use `try/catch` only for meaningful error conversion.
+- [ ] Add input invariants in `ActivityService.logActivity` (`like` requires `targetPost`, `follow` requires `targetUser`).
+- [ ] Guard follows resolver follow-state mapping against raw/entities length mismatches.
+- [ ] Replace generic thrown `Error` in `ActivityResolver.feed` with framework exception type.
 
 ## P2 — API/Service Cleanup
 
@@ -37,12 +41,19 @@
 ## P2 — Unit Testing Readiness
 
 - [x] Extract mobile GraphQL operations into shared constants (hooks/components no longer inline query strings).
-- [ ] Add first backend service unit tests (`auth`, `posts`, `follows`) with mocked repositories + mocked `ActivityService`.
-- [ ] Add first resolver unit tests (`users`, `posts`) with service-only mocks.
-- [ ] Add one shared backend test helper for repository/dataSource mocks to reduce boilerplate.
+- [x] Add backend service unit tests (`auth`, `posts`, `follows`, `activity`, `users`) with mocked repositories + mocked dependencies.
+- [x] Add backend resolver unit tests (`auth`, `users`, `posts`, `follows`, `activity`) with service-only mocks.
+- [x] Add shared backend test helper for repository/dataSource/entity-manager mocks to reduce boilerplate.
 - [ ] Add hook-level mobile tests for optimistic follow/like behavior (`useActivities`, `useProfile`) with mocked `graphqlFetch`.
 - [ ] Add component-level mobile test for likes modal flow in `ActivityRow` with mocked `graphqlFetch`.
 - [ ] Add CI step to run `backend npm test` + `mobile npm test`.
+- [x] Add backend tests covering module config metadata shape (`TypeORM` + `JwtModule.register`).
+- [x] Add backend tests capturing follows resolver raw/entities mismatch behavior.
+- [x] Add backend tests capturing current `logActivity` invalid-input behavior for missing `targetPost`/`targetUser`.
+
+Backend test status:
+
+- [x] Full backend test pass is currently green (`138 passed, 0 failed` on 2026-02-21).
 
 ## P2 — Mobile UX/Behavior
 

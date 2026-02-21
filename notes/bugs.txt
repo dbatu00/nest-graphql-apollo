@@ -1,7 +1,16 @@
 # Bugs
 
-Status: no active bug notes.
+Status: active notes present.
 
 When adding bugs, use this format:
 
 scroll jitter on bottom of feed - 2posts
+
+backend: jwt secret logged on module load - high
+backend: follows resolver assumes raw/entities same length and can throw - medium
+backend: activity log accepts invalid like/follow payloads without targets - medium
+backend: auth uses plain-text password storage/compare - high
+backend: app module has hardcoded postgres credentials - high
+backend: typeorm synchronize=true in app module - medium
+backend: deletePost flow is not transactional (activity delete + post remove split) - medium
+backend: activity resolver throws generic Error instead of framework exception - low
