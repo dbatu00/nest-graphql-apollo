@@ -2,6 +2,15 @@ import { useEffect, useState, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { getCurrentUser } from "@/utils/currentUser";
 import { Activity } from "@/types/Activity";
+import {
+  ADD_POST_MUTATION,
+  DELETE_POST_MUTATION,
+  FEED_QUERY,
+  FOLLOW_USER_MUTATION,
+  LIKE_POST_MUTATION,
+  UNFOLLOW_USER_MUTATION,
+  UNLIKE_POST_MUTATION,
+} from "@/graphql/operations";
 
 type Params = {
   username?: string;
@@ -30,47 +39,10 @@ export function useActivities(params: Params = {}) {
     setError(null);
 
     try {
-      const data = await graphqlFetch<{ feed: Activity[] }>(
-        `
-        query Feed($username: String, $types: [String!]) {
-          feed(username: $username, types: $types) {
-            id
-            type
-            active
-            createdAt
-
-            actor {
-              id
-              username
-              displayName
-              followedByMe
-            }
-
-            targetUser {
-              id
-              username
-              displayName
-              followedByMe
-            }
-
-            targetPost {
-              id
-              content
-              createdAt
-              likesCount
-              likedByMe
-              user {
-                id
-                username
-                displayName
-                followedByMe
-              }
-            }
-          }
-        }
-        `,
-        { username, types }
-      );
+      const data = await graphqlFetch<{ feed: Activity[] }>(FEED_QUERY, {
+        username,
+        types,
+      });
 
       setActivities(data.feed ?? []);
     } catch (err) {
@@ -124,9 +96,7 @@ export function useActivities(params: Params = {}) {
 
       try {
         await graphqlFetch(
-          shouldFollow
-            ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
-            : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
+          shouldFollow ? FOLLOW_USER_MUTATION : UNFOLLOW_USER_MUTATION,
           { username: targetUsername }
         );
       } catch (err) {
@@ -169,13 +139,7 @@ export function useActivities(params: Params = {}) {
 
       try {
         await graphqlFetch(
-          currentlyLiked
-            ? `mutation UnlikePost($postId: Int!) {
-                unlikePost(postId: $postId)
-              }`
-            : `mutation LikePost($postId: Int!) {
-                likePost(postId: $postId)
-              }`,
+          currentlyLiked ? UNLIKE_POST_MUTATION : LIKE_POST_MUTATION,
           { postId }
         );
       } catch (err) {
@@ -196,12 +160,7 @@ export function useActivities(params: Params = {}) {
       );
 
       try {
-        await graphqlFetch(
-          `mutation DeletePost($postId: Int!) {
-            deletePost(postId: $postId)
-          }`,
-          { postId }
-        );
+        await graphqlFetch(DELETE_POST_MUTATION, { postId });
       } catch (err) {
         console.error("[useActivities] delete post failed", err);
         refresh();
@@ -217,12 +176,7 @@ export function useActivities(params: Params = {}) {
       if (!content.trim()) return;
 
       try {
-        await graphqlFetch(
-          `mutation AddPost($content: String!) {
-            addPost(content: $content) { id }
-          }`,
-          { content }
-        );
+        await graphqlFetch(ADD_POST_MUTATION, { content });
 
         refresh();
       } catch (err) {

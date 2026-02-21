@@ -4,10 +4,4 @@ Status: no active bug notes.
 
 When adding bugs, use this format:
 
-- Title:
-- Area:
-- Repro steps:
-- Expected:
-- Actual:
-- Severity:
-- Status:
+scroll jitter on bottom of feed - 2posts

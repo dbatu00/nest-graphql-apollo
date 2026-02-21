@@ -5,6 +5,7 @@ import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
 import { feedStyles } from "@/styles/feed";
 import { graphqlFetch } from "@/utils/graphqlFetch";
+import { GET_LIKED_USERS_QUERY } from "@/graphql/operations";
 
 type Props = {
   activity: Activity;
@@ -38,21 +39,7 @@ export const ActivityRow = ({
 
       const data = await graphqlFetch<{
         post: { likedUsers: any[] };
-      }>(
-        `
-        query GetLikedUsers($postId: Int!) {
-          post(id: $postId) {
-            likedUsers {
-              id
-              username
-              displayName
-              followedByMe
-            }
-          }
-        }
-        `,
-        { postId }
-      );
+      }>(GET_LIKED_USERS_QUERY, { postId });
 
       setLikedUsers(data.post.likedUsers);
     } catch (err) {

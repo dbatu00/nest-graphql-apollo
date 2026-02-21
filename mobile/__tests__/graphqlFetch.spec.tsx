@@ -2,8 +2,24 @@
 import { graphqlFetch } from "../utils/graphqlFetch";
 
 describe("graphqlFetch", () => {
+  const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
+
   beforeEach(() => {
+    process.env.EXPO_PUBLIC_API_URL = "http://localhost:3000/graphql";
     global.fetch = jest.fn();
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  afterAll(() => {
+    if (originalApiUrl === undefined) {
+      delete process.env.EXPO_PUBLIC_API_URL;
+      return;
+    }
+
+    process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
   });
 
   it("should return data on successful response", async () => {
@@ -43,11 +59,11 @@ describe("graphqlFetch", () => {
 
     const query = "query { test }";
     const variables = { a: 1 };
-     const url = process.env.EXPO_PUBLIC_API_URL;
+    const url = process.env.EXPO_PUBLIC_API_URL;
 
-  if (!url) {
-    throw new Error('EXPO_PUBLIC_API_URL is not defined');
-  }
+    if (!url) {
+      throw new Error("EXPO_PUBLIC_API_URL is not defined");
+    }
 
     await graphqlFetch(query, variables);
 

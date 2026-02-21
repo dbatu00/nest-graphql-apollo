@@ -25,7 +25,7 @@
 
 ## P2 — API/Service Cleanup
 
-- [ ] Extract GraphQL query strings for readability.
+- [x] Extract GraphQL query strings for readability.
 - [ ] Review resolver `async` usage consistency.
 - [ ] Revisit `getFollowersWithFollowStat` return shape.
 - [ ] Move profile post loading from `findByUsername` to `@ResolveField()`.
@@ -33,6 +33,16 @@
 - [ ] Remove redundant reads and unnecessary defensive checks.
 - [ ] Re-evaluate whether `likedByMe` should be client-derived.
 - [ ] Re-evaluate whether `active` is necessary in like/follow entities.
+
+## P2 — Unit Testing Readiness
+
+- [x] Extract mobile GraphQL operations into shared constants (hooks/components no longer inline query strings).
+- [ ] Add first backend service unit tests (`auth`, `posts`, `follows`) with mocked repositories + mocked `ActivityService`.
+- [ ] Add first resolver unit tests (`users`, `posts`) with service-only mocks.
+- [ ] Add one shared backend test helper for repository/dataSource mocks to reduce boilerplate.
+- [ ] Add hook-level mobile tests for optimistic follow/like behavior (`useActivities`, `useProfile`) with mocked `graphqlFetch`.
+- [ ] Add component-level mobile test for likes modal flow in `ActivityRow` with mocked `graphqlFetch`.
+- [ ] Add CI step to run `backend npm test` + `mobile npm test`.
 
 ## P2 — Mobile UX/Behavior
 

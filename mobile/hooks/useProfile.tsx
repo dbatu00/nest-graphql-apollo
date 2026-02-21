@@ -2,6 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { Post } from "@/types/Post";
 import { getCurrentUser } from "@/utils/currentUser";
+import {
+  FOLLOWERS_WITH_FOLLOW_STATE_QUERY,
+  FOLLOWING_WITH_FOLLOW_STATE_QUERY,
+  FOLLOW_USER_MUTATION,
+  LIKED_POSTS_QUERY,
+  UNFOLLOW_USER_MUTATION,
+  USER_PROFILE_QUERY,
+} from "@/graphql/operations";
 
 type Profile = {
   id: number;
@@ -57,26 +65,7 @@ export function useProfile(username: string) {
 
         const data = await graphqlFetch<{
           userByUsername: Profile & { posts: Post[] };
-        }>(
-          `
-          query UserProfile($username: String!) {
-            userByUsername(username: $username) {
-              id
-              username
-              displayName
-              bio
-              followersCount
-              followingCount
-              posts {
-                id
-                content
-                createdAt
-              }
-            }
-          }
-        `,
-          { username }
-        );
+        }>(USER_PROFILE_QUERY, { username });
 
         if (cancelled) return;
 
@@ -107,23 +96,7 @@ export function useProfile(username: string) {
 
     try {
       const data = await graphqlFetch<{ likedPosts: Post[] }>(
-        `
-        query LikedPosts($username: String!) {
-          likedPosts(username: $username) {
-            id
-            content
-            createdAt
-            user {
-              id
-              username
-              displayName
-              followedByMe
-            }
-            likesCount
-            likedByMe
-          }
-        }
-        `,
+        LIKED_POSTS_QUERY,
         { username }
       );
 
@@ -140,21 +113,7 @@ export function useProfile(username: string) {
     try {
       const data = await graphqlFetch<{
         followersWithFollowState: FollowerViewAPI[];
-      }>(
-        `
-        query FollowersWithFollowState($username: String!) {
-          followersWithFollowState(username: $username) {
-            followedByMe
-            user {
-              id
-              username
-              displayName
-            }
-          }
-        }
-      `,
-        { username }
-      );
+      }>(FOLLOWERS_WITH_FOLLOW_STATE_QUERY, { username });
 
       setFollowers(
         (data.followersWithFollowState ?? []).map(f => ({
@@ -174,21 +133,7 @@ export function useProfile(username: string) {
     try {
       const data = await graphqlFetch<{
         followingWithFollowState: FollowerViewAPI[];
-      }>(
-        `
-        query FollowingWithFollowState($username: String!) {
-          followingWithFollowState(username: $username) {
-            followedByMe
-            user {
-              id
-              username
-              displayName
-            }
-          }
-        }
-        `,
-        { username }
-      );
+      }>(FOLLOWING_WITH_FOLLOW_STATE_QUERY, { username });
 
       setFollowing(
         (data.followingWithFollowState ?? []).map(f => ({
@@ -232,9 +177,7 @@ export function useProfile(username: string) {
 
       try {
         await graphqlFetch(
-          shouldFollow
-            ? `mutation FollowUser($username: String!) { followUser(username: $username) }`
-            : `mutation UnfollowUser($username: String!) { unfollowUser(username: $username) }`,
+          shouldFollow ? FOLLOW_USER_MUTATION : UNFOLLOW_USER_MUTATION,
           { username: targetUsername }
         );
       } catch (err) {

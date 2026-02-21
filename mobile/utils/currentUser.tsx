@@ -1,4 +1,5 @@
 import { graphqlFetch } from "@/utils/graphqlFetch";
+import { ME_QUERY } from "@/graphql/operations";
 
 export async function getCurrentUser() {
   try {
@@ -8,15 +9,7 @@ export async function getCurrentUser() {
         username: string;
         displayName?: string;
       };
-    }>(`
-      query {
-        me {
-          id
-          username
-          displayName
-        }
-      }
-    `);
+    }>(ME_QUERY);
 
     return data.me;
   } catch (err) {
