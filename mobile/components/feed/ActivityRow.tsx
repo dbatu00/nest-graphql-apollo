@@ -49,8 +49,8 @@ export const ActivityRow = ({
       }>(GET_LIKED_USERS_QUERY, { postId });
 
       setLikedUsers(data.post.likedUsers);
-    } catch (err) {
-      console.error(err);
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to load liked users", err);
       setLikedUsers([]);
     } finally {
       setLikedLoading(false);

@@ -50,7 +50,10 @@ export function useProfile(username: string) {
   useEffect(() => {
     getCurrentUser()
       .then(user => setCurrentUsername(user?.username ?? null))
-      .catch(() => setCurrentUsername(null));
+      .catch((err: unknown) => {
+        console.warn("[useProfile] failed to resolve current user", err);
+        setCurrentUsername(null);
+      });
   }, []);
 
   /* PROFILE + POSTS */
@@ -71,7 +74,7 @@ export function useProfile(username: string) {
 
         setProfile(data.userByUsername);
         setPosts(data.userByUsername.posts ?? []);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[useProfile] profile fetch failed", err);
         if (!cancelled) {
           setProfile(null);
@@ -101,7 +104,7 @@ export function useProfile(username: string) {
       );
 
       setLikedPosts(data.likedPosts ?? []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[useProfile] liked posts fetch failed", err);
     }
   }, [username]);
@@ -121,7 +124,7 @@ export function useProfile(username: string) {
           followedByMe: f.followedByMe,
         }))
       );
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[useProfile] followers fetch failed", err);
     }
   }, [username]);
@@ -141,7 +144,7 @@ export function useProfile(username: string) {
           followedByMe: f.followedByMe,
         }))
       );
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[useProfile] following fetch failed", err);
     }
   }, [username]);
@@ -180,7 +183,7 @@ export function useProfile(username: string) {
           shouldFollow ? FOLLOW_USER_MUTATION : UNFOLLOW_USER_MUTATION,
           { username: targetUsername }
         );
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[useProfile] follow toggle failed", err);
         // Roll back all optimistic surfaces if mutation fails.
         setFollowers(prev =>

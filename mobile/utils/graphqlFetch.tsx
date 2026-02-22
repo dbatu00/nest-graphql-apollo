@@ -2,7 +2,7 @@ import { getToken } from "@/utils/token";
 
 export async function graphqlFetch<T>(
   query: string,
-  variables: Record<string, any> = {}
+  variables: Record<string, unknown> = {}
 ): Promise<T> {
   const url = process.env.EXPO_PUBLIC_API_URL;
 
@@ -30,7 +30,7 @@ export async function graphqlFetch<T>(
     }
 
     return data.data as T;
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("[graphqlFetch] request failed", err);
     throw err;
   }

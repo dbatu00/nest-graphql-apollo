@@ -12,7 +12,7 @@ export async function getCurrentUser() {
     }>(ME_QUERY);
 
     return data.me;
-  } catch (err) {
+  } catch (err: unknown) {
     console.warn("[currentUser] failed to fetch current user", err);
     return null;
   }

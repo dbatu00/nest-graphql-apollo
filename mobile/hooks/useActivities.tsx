@@ -28,7 +28,7 @@ export function useActivities(params: Params = {}) {
   useEffect(() => {
     getCurrentUser()
       .then(user => setCurrentUserId(user?.id ?? null))
-      .catch(err => {
+      .catch((err: unknown) => {
         console.warn("[useActivities] failed to resolve current user", err);
         setCurrentUserId(null);
       });
@@ -45,7 +45,7 @@ export function useActivities(params: Params = {}) {
       });
 
       setActivities(data.feed ?? []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[useActivities] feed refresh failed", err);
       setError("Failed to load feed");
     } finally {
@@ -99,7 +99,7 @@ export function useActivities(params: Params = {}) {
           shouldFollow ? FOLLOW_USER_MUTATION : UNFOLLOW_USER_MUTATION,
           { username: targetUsername }
         );
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[useActivities] follow toggle failed", err);
         refresh(); // rollback via truth
       }
@@ -142,7 +142,7 @@ export function useActivities(params: Params = {}) {
           currentlyLiked ? UNLIKE_POST_MUTATION : LIKE_POST_MUTATION,
           { postId }
         );
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[useActivities] like toggle failed", err);
         refresh();
       }
@@ -161,7 +161,7 @@ export function useActivities(params: Params = {}) {
 
       try {
         await graphqlFetch(DELETE_POST_MUTATION, { postId });
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[useActivities] delete post failed", err);
         refresh();
       }
@@ -179,7 +179,7 @@ export function useActivities(params: Params = {}) {
         await graphqlFetch(ADD_POST_MUTATION, { content });
 
         refresh();
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("[useActivities] publish failed", err);
         refresh();
       }
