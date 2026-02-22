@@ -44,8 +44,9 @@
 - [x] Add backend service unit tests (`auth`, `posts`, `follows`, `activity`, `users`) with mocked repositories + mocked dependencies.
 - [x] Add backend resolver unit tests (`auth`, `users`, `posts`, `follows`, `activity`) with service-only mocks.
 - [x] Add shared backend test helper for repository/dataSource/entity-manager mocks to reduce boilerplate.
-- [ ] Add hook-level mobile tests for optimistic follow/like behavior (`useActivities`, `useProfile`) with mocked `graphqlFetch`.
-- [ ] Add component-level mobile test for likes modal flow in `ActivityRow` with mocked `graphqlFetch`.
+- [x] Add hook-level mobile tests for optimistic follow/like behavior (`useActivities`, `useProfile`) with mocked `graphqlFetch`.
+- [x] Add component-level mobile test for likes modal flow in `ActivityRow` with mocked `graphqlFetch`.
+- [x] Add auth-flow screen tests for `login`, `signUp`, and root `index` redirects.
 - [ ] Add CI step to run `backend npm test` + `mobile npm test`.
 - [x] Add backend tests covering module config metadata shape (`TypeORM` + `JwtModule.register`).
 - [x] Add backend tests capturing follows resolver raw/entities mismatch behavior.
@@ -54,6 +55,15 @@
 Backend test status:
 
 - [x] Full backend test pass is currently green (`138 passed, 0 failed` on 2026-02-21).
+
+Frontend test status (mobile, 2026-02-22):
+
+- [x] Utility tests: `graphqlFetch`, `token`, `logout`, `currentUser`.
+- [x] Hook tests: `useActivities` (optimistic + rollback/error + guards).
+- [x] Hook tests: `useProfile` (load/fetch/toggleFollow optimistic + rollback/error + guards).
+- [x] Component tests: `ActivityRow` (likes modal, follow forwarding, close behavior, owner delete wiring, no-like-controls path).
+- [x] Screen/route tests: `login`, `signUp`, `index` redirects.
+- [ ] Remaining likely gaps: `ProfileLink` navigation timing, feed/profile screen-level integration tests, and CI automation for mobile test runs.
 
 ## P2 — Mobile UX/Behavior
 
