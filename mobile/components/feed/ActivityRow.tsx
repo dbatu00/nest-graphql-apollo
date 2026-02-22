@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, ActivityIndicator, ScrollView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Modal, ScrollView, Platform } from "react-native";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
@@ -15,6 +15,13 @@ type Props = {
   onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
 };
 
+type LikedUser = {
+  id: number;
+  username: string;
+  displayName?: string;
+  followedByMe?: boolean;
+};
+
 export const ActivityRow = ({
   activity,
   currentUserId,
@@ -28,7 +35,7 @@ export const ActivityRow = ({
   const isOwner = currentUserId === targetPost?.user.id;
 
   /* ---------- LIKES MODAL STATE ---------- */
-  const [likedUsers, setLikedUsers] = useState<any[]>([]);
+  const [likedUsers, setLikedUsers] = useState<LikedUser[]>([]);
   const [likedModalVisible, setLikedModalVisible] = useState(false);
   const [likedLoading, setLikedLoading] = useState(false);
 
@@ -38,7 +45,7 @@ export const ActivityRow = ({
       setLikedModalVisible(true);
 
       const data = await graphqlFetch<{
-        post: { likedUsers: any[] };
+        post: { likedUsers: LikedUser[] };
       }>(GET_LIKED_USERS_QUERY, { postId });
 
       setLikedUsers(data.post.likedUsers);

@@ -14,6 +14,7 @@ import { ActivityRow } from "@/components/feed/ActivityRow";
 import { useActivities } from "@/hooks/useActivities";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { logout } from "@/utils/logout";
+import { FOLLOWERS_QUERY, FOLLOWING_QUERY } from "@/graphql/operations";
 
 type Tab =
   | "posts"
@@ -21,6 +22,13 @@ type Tab =
   | "activity"
   | "followers"
   | "following";
+
+type FollowUser = {
+  id: number;
+  username: string;
+  displayName?: string;
+  followedByMe?: boolean;
+};
 
 export default function UsernameScreen() {
   const { username } =
@@ -48,7 +56,7 @@ export default function UsernameScreen() {
 
   /* ---------------- FOLLOW LIST STATE ---------------- */
 
-  const [followUsers, setFollowUsers] = useState<any[]>([]);
+  const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
   const [followLoading, setFollowLoading] =
     useState(false);
 
@@ -64,30 +72,10 @@ export default function UsernameScreen() {
 
       try {
         const data = await graphqlFetch<{
-          followers?: any[];
-          following?: any[];
+          followers?: FollowUser[];
+          following?: FollowUser[];
         }>(
-          tab === "followers"
-            ? `
-              query ($username: String!) {
-                followers(username: $username) {
-                  id
-                  username
-                  displayName
-                  followedByMe
-                }
-              }
-            `
-            : `
-              query ($username: String!) {
-                following(username: $username) {
-                  id
-                  username
-                  displayName
-                  followedByMe
-                }
-              }
-            `,
+          tab === "followers" ? FOLLOWERS_QUERY : FOLLOWING_QUERY,
           { username }
         );
 

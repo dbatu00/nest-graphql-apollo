@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { commonStyles } from "../../styles/common";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { saveToken } from "@/utils/token";
+import { LOGIN_MUTATION } from "@/graphql/operations";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -22,36 +23,21 @@ export default function Login() {
     setLoading(true);
 
     try {
-     const res = await graphqlFetch<{
-  login: {
-    token: string;
-    user: {
-      id: number;
-      username: string;
-      displayName?: string;
-    };
-  };
-}>(
-  `
-  mutation Login($username: String!, $password: String!) {
-    login(username: $username, password: $password) {
-      token
-      user {
-        id
-        username
-        displayName
-      }
-    }
-  }
-  `,
-  { username, password }
-);
+      const res = await graphqlFetch<{
+        login: {
+          token: string;
+          user: {
+            id: number;
+            username: string;
+            displayName?: string;
+          };
+        };
+      }>(LOGIN_MUTATION, { username, password });
 
-saveToken(res.login.token);
-router.replace("/(app)/feed");
-
-    } catch (err: any) {
-      setError(err.message || "Invalid credentials");
+      saveToken(res.login.token);
+      router.replace("/(app)/feed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {
       setLoading(false);
     }

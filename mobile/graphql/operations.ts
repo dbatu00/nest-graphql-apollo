@@ -109,6 +109,30 @@ export const ME_QUERY = `
   }
 `;
 
+export const LOGIN_MUTATION = `
+  mutation Login($username: String!, $password: String!) {
+    login(username: $username, password: $password) {
+      token
+      user {
+        id
+        username
+        displayName
+      }
+    }
+  }
+`;
+
+export const SIGNUP_MUTATION = `
+  mutation SignUp($username: String!, $password: String!) {
+    signUp(username: $username, password: $password) {
+      user {
+        id
+        username
+      }
+    }
+  }
+`;
+
 export const FOLLOW_USER_MUTATION = `
   mutation FollowUser($username: String!) {
     followUser(username: $username)
@@ -156,6 +180,28 @@ export const GET_LIKED_USERS_QUERY = `
         displayName
         followedByMe
       }
+    }
+  }
+`;
+
+export const FOLLOWERS_QUERY = `
+  query Followers($username: String!) {
+    followers(username: $username) {
+      id
+      username
+      displayName
+      followedByMe
+    }
+  }
+`;
+
+export const FOLLOWING_QUERY = `
+  query Following($username: String!) {
+    following(username: $username) {
+      id
+      username
+      displayName
+      followedByMe
     }
   }
 `;

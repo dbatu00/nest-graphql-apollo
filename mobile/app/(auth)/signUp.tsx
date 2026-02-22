@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { commonStyles } from "@/styles/common";
+import { SIGNUP_MUTATION } from "@/graphql/operations";
 
 export default function SignUp() {
   const [username, setUsername] = useState("");
@@ -28,19 +29,7 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-    await graphqlFetch(
-  `
-  mutation SignUp($username: String!, $password: String!) {
-    signUp(username: $username, password: $password) {
-      user {
-        id
-        username
-      }
-    }
-  }
-  `,
-  { username, password }
-);
+      await graphqlFetch(SIGNUP_MUTATION, { username, password });
 
       setSuccess(true);
 
@@ -48,8 +37,8 @@ export default function SignUp() {
       setTimeout(() => {
         router.replace("/(auth)/login");
       }, 2000);
-    } catch (err: any) {
-      setError(err.message ?? "Sign up failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Sign up failed");
     } finally {
       setLoading(false);
     }

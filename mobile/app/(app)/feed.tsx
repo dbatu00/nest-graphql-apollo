@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   Animated,
   Platform,
 } from "react-native";
-import { usePathname } from "expo-router";
 
 import { commonStyles as styles } from "@/styles/common";
 import { FeedHeader } from "@/components/layout/FeedHeader";
@@ -17,7 +16,6 @@ import { ActivityRow } from "@/components/feed/ActivityRow";
 
 export default function Feed() {
   const feed = useActivities();
-  const pathname = usePathname();
 
   const [content, setContent] = useState("");
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -34,11 +32,6 @@ export default function Feed() {
     outputRange: [200, 30],
     extrapolate: 'clamp',
   });
-
-  // close modal automatically on route change
-  useEffect(() => {
-    // modals are now managed inside ActivityRow
-  }, [pathname]);
 
   const handlePublish = async () => {
     if (!content.trim()) return;
