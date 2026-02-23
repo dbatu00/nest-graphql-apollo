@@ -1,7 +1,8 @@
 // Application bootstrap entrypoint.
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -15,11 +16,26 @@ async function bootstrap() {
   logger.log(`Starting app env=${nodeEnv} port=${port}`);
   logger.log(`CORS origins: ${corsOrigins.join(', ')}`);
 
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+    }),
+  );
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidUnknownValues: true,
+    }),
+  );
+
   // Restrict cross-origin access to explicit allowlisted origins.
   app.enableCors({
     origin: corsOrigins,
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   });
 
   // Port is normalized by validateEnvironment.

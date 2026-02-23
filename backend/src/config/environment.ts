@@ -96,5 +96,8 @@ export function validateEnvironment(config: RawEnv): RawEnv {
             'http://localhost:8081',
             'http://localhost:3000',
         ]),
+        GRAPHQL_MAX_DEPTH: asNumber(config.GRAPHQL_MAX_DEPTH, 8),
+        RATE_LIMIT_TTL: asNumber(config.RATE_LIMIT_TTL, 60_000),
+        RATE_LIMIT_LIMIT: asNumber(config.RATE_LIMIT_LIMIT, 120),
     };
 }

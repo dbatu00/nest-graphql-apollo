@@ -21,6 +21,8 @@ describe('main bootstrap', () => {
     it('creates app, enables cors, and listens on configured port', async () => {
         process.env.PORT = '4555';
 
+        const use = jest.fn();
+        const useGlobalPipes = jest.fn();
         const enableCors = jest.fn();
         const listen = jest.fn().mockResolvedValue(undefined);
         const get = jest.fn().mockReturnValue({
@@ -36,10 +38,13 @@ describe('main bootstrap', () => {
                 return undefined;
             },
         });
-        const create = jest.fn().mockResolvedValue({ enableCors, listen, get });
+        const create = jest.fn().mockResolvedValue({ use, useGlobalPipes, enableCors, listen, get });
 
         jest.doMock('@nestjs/core', () => ({
             NestFactory: { create },
+        }));
+        jest.doMock('../app.module', () => ({
+            AppModule: class MockAppModule { },
         }));
 
         jest.isolateModules(() => {
@@ -54,7 +59,10 @@ describe('main bootstrap', () => {
             origin: ['http://localhost:19006'],
             methods: ['GET', 'POST', 'OPTIONS'],
             allowedHeaders: ['Content-Type', 'Authorization'],
+            credentials: true,
         });
+        expect(use).toHaveBeenCalledTimes(1);
+        expect(useGlobalPipes).toHaveBeenCalledTimes(1);
         expect(listen).toHaveBeenCalledWith(4555);
     });
 
@@ -67,6 +75,9 @@ describe('main bootstrap', () => {
 
         jest.doMock('@nestjs/core', () => ({
             NestFactory: { create },
+        }));
+        jest.doMock('../app.module', () => ({
+            AppModule: class MockAppModule { },
         }));
 
         jest.isolateModules(() => {

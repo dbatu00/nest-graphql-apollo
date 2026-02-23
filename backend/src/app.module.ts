@@ -3,7 +3,10 @@ import { Logger, Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { join } from 'path';
+import depthLimit from 'graphql-depth-limit';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { UsersModule } from './users/users.module';
 import { User } from './users/user.entity';
 import { Post } from './posts/post.entity';
@@ -18,6 +21,7 @@ import { Activity } from './activity/activity.entity';
 import { Like } from './posts/like.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnvironment } from './config/environment';
+import { GqlThrottlerGuard } from './auth/gql-auth.guard';
 
 const databaseConfigLogger = new Logger('DatabaseConfig');
 
@@ -29,9 +33,34 @@ const databaseConfigLogger = new Logger('DatabaseConfig');
       cache: true,
       validate: validateEnvironment,
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const nodeEnv = configService.get<string>('NODE_ENV') ?? 'development';
+        const maxDepth = configService.get<number>('GRAPHQL_MAX_DEPTH') ?? 8;
+        const isProduction = nodeEnv === 'production';
+
+        return {
+          autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+          csrfPrevention: true,
+          introspection: !isProduction,
+          playground: !isProduction,
+          validationRules: [depthLimit(maxDepth)],
+          context: ({ req, res }) => ({ req, res }),
+        };
+      },
+    }),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: configService.get<number>('RATE_LIMIT_TTL') ?? 60_000,
+            limit: configService.get<number>('RATE_LIMIT_LIMIT') ?? 120,
+          },
+        ],
+      }),
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -68,6 +97,12 @@ const databaseConfigLogger = new Logger('DatabaseConfig');
     FollowsModule,
     ActivityModule,
   ],
-  providers: [ActivityResolver]
+  providers: [
+    ActivityResolver,
+    {
+      provide: APP_GUARD,
+      useClass: GqlThrottlerGuard,
+    },
+  ]
 })
 export class AppModule { }

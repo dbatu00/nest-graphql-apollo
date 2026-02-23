@@ -23,7 +23,7 @@
     "noFallthroughCasesInSwitch": false
   },
   "include": [
-    "src//**/*",
+    "src/**/*",
     "jest.config.js"
   ]
 }

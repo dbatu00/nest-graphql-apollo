@@ -5,10 +5,12 @@ import { Repository, DataSource } from "typeorm";
 import { Auth } from "./auth.entity";
 import { User } from "../users/user.entity";
 import { JwtService } from "@nestjs/jwt";
+import * as argon2 from "argon2";
 
 @Injectable()
 export class AuthService {
     private readonly logger = new Logger(AuthService.name);
+    private static readonly MIN_PASSWORD_LENGTH = 8;
 
     constructor(
         @InjectRepository(Auth)
@@ -20,6 +22,8 @@ export class AuthService {
 
     async signUp(username: string, password: string) {
         try {
+            this.validateCredentials(username, password);
+
             const existingUser = await this.dataSource
                 .getRepository(User)
                 .findOne({ where: { username } });
@@ -27,6 +31,8 @@ export class AuthService {
             if (existingUser) {
                 throw new BadRequestException("Username already exists");
             }
+
+            const passwordHash = await argon2.hash(password);
 
             const user = await this.dataSource.transaction(async (manager) => {
                 const user = manager.create(User, {
@@ -37,7 +43,7 @@ export class AuthService {
                 await manager.save(user);
 
                 const auth = manager.create(Auth, {
-                    password,
+                    password: passwordHash,
                     user,
                 });
 
@@ -60,15 +66,32 @@ export class AuthService {
 
     async login(username: string, password: string) {
         try {
+            this.validateCredentials(username, password);
+
             const credential = await this.authRepo
                 .createQueryBuilder("auth")
                 .innerJoinAndSelect("auth.user", "user")
                 .where("user.username = :username", { username })
                 .getOne();
 
-            if (!credential || credential.password !== password) {
+            if (!credential) {
                 this.logger.warn(`Invalid login attempt for username: ${username}`);
                 throw new UnauthorizedException("Invalid credentials");
+            }
+
+            const isHash = credential.password.startsWith("$argon2");
+            const isValidPassword = isHash
+                ? await argon2.verify(credential.password, password)
+                : credential.password === password;
+
+            if (!isValidPassword) {
+                this.logger.warn(`Invalid login attempt for username: ${username}`);
+                throw new UnauthorizedException("Invalid credentials");
+            }
+
+            if (!isHash) {
+                credential.password = await argon2.hash(password);
+                await this.authRepo.save(credential);
             }
 
             this.logger.log(`User logged in: ${username}`);
@@ -88,5 +111,15 @@ export class AuthService {
             sub: user.id,
             username: user.username,
         });
+    }
+
+    private validateCredentials(username: string, password: string): void {
+        if (!username?.trim() || !password?.trim()) {
+            throw new BadRequestException("Username and password are required");
+        }
+
+        if (password.length < AuthService.MIN_PASSWORD_LENGTH) {
+            throw new BadRequestException(`Password must be at least ${AuthService.MIN_PASSWORD_LENGTH} characters`);
+        }
     }
 }
