@@ -1,26 +1,46 @@
+import * as SecureStore from "expo-secure-store";
+
 const TOKEN_KEY = "auth_token";
 
-export function saveToken(token: string) {
+function canUseLocalStorage(): boolean {
+  return typeof globalThis !== "undefined" && "localStorage" in globalThis;
+}
+
+export async function saveToken(token: string): Promise<void> {
   try {
-    localStorage.setItem(TOKEN_KEY, token);
+    if (canUseLocalStorage()) {
+      globalThis.localStorage.setItem(TOKEN_KEY, token);
+      return;
+    }
+
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
   } catch (err: unknown) {
-    console.error('[token] save failed', err);
+    console.error("[token] save failed", err);
   }
 }
 
-export function getToken(): string | null {
+export async function getToken(): Promise<string | null> {
   try {
-    return localStorage.getItem(TOKEN_KEY);
+    if (canUseLocalStorage()) {
+      return globalThis.localStorage.getItem(TOKEN_KEY);
+    }
+
+    return await SecureStore.getItemAsync(TOKEN_KEY);
   } catch (err: unknown) {
-    console.warn('[token] read failed', err);
+    console.warn("[token] read failed", err);
     return null;
   }
 }
 
-export function clearToken() {
+export async function clearToken(): Promise<void> {
   try {
-    localStorage.removeItem(TOKEN_KEY);
+    if (canUseLocalStorage()) {
+      globalThis.localStorage.removeItem(TOKEN_KEY);
+      return;
+    }
+
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
   } catch (err: unknown) {
-    console.error('[token] clear failed', err);
+    console.error("[token] clear failed", err);
   }
 }

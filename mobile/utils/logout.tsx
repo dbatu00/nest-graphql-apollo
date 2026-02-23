@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 
 export async function logout() {
   try {
-    clearToken();
+    await clearToken();
   } catch (err: unknown) {
     console.error('[logout] token clear failed', err);
   } finally {

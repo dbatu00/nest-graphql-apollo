@@ -34,7 +34,7 @@ export default function Login() {
         };
       }>(LOGIN_MUTATION, { username, password });
 
-      saveToken(res.login.token);
+      await saveToken(res.login.token);
       router.replace("/(app)/feed");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid credentials");

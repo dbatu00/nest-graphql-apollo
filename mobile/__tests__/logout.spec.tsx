@@ -26,9 +26,7 @@ describe("logout", () => {
 
   it("still redirects when token clear throws", async () => {
     const errorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
-    (clearToken as jest.Mock).mockImplementationOnce(() => {
-      throw new Error("clear failed");
-    });
+    (clearToken as jest.Mock).mockRejectedValueOnce(new Error("clear failed"));
 
     await expect(logout()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();

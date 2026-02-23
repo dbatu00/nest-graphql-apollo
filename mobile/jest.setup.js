@@ -17,5 +17,11 @@ Object.defineProperty(global, "localStorage", {
   writable: true,
 });
 
+jest.mock("expo-secure-store", () => ({
+  setItemAsync: jest.fn(async () => undefined),
+  getItemAsync: jest.fn(async () => null),
+  deleteItemAsync: jest.fn(async () => undefined),
+}), { virtual: true });
+
 // Env vars
 process.env.EXPO_PUBLIC_API_URL = "http://localhost:3000/graphql";
