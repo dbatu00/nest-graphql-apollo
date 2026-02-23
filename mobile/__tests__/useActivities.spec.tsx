@@ -193,7 +193,7 @@ describe("useActivities", () => {
         throw new Error("follow failed");
       }
 
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useActivities());
@@ -289,7 +289,7 @@ describe("useActivities", () => {
         throw new Error("like failed");
       }
 
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useActivities());
@@ -346,7 +346,7 @@ describe("useActivities", () => {
         throw new Error("delete failed");
       }
 
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useActivities());
@@ -391,7 +391,7 @@ describe("useActivities", () => {
         return { addPost: { id: 1 } };
       }
 
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useActivities());
@@ -427,7 +427,7 @@ describe("useActivities", () => {
         throw new Error("publish failed");
       }
 
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useActivities());

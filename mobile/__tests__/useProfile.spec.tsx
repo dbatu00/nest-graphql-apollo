@@ -53,7 +53,10 @@ describe("useProfile", () => {
       if (query === USER_PROFILE_QUERY) {
         return makeProfileResponse();
       }
-      return {};
+      if (query === FOLLOW_USER_MUTATION || query === UNFOLLOW_USER_MUTATION) {
+        return true;
+      }
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
   });
 
@@ -129,7 +132,7 @@ describe("useProfile", () => {
     (graphqlFetch as jest.Mock).mockImplementation(async (query: string) => {
       if (query === USER_PROFILE_QUERY) return makeProfileResponse();
       if (query === LIKED_POSTS_QUERY) return { likedPosts };
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useProfile("alice"));
@@ -152,7 +155,7 @@ describe("useProfile", () => {
     (graphqlFetch as jest.Mock).mockImplementation(async (query: string) => {
       if (query === USER_PROFILE_QUERY) return makeProfileResponse();
       if (query === LIKED_POSTS_QUERY) throw new Error("liked failed");
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useProfile("alice"));
@@ -194,7 +197,10 @@ describe("useProfile", () => {
           ],
         };
       }
-      return {};
+      if (query === FOLLOW_USER_MUTATION) {
+        return true;
+      }
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useProfile("alice"));
@@ -229,7 +235,7 @@ describe("useProfile", () => {
       if (query === USER_PROFILE_QUERY) return makeProfileResponse();
       if (query === FOLLOWERS_WITH_FOLLOW_STATE_QUERY) throw new Error("followers failed");
       if (query === FOLLOWING_WITH_FOLLOW_STATE_QUERY) throw new Error("following failed");
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useProfile("alice"));
@@ -318,7 +324,10 @@ describe("useProfile", () => {
           ],
         };
       }
-      return {};
+      if (query === FOLLOW_USER_MUTATION) {
+        return true;
+      }
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useProfile("alice"));
@@ -374,7 +383,7 @@ describe("useProfile", () => {
       if (query === FOLLOW_USER_MUTATION) {
         throw new Error("follow failed");
       }
-      return {};
+      throw new Error(`Unexpected GraphQL query in test: ${query}`);
     });
 
     const { result } = renderHook(() => useProfile("alice"));
