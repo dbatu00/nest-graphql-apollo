@@ -3,6 +3,8 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
+import { ConfigService } from "@nestjs/config";
+import type { StringValue } from "ms";
 
 import { AuthService } from "./auth.service";
 import { AuthResolver } from "./auth.resolver";
@@ -11,15 +13,22 @@ import { User } from "../users/user.entity";
 import { JwtStrategy } from "./jwt.strategy";
 import { UsersModule } from "src/users/users.module";
 
-console.log('JWT_SECRET in AuthModule:', process.env.JWT_SECRET);
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([Auth, User]),
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: "15m" },
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        // jsonwebtoken types require StringValue/number rather than a generic string.
+        const expiresIn = (configService.get<string>("JWT_EXPIRES_IN") ?? "15m") as StringValue;
+
+        return {
+          // Secret is mandatory and validated at startup.
+          secret: configService.getOrThrow<string>("JWT_SECRET"),
+          signOptions: { expiresIn },
+        };
+      },
     }),
     UsersModule
   ],
