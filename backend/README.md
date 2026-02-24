@@ -63,6 +63,8 @@ Required:
 Optional:
 
 - `PORT` (defaults to `3000`)
+- `APP_BASE_URL` (used in verification email content, defaults to `http://localhost:3000`)
+- SMTP settings (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, `EMAIL_FROM`) for real email delivery
 
 ### Run
 
@@ -114,6 +116,24 @@ http://localhost:3000/graphql
 - Production-grade migrations are not yet wired (dev still uses `DB_SYNCHRONIZE=true`).
 - Auth is still app-local JWT; Firebase Auth integration is planned next.
 - Rate limits and GraphQL depth limits are in place but should be tuned per environment and traffic profile.
+
+## Email Verification Testing (Local)
+
+Recommended for multi-user local testing: run a local SMTP catcher (MailHog/Mailpit) and point backend SMTP env vars to it.
+
+Example (`.env`):
+
+```env
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_SECURE=false
+EMAIL_FROM=no-reply@local.dev
+```
+
+Behavior:
+
+- When SMTP is configured, signup sends a verification email and does not expose the raw verification token in API payload.
+- When SMTP is not configured, backend logs a dev token fallback so you can still test the verify flow.
 
 ## Next Hardening Priorities
 

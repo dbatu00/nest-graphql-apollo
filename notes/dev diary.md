@@ -132,3 +132,22 @@ Decisions implemented:
 - Standardized verification-token failures to one client-safe message.
   - “Invalid, expired, or already-used verification token”
   - Reason: simple and consistent UX without leaking token state detail.
+
+---
+
+## 2026-02-25 — Verification delivery via SMTP
+
+Decision:
+
+- Move from token-only dev verification toward actual email delivery.
+
+Implementation direction:
+
+- Added SMTP-backed verification sender in backend signup flow.
+- If SMTP is configured, verification token is sent via email and omitted from API payload.
+- If SMTP is not configured, backend keeps a dev fallback by logging token for local testing.
+
+Why this helps now:
+
+- Keeps MVP velocity while allowing realistic end-to-end verification testing.
+- Supports testing many local users through MailHog/Mailpit without real inbox management.

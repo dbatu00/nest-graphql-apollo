@@ -8,6 +8,7 @@ import { JwtService } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
 import { VerificationToken } from "./verification-token.entity";
+import { VerificationEmailService } from "./verification-email.service";
 
 @Injectable()
 export class AuthService {
@@ -22,6 +23,7 @@ export class AuthService {
 
         private readonly dataSource: DataSource,
         private readonly jwtService: JwtService,
+        private readonly verificationEmailService: VerificationEmailService,
     ) { }
 
     async signUp(username: string, email: string, password: string) {
@@ -79,13 +81,15 @@ export class AuthService {
                 return user;
             });
 
+            await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+
             this.logger.log(`User signed up: ${username}`);
 
             return {
                 user,
                 token: this.issueAccessToken(user),
                 emailVerified: user.emailVerified,
-                verificationToken,
+                verificationToken: this.verificationEmailService.isConfigured() ? undefined : verificationToken,
             };
         } catch (error) {
             this.logger.error(`Sign-up failed for username: ${username}`, error instanceof Error ? error.stack : undefined);

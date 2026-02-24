@@ -13,6 +13,8 @@ import { User } from "../users/user.entity";
 import { JwtStrategy } from "./jwt.strategy";
 import { UsersModule } from "src/users/users.module";
 import { VerificationToken } from "./verification-token.entity";
+import { VerificationEmailService } from "./verification-email.service";
+import { AuthController } from "./auth.controller";
 
 @Module({
   imports: [
@@ -37,7 +39,9 @@ import { VerificationToken } from "./verification-token.entity";
     AuthService,
     AuthResolver,
     JwtStrategy,
+    VerificationEmailService,
   ],
+  controllers: [AuthController],
   exports: [AuthService],
 })
 export class AuthModule { }

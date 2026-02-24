@@ -34,12 +34,24 @@ describe('AuthService', () => {
 
     const dataSource = createDataSourceMock();
     const jwtService = createJwtServiceMock();
+    const verificationEmailService = {
+        sendVerificationEmail: jest.fn(),
+        isConfigured: jest.fn().mockReturnValue(false),
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
         (argon2.hash as jest.Mock).mockResolvedValue(hashedPassword);
         (argon2.verify as jest.Mock).mockResolvedValue(true);
-        service = new AuthService(authRepo as any, verificationTokenRepo as any, dataSource as any, jwtService as any);
+        verificationEmailService.isConfigured.mockReturnValue(false);
+        verificationEmailService.sendVerificationEmail.mockResolvedValue(undefined);
+        service = new AuthService(
+            authRepo as any,
+            verificationTokenRepo as any,
+            dataSource as any,
+            jwtService as any,
+            verificationEmailService as any,
+        );
     });
 
     describe('signUp', () => {
@@ -95,8 +107,45 @@ describe('AuthService', () => {
             expect(jwtService.sign).toHaveBeenCalledWith(
                 expect.objectContaining({ username }),
             );
+            expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalledWith(
+                email,
+                expect.any(String),
+                username,
+            );
             expect(result).toEqual(expect.objectContaining({ user: createdUserPayload, token: 'jwt-token', emailVerified: false }));
             expect(result.verificationToken).toEqual(expect.any(String));
+        });
+
+        it('omits raw verification token when SMTP delivery is configured', async () => {
+            verificationEmailService.isConfigured.mockReturnValue(true);
+
+            const existingUserRepo = {
+                findOne: jest
+                    .fn<Promise<User | null>, [any]>()
+                    .mockResolvedValueOnce(null)
+                    .mockResolvedValueOnce(null),
+            };
+            dataSource.getRepository.mockReturnValue(existingUserRepo);
+
+            const manager = createEntityManagerMock();
+            const createdUser: Partial<User> = { id: 1, username, displayName: username, email, emailVerified: false };
+
+            manager.create
+                .mockImplementationOnce((_entity, payload) => payload)
+                .mockImplementationOnce((_entity, payload) => payload)
+                .mockImplementationOnce((_entity, payload) => payload);
+            manager.save
+                .mockResolvedValueOnce(createdUser)
+                .mockResolvedValueOnce({ id: 10, password, user: createdUser } as Auth)
+                .mockResolvedValueOnce({ id: 99, type: 'email_verification', user: createdUser } as any);
+
+            dataSource.transaction.mockImplementation(async (callback: any) => callback(manager));
+            jwtService.sign.mockReturnValue('jwt-token');
+
+            const result = await service.signUp(username, email, password);
+
+            expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalled();
+            expect(result.verificationToken).toBeUndefined();
         });
 
         it('throws BadRequestException when password is too short', async () => {
