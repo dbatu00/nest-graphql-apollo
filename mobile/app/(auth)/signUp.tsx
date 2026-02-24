@@ -7,6 +7,7 @@ import { SIGNUP_MUTATION } from "@/graphql/operations";
 
 export default function SignUp() {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,8 +17,14 @@ export default function SignUp() {
   const handleSignUp = async () => {
     setError("");
 
-    if (!username || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       setError("All fields are required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("Please enter a valid email");
       return;
     }
 
@@ -29,7 +36,15 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      await graphqlFetch(SIGNUP_MUTATION, { username, password });
+      const result = await graphqlFetch<{
+        signUp: {
+          verificationToken?: string;
+        };
+      }>(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
+
+      if (result.signUp.verificationToken) {
+        console.log("[auth] verification token (dev):", result.signUp.verificationToken);
+      }
 
       setSuccess(true);
 
@@ -56,6 +71,16 @@ export default function SignUp() {
           onChangeText={setUsername}
           autoCapitalize="none"
           style={commonStyles.input}
+        />
+
+        <TextInput
+          placeholder="Email"
+          placeholderTextColor="#d1d5db"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={[commonStyles.input, { marginTop: 12 }]}
         />
 
         <TextInput

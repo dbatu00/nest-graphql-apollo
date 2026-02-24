@@ -44,6 +44,8 @@ type Activity {
 type AuthPayload {
   user: User!
   token: String!
+  emailVerified: Boolean!
+  verificationToken: String
 }
 
 type FollowerView {
@@ -69,8 +71,9 @@ type Mutation {
   deletePost(postId: Int!): Boolean!
   likePost(postId: Int!): Boolean!
   unlikePost(postId: Int!): Boolean!
-  signUp(username: String!, password: String!): AuthPayload!
+  signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
+  verifyEmail(token: String!): Boolean!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!
 }

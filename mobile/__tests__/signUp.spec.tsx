@@ -38,6 +38,7 @@ describe("SignUp screen", () => {
     const { getByPlaceholderText, getAllByText, getByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Email"), "deniz@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "secret1");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "secret2");
     fireEvent.press(getAllByText("Sign Up")[1]);
@@ -51,12 +52,15 @@ describe("SignUp screen", () => {
     (graphqlFetch as jest.Mock).mockResolvedValueOnce({
       signUp: {
         user: { id: 1, username: "deniz" },
+        emailVerified: false,
+        verificationToken: "dev-token",
       },
     });
 
     const { getByPlaceholderText, getAllByText, getByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Email"), "deniz@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "secret");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "secret");
     fireEvent.press(getAllByText("Sign Up")[1]);
@@ -64,6 +68,7 @@ describe("SignUp screen", () => {
     await waitFor(() => {
       expect(graphqlFetch).toHaveBeenCalledWith(SIGNUP_MUTATION, {
         username: "deniz",
+        email: "deniz@example.com",
         password: "secret",
       });
     });
@@ -81,6 +86,7 @@ describe("SignUp screen", () => {
     const { getByPlaceholderText, getAllByText, getByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Email"), "deniz@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "secret");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "secret");
     fireEvent.press(getAllByText("Sign Up")[1]);

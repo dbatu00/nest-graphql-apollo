@@ -22,6 +22,7 @@ import { Like } from './posts/like.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnvironment } from './config/environment';
 import { GqlThrottlerGuard } from './auth/gql-auth.guard';
+import { VerificationToken } from './auth/verification-token.entity';
 
 const databaseConfigLogger = new Logger('DatabaseConfig');
 
@@ -85,7 +86,7 @@ const databaseConfigLogger = new Logger('DatabaseConfig');
           username,
           password,
           database,
-          entities: [User, Post, Auth, Follow, Activity, Like],
+          entities: [User, Post, Auth, Follow, Activity, Like, VerificationToken],
           // Safe default comes from validateEnvironment (false in production).
           synchronize,
         };

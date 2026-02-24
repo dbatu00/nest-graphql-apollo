@@ -123,12 +123,14 @@ export const LOGIN_MUTATION = `
 `;
 
 export const SIGNUP_MUTATION = `
-  mutation SignUp($username: String!, $password: String!) {
-    signUp(username: $username, password: $password) {
+  mutation SignUp($username: String!, $email: String!, $password: String!) {
+    signUp(username: $username, email: $email, password: $password) {
       user {
         id
         username
       }
+      emailVerified
+      verificationToken
     }
   }
 `;

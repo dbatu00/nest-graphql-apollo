@@ -112,3 +112,23 @@ Implementation note:
 
 - If more hard-delete entities are added later (for example comments), prefer a typed purge helper (example: `purgeActivitiesByTarget`) and keep `deleteActivitiesForPost` as a thin wrapper.
 - Do not merge purge and logging into one “super” write method; it makes intent less clear and tests harder to reason about.
+
+---
+
+## 2026-02-25 — Auth hardening (email verification MVP)
+
+Decisions implemented:
+
+- Removed legacy plaintext-password fallback at login.
+  - Login now accepts only Argon2-hashed credentials.
+  - Reason: avoids silent downgrade paths and removes mixed credential semantics.
+
+
+
+- Added unique constraint for verification token hash.
+  - `verification_tokens.tokenHash` is now unique/indexed.
+  - Reason: removes collision ambiguity and strengthens token lookup guarantees.
+
+- Standardized verification-token failures to one client-safe message.
+  - “Invalid, expired, or already-used verification token”
+  - Reason: simple and consistent UX without leaking token state detail.

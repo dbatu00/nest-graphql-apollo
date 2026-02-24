@@ -12,10 +12,11 @@ import { Auth } from "./auth.entity";
 import { User } from "../users/user.entity";
 import { JwtStrategy } from "./jwt.strategy";
 import { UsersModule } from "src/users/users.module";
+import { VerificationToken } from "./verification-token.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Auth, User]),
+    TypeOrmModule.forFeature([Auth, User, VerificationToken]),
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],

@@ -6,6 +6,8 @@ import { Auth } from "./auth.entity";
 import { User } from "../users/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import * as argon2 from "argon2";
+import { createHash, randomBytes } from "crypto";
+import { VerificationToken } from "./verification-token.entity";
 
 @Injectable()
 export class AuthService {
@@ -15,14 +17,18 @@ export class AuthService {
     constructor(
         @InjectRepository(Auth)
         private readonly authRepo: Repository<Auth>,
+        @InjectRepository(VerificationToken)
+        private readonly verificationTokenRepo: Repository<VerificationToken>,
 
         private readonly dataSource: DataSource,
         private readonly jwtService: JwtService,
     ) { }
 
-    async signUp(username: string, password: string) {
+    async signUp(username: string, email: string, password: string) {
         try {
-            this.validateCredentials(username, password);
+            this.validateSignUpInput(username, email, password);
+
+            const normalizedEmail = email.trim().toLowerCase();
 
             const existingUser = await this.dataSource
                 .getRepository(User)
@@ -32,12 +38,24 @@ export class AuthService {
                 throw new BadRequestException("Username already exists");
             }
 
+            const existingEmail = await this.dataSource
+                .getRepository(User)
+                .findOne({ where: { email: normalizedEmail } });
+
+            if (existingEmail) {
+                throw new BadRequestException("Email already exists");
+            }
+
             const passwordHash = await argon2.hash(password);
+            const verificationToken = this.generateRawToken();
+            const verificationTokenHash = this.hashToken(verificationToken);
 
             const user = await this.dataSource.transaction(async (manager) => {
                 const user = manager.create(User, {
                     username,
                     displayName: username,
+                    email: normalizedEmail,
+                    emailVerified: false,
                 });
 
                 await manager.save(user);
@@ -49,6 +67,15 @@ export class AuthService {
 
                 await manager.save(auth);
 
+                const tokenEntity = manager.create(VerificationToken, {
+                    tokenHash: verificationTokenHash,
+                    type: "email_verification",
+                    user,
+                    expiresAt: this.createTokenExpiry(),
+                });
+
+                await manager.save(tokenEntity);
+
                 return user;
             });
 
@@ -57,6 +84,8 @@ export class AuthService {
             return {
                 user,
                 token: this.issueAccessToken(user),
+                emailVerified: user.emailVerified,
+                verificationToken,
             };
         } catch (error) {
             this.logger.error(`Sign-up failed for username: ${username}`, error instanceof Error ? error.stack : undefined);
@@ -71,7 +100,7 @@ export class AuthService {
             const credential = await this.authRepo
                 .createQueryBuilder("auth")
                 .innerJoinAndSelect("auth.user", "user")
-                .where("user.username = :username", { username })
+                .where("user.username = :identifier OR LOWER(user.email) = LOWER(:identifier)", { identifier: username })
                 .getOne();
 
             if (!credential) {
@@ -80,18 +109,20 @@ export class AuthService {
             }
 
             const isHash = credential.password.startsWith("$argon2");
-            const isValidPassword = isHash
-                ? await argon2.verify(credential.password, password)
-                : credential.password === password;
+            if (!isHash) {
+                this.logger.warn(`Legacy/invalid credential format for username: ${username}`);
+                throw new UnauthorizedException("Invalid credentials");
+            }
+
+            const isValidPassword = await argon2.verify(credential.password, password);
 
             if (!isValidPassword) {
                 this.logger.warn(`Invalid login attempt for username: ${username}`);
                 throw new UnauthorizedException("Invalid credentials");
             }
 
-            if (!isHash) {
-                credential.password = await argon2.hash(password);
-                await this.authRepo.save(credential);
+            if (!credential.user.emailVerified) {
+                throw new UnauthorizedException("Email is not verified");
             }
 
             this.logger.log(`User logged in: ${username}`);
@@ -99,11 +130,44 @@ export class AuthService {
             return {
                 user: credential.user,
                 token: this.issueAccessToken(credential.user),
+                emailVerified: credential.user.emailVerified,
             };
         } catch (error) {
             this.logger.error(`Login failed for username: ${username}`, error instanceof Error ? error.stack : undefined);
             throw error;
         }
+    }
+
+    async verifyEmail(token: string): Promise<boolean> {
+        const tokenHash = this.hashToken(token);
+        const invalidTokenMessage = "Invalid, expired, or already-used verification token";
+        const verificationToken = await this.verificationTokenRepo
+            .createQueryBuilder("verification")
+            .innerJoinAndSelect("verification.user", "user")
+            .where("verification.tokenHash = :tokenHash AND verification.type = :type", { tokenHash, type: "email_verification" })
+            .getOne();
+
+        if (!verificationToken) {
+            throw new BadRequestException(invalidTokenMessage);
+        }
+
+        if (verificationToken.consumedAt) {
+            throw new BadRequestException(invalidTokenMessage);
+        }
+
+        if (verificationToken.expiresAt.getTime() < Date.now()) {
+            throw new BadRequestException(invalidTokenMessage);
+        }
+
+        verificationToken.user.emailVerified = true;
+        verificationToken.consumedAt = new Date();
+
+        await this.dataSource.transaction(async (manager) => {
+            await manager.save(verificationToken.user);
+            await manager.save(verificationToken);
+        });
+
+        return true;
     }
 
     private issueAccessToken(user: User): string {
@@ -121,5 +185,32 @@ export class AuthService {
         if (password.length < AuthService.MIN_PASSWORD_LENGTH) {
             throw new BadRequestException(`Password must be at least ${AuthService.MIN_PASSWORD_LENGTH} characters`);
         }
+    }
+
+    private validateSignUpInput(username: string, email: string, password: string): void {
+        this.validateCredentials(username, password);
+
+        if (!email?.trim()) {
+            throw new BadRequestException("Email is required");
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email.trim())) {
+            throw new BadRequestException("Invalid email format");
+        }
+    }
+
+    private generateRawToken(): string {
+        return randomBytes(32).toString("hex");
+    }
+
+    private hashToken(token: string): string {
+        return createHash("sha256").update(token).digest("hex");
+    }
+
+    private createTokenExpiry(): Date {
+        const expiry = new Date();
+        expiry.setHours(expiry.getHours() + 24);
+        return expiry;
     }
 }

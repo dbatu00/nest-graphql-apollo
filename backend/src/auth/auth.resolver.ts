@@ -24,9 +24,10 @@ export class AuthResolver {
     @Mutation(() => AuthPayload)
     signUp(
         @Args("username") username: string,
+        @Args("email") email: string,
         @Args("password") password: string
     ) {
-        return this.authService.signUp(username, password);
+        return this.authService.signUp(username, email, password);
     }
 
     @Mutation(() => AuthPayload)
@@ -35,5 +36,10 @@ export class AuthResolver {
         @Args("password") password: string
     ) {
         return this.authService.login(username, password);
+    }
+
+    @Mutation(() => Boolean)
+    verifyEmail(@Args("token") token: string) {
+        return this.authService.verifyEmail(token);
     }
 }
