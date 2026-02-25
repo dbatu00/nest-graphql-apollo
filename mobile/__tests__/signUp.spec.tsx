@@ -53,7 +53,6 @@ describe("SignUp screen", () => {
       signUp: {
         user: { id: 1, username: "deniz" },
         emailVerified: false,
-        verificationToken: "dev-token",
       },
     });
 

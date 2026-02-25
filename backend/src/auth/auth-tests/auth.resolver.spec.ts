@@ -5,6 +5,7 @@ describe('AuthResolver', () => {
         signUp: jest.fn(),
         login: jest.fn(),
         verifyEmail: jest.fn(),
+        resendMyVerificationEmail: jest.fn(),
     };
 
     let resolver: AuthResolver;
@@ -56,5 +57,12 @@ describe('AuthResolver', () => {
 
         await expect(resolver.verifyEmail('token123')).resolves.toBe(true);
         expect(authService.verifyEmail).toHaveBeenCalledWith('token123');
+    });
+
+    it('resendMyVerificationEmail forwards current user id to service', async () => {
+        authService.resendMyVerificationEmail.mockResolvedValue(true);
+
+        await expect(resolver.resendMyVerificationEmail({ id: 7 } as any)).resolves.toBe(true);
+        expect(authService.resendMyVerificationEmail).toHaveBeenCalledWith(7);
     });
 });

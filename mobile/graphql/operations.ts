@@ -130,8 +130,13 @@ export const SIGNUP_MUTATION = `
         username
       }
       emailVerified
-      verificationToken
     }
+  }
+`;
+
+export const RESEND_VERIFICATION_EMAIL_MUTATION = `
+  mutation ResendMyVerificationEmail {
+    resendMyVerificationEmail
   }
 `;
 

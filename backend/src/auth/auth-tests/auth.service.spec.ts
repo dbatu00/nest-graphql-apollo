@@ -34,6 +34,9 @@ describe('AuthService', () => {
 
     const dataSource = createDataSourceMock();
     const jwtService = createJwtServiceMock();
+    const configService = {
+        get: jest.fn(),
+    };
     const verificationEmailService = {
         sendVerificationEmail: jest.fn(),
         isConfigured: jest.fn().mockReturnValue(false),
@@ -43,6 +46,14 @@ describe('AuthService', () => {
         jest.clearAllMocks();
         (argon2.hash as jest.Mock).mockResolvedValue(hashedPassword);
         (argon2.verify as jest.Mock).mockResolvedValue(true);
+        configService.get.mockImplementation((key: string) => {
+            const defaults: Record<string, number> = {
+                EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: 86400,
+                EMAIL_VERIFICATION_RESEND_COOLDOWN_MS: 60000,
+                EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR: 5,
+            };
+            return defaults[key];
+        });
         verificationEmailService.isConfigured.mockReturnValue(false);
         verificationEmailService.sendVerificationEmail.mockResolvedValue(undefined);
         service = new AuthService(
@@ -51,6 +62,7 @@ describe('AuthService', () => {
             dataSource as any,
             jwtService as any,
             verificationEmailService as any,
+            configService as any,
         );
     });
 
@@ -113,7 +125,6 @@ describe('AuthService', () => {
                 username,
             );
             expect(result).toEqual(expect.objectContaining({ user: createdUserPayload, token: 'jwt-token', emailVerified: false }));
-            expect(result.verificationToken).toEqual(expect.any(String));
         });
 
         it('omits raw verification token when SMTP delivery is configured', async () => {
@@ -145,7 +156,8 @@ describe('AuthService', () => {
             const result = await service.signUp(username, email, password);
 
             expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalled();
-            expect(result.verificationToken).toBeUndefined();
+            expect(result).toEqual(expect.objectContaining({ token: 'jwt-token', emailVerified: false }));
+            expect(result).not.toHaveProperty('verificationToken');
         });
 
         it('throws BadRequestException when password is too short', async () => {
@@ -270,16 +282,16 @@ describe('AuthService', () => {
             await expect(service.verifyEmail('token123')).resolves.toBe(true);
         });
 
-        it('returns standardized error for missing token record', async () => {
+        it('returns specific error for missing token record', async () => {
             const qb = createQueryBuilderMock<any>(null);
             verificationTokenRepo.createQueryBuilder.mockReturnValue(qb);
 
             await expect(service.verifyEmail('missing-token')).rejects.toThrow(
-                'Invalid, expired, or already-used verification token',
+                'Verification token is invalid',
             );
         });
 
-        it('returns standardized error for consumed token', async () => {
+        it('returns specific error for consumed token', async () => {
             const tokenRecord = {
                 id: 2,
                 type: 'email_verification',
@@ -293,11 +305,11 @@ describe('AuthService', () => {
             verificationTokenRepo.createQueryBuilder.mockReturnValue(qb);
 
             await expect(service.verifyEmail('used-token')).rejects.toThrow(
-                'Invalid, expired, or already-used verification token',
+                'Verification token has already been used',
             );
         });
 
-        it('returns standardized error for expired token', async () => {
+        it('returns specific error for expired token', async () => {
             const tokenRecord = {
                 id: 3,
                 type: 'email_verification',
@@ -311,8 +323,179 @@ describe('AuthService', () => {
             verificationTokenRepo.createQueryBuilder.mockReturnValue(qb);
 
             await expect(service.verifyEmail('expired-token')).rejects.toThrow(
-                'Invalid, expired, or already-used verification token',
+                'Verification token has expired',
             );
+        });
+    });
+
+    describe('resendMyVerificationEmail', () => {
+        it('throws UnauthorizedException when user is missing', async () => {
+            const userRepo = {
+                findOne: jest.fn<Promise<User | null>, [any]>().mockResolvedValue(null),
+            };
+            dataSource.getRepository.mockReturnValue(userRepo);
+
+            await expect(service.resendMyVerificationEmail(77)).rejects.toBeInstanceOf(UnauthorizedException);
+        });
+
+        it('returns true without sending when user email is already verified', async () => {
+            const verifiedUser = { id: 10, username, email, emailVerified: true } as User;
+            const userRepo = {
+                findOne: jest.fn<Promise<User | null>, [any]>().mockResolvedValue(verifiedUser),
+            };
+            dataSource.getRepository.mockReturnValue(userRepo);
+
+            await expect(service.resendMyVerificationEmail(verifiedUser.id)).resolves.toBe(true);
+            expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
+            expect(dataSource.transaction).not.toHaveBeenCalled();
+        });
+
+        it('applies cooldown throttle and skips resend when latest token is too recent', async () => {
+            const unverifiedUser = { id: 12, username, email, emailVerified: false } as User;
+            const userRepo = {
+                findOne: jest.fn<Promise<User | null>, [any]>().mockResolvedValue(unverifiedUser),
+            };
+            dataSource.getRepository.mockReturnValue(userRepo);
+
+            const latestTokenQb = createQueryBuilderMock<any>({ createdAt: new Date() } as any);
+            verificationTokenRepo.createQueryBuilder.mockReturnValue(latestTokenQb);
+
+            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).resolves.toBe(true);
+            expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
+            expect(dataSource.transaction).not.toHaveBeenCalled();
+        });
+
+        it('applies hourly max throttle and skips resend when limit is reached', async () => {
+            const unverifiedUser = { id: 13, username, email, emailVerified: false } as User;
+            const userRepo = {
+                findOne: jest.fn<Promise<User | null>, [any]>().mockResolvedValue(unverifiedUser),
+            };
+            dataSource.getRepository.mockReturnValue(userRepo);
+
+            const latestTokenQb = createQueryBuilderMock<any>({ createdAt: new Date(Date.now() - 61_000) } as any);
+            latestTokenQb.getCount.mockResolvedValue(5);
+            verificationTokenRepo.createQueryBuilder.mockReturnValue(latestTokenQb);
+
+            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).resolves.toBe(true);
+            expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
+            expect(dataSource.transaction).not.toHaveBeenCalled();
+        });
+
+        it('rotates old tokens and sends new verification email for unverified user', async () => {
+            const unverifiedUser = { id: 11, username, email, emailVerified: false } as User;
+            const userRepo = {
+                findOne: jest.fn<Promise<User | null>, [any]>().mockResolvedValue(unverifiedUser),
+            };
+            dataSource.getRepository.mockReturnValue(userRepo);
+
+            const latestTokenQb = createQueryBuilderMock<any>({ createdAt: new Date(Date.now() - 61_000) } as any);
+            latestTokenQb.getCount.mockResolvedValue(0);
+            verificationTokenRepo.createQueryBuilder.mockReturnValue(latestTokenQb);
+
+            const oldToken = {
+                id: 51,
+                tokenHash: 'old-hash',
+                type: 'email_verification',
+                user: unverifiedUser,
+                expiresAt: new Date(Date.now() + 60_000),
+                consumedAt: null,
+            };
+
+            const manager = {
+                createQueryBuilder: jest.fn().mockReturnValue({
+                    where: jest.fn().mockReturnThis(),
+                    getMany: jest.fn().mockResolvedValue([oldToken]),
+                }),
+                create: jest.fn().mockImplementation((_entity, payload) => payload),
+                save: jest.fn().mockResolvedValue(undefined),
+            };
+            dataSource.transaction.mockImplementation(async (callback: any) => callback(manager));
+
+            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).resolves.toBe(true);
+            expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalledWith(
+                email,
+                expect.any(String),
+                username,
+            );
+        });
+    });
+
+    describe('processVerificationLink', () => {
+        it('returns verified and marks token consumed when token is valid', async () => {
+            const tokenRecord = {
+                id: 61,
+                type: 'email_verification',
+                tokenHash: 'hash',
+                expiresAt: new Date(Date.now() + 60_000),
+                consumedAt: null,
+                user: { id: 90, username, email, emailVerified: false },
+            };
+
+            const verificationQb = createQueryBuilderMock<any>(tokenRecord);
+            verificationTokenRepo.createQueryBuilder.mockReturnValue(verificationQb);
+            dataSource.transaction.mockImplementation(async (callback: any) => callback({ save: jest.fn().mockResolvedValue(undefined) }));
+
+            await expect(service.processVerificationLink('valid-token')).resolves.toEqual({ status: 'verified' });
+        });
+
+        it('returns expired_resent and sends new token when expired and throttle allows', async () => {
+            const user = { id: 42, username, email, emailVerified: false } as User;
+            const expiredToken = {
+                id: 62,
+                type: 'email_verification',
+                tokenHash: 'hash',
+                expiresAt: new Date(Date.now() - 60_000),
+                consumedAt: null,
+                user,
+            };
+
+            const verificationQb = createQueryBuilderMock<any>(expiredToken);
+            const throttleQb = createQueryBuilderMock<any>({ createdAt: new Date(Date.now() - 61_000) } as any);
+            throttleQb.getCount.mockResolvedValue(0);
+
+            verificationTokenRepo.createQueryBuilder
+                .mockReturnValueOnce(verificationQb)
+                .mockReturnValueOnce(throttleQb);
+
+            const manager = {
+                createQueryBuilder: jest.fn().mockReturnValue({
+                    where: jest.fn().mockReturnThis(),
+                    getMany: jest.fn().mockResolvedValue([]),
+                }),
+                create: jest.fn().mockImplementation((_entity, payload) => payload),
+                save: jest.fn().mockResolvedValue(undefined),
+            };
+            dataSource.transaction.mockImplementation(async (callback: any) => callback(manager));
+
+            await expect(service.processVerificationLink('expired-token')).resolves.toEqual({ status: 'expired_resent' });
+            expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalledWith(
+                email,
+                expect.any(String),
+                username,
+            );
+        });
+
+        it('returns expired_throttled when expired and resend is throttled', async () => {
+            const user = { id: 43, username, email, emailVerified: false } as User;
+            const expiredToken = {
+                id: 63,
+                type: 'email_verification',
+                tokenHash: 'hash',
+                expiresAt: new Date(Date.now() - 60_000),
+                consumedAt: null,
+                user,
+            };
+
+            const verificationQb = createQueryBuilderMock<any>(expiredToken);
+            const throttleQb = createQueryBuilderMock<any>({ createdAt: new Date() } as any);
+            throttleQb.getCount.mockResolvedValue(0);
+
+            verificationTokenRepo.createQueryBuilder
+                .mockReturnValueOnce(verificationQb)
+                .mockReturnValueOnce(throttleQb);
+
+            await expect(service.processVerificationLink('expired-throttled-token')).resolves.toEqual({ status: 'expired_throttled' });
+            expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
         });
     });
 });

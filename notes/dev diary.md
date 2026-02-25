@@ -151,3 +151,44 @@ Why this helps now:
 
 - Keeps MVP velocity while allowing realistic end-to-end verification testing.
 - Supports testing many local users through MailHog/Mailpit without real inbox management.
+
+---
+
+## 2026-02-26 — Verification resend throttling notes
+
+Current behavior (agreed shape):
+
+- Expired verification link click attempts resend.
+- If resend passes throttle, user sees "expired + resent".
+- If resend is throttled, user gets a throttle message.
+- In-app resend still goes through the same verification throttle checks.
+
+Malicious idea considered:
+
+- Large-scale abuse scenario (for example mass-created accounts all triggering verification resend) is realistic enough to plan for.
+
+How to track + reset (current stage):
+
+- DB-backed token events are acceptable at this product stage.
+- Reset is time-based by design: rolling windows naturally cool down as records age out of window checks.
+- Throttle state is not manually "reset" in normal flow; it decays automatically over time.
+
+Scale path (later):
+
+- Move hot-path counters to Redis/token-bucket style limits.
+- Keep DB for audit/history and add analytics events for abuse monitoring.
+
+---
+
+## 2026-02-26 — Why email-link resend is in controller, app resend is in resolver
+
+Decision boundary:
+
+- Email link click (`/auth/verify-email?token=...`) is a browser URL entry-point, so it belongs in an HTTP controller.
+- In-app resend is an authenticated app/API action, so it belongs in GraphQL resolver flow.
+
+Reasoning:
+
+- Controllers are the clean fit for external link-based flows (email verify, reset links, webhooks).
+- Resolvers are the clean fit for authenticated client operations already living in app GraphQL contracts.
+- This split keeps UX behavior consistent while preventing resolver contracts from carrying browser-link concerns.

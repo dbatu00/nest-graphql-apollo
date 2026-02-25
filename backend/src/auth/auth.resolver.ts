@@ -42,4 +42,10 @@ export class AuthResolver {
     verifyEmail(@Args("token") token: string) {
         return this.authService.verifyEmail(token);
     }
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    resendMyVerificationEmail(@CurrentUser() user: User) {
+        return this.authService.resendMyVerificationEmail(user.id);
+    }
 }

@@ -12,7 +12,4 @@ export class AuthPayload {
 
     @Field()
     emailVerified: boolean;
-
-    @Field({ nullable: true })
-    verificationToken?: string;
 }

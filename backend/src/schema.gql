@@ -45,7 +45,6 @@ type AuthPayload {
   user: User!
   token: String!
   emailVerified: Boolean!
-  verificationToken: String
 }
 
 type FollowerView {
@@ -74,6 +73,7 @@ type Mutation {
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
   verifyEmail(token: String!): Boolean!
+  resendMyVerificationEmail: Boolean!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!
 }

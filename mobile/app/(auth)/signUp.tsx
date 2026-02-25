@@ -36,15 +36,7 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      const result = await graphqlFetch<{
-        signUp: {
-          verificationToken?: string;
-        };
-      }>(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
-
-      if (result.signUp.verificationToken) {
-        console.log("[auth] verification token (dev):", result.signUp.verificationToken);
-      }
+      await graphqlFetch(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
 
       setSuccess(true);
 

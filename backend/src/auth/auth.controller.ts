@@ -1,11 +1,13 @@
 import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { AuthService } from "./auth.service";
+import type { VerificationLinkResult } from "./verification-link.types";
 
 @Controller("auth")
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
+    // Email clients open a normal URL, so verification entrypoint is HTTP controller (not GraphQL mutation).
     @Get("verify-email")
     async verifyEmailFromLink(
         @Query("token") token: string,
@@ -15,12 +17,25 @@ export class AuthController {
             throw new BadRequestException("Verification token is required");
         }
 
-        try {
-            await this.authService.verifyEmail(token);
+        // Service returns typed outcome; controller maps it to user-facing HTML and status code.
+        const result: VerificationLinkResult = await this.authService.processVerificationLink(token);
+
+        if (result.status === "verified") {
             res.status(200).type("html").send(this.renderHtmlPage("Email verified", "Your email has been verified. You can return to the app and log in."));
-        } catch {
-            res.status(400).type("html").send(this.renderHtmlPage("Verification failed", "This verification link is invalid, expired, or already used."));
+            return;
         }
+
+        if (result.status === "expired_resent") {
+            res.status(400).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired. We sent a new verification email. Please check your inbox."));
+            return;
+        }
+
+        if (result.status === "expired_throttled") {
+            res.status(429).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired. Please wait briefly before trying again."));
+            return;
+        }
+
+        res.status(400).type("html").send(this.renderHtmlPage("Verification failed", "This verification link is invalid or already used."));
     }
 
     private renderHtmlPage(title: string, message: string): string {

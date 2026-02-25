@@ -106,5 +106,8 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         SMTP_PASS: asString(config.SMTP_PASS),
         SMTP_SECURE: asBoolean(config.SMTP_SECURE, false),
         EMAIL_FROM: asString(config.EMAIL_FROM) ?? 'no-reply@local.dev',
+        EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: asNumber(config.EMAIL_VERIFICATION_TOKEN_TTL_SECONDS, 24 * 60 * 60),
+        EMAIL_VERIFICATION_RESEND_COOLDOWN_MS: asNumber(config.EMAIL_VERIFICATION_RESEND_COOLDOWN_MS, 60_000),
+        EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR: asNumber(config.EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR, 5),
     };
 }
