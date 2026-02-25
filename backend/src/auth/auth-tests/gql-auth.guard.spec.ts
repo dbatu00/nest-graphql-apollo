@@ -5,7 +5,7 @@ jest.mock('@nestjs/graphql', () => ({
 }));
 
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { GqlAuthGuard } from '../gql-auth.guard';
+import { GqlAuthGuard } from '../security/gql-auth.guard';
 
 describe('GqlAuthGuard', () => {
     it('returns req object from GraphQL context', () => {

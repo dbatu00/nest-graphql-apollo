@@ -21,8 +21,8 @@ import { Activity } from './activity/activity.entity';
 import { Like } from './posts/like.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnvironment } from './config/environment';
-import { GqlThrottlerGuard } from './auth/gql-auth.guard';
-import { VerificationToken } from './auth/verification-token.entity';
+import { GqlThrottlerGuard } from './auth/security/gql-auth.guard';
+import { VerificationToken } from './auth/verification/verification-token.entity';
 
 const databaseConfigLogger = new Logger('DatabaseConfig');
 

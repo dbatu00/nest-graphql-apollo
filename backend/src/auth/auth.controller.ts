@@ -1,7 +1,7 @@
 import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { AuthService } from "./auth.service";
-import type { VerificationLinkResult } from "./verification-link.types";
+import { VerificationLinkResult } from "./verification/verification-link.types";
 
 @Controller("auth")
 export class AuthController {

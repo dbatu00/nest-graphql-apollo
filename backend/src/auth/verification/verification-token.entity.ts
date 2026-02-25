@@ -6,7 +6,7 @@ import {
     CreateDateColumn,
     Index,
 } from "typeorm";
-import { User } from "../users/user.entity";
+import { User } from "../../users/user.entity";
 
 export type VerificationTokenType = "email_verification";
 

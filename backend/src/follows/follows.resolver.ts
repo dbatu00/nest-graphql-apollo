@@ -2,8 +2,8 @@
 import { Resolver, Mutation, Args, Query } from "@nestjs/graphql";
 import { UseGuards } from "@nestjs/common";
 import { FollowsService } from "./follows.service";
-import { GqlAuthGuard } from "../auth/gql-auth.guard";
-import { CurrentUser } from "../auth/current-user.decorator";
+import { GqlAuthGuard } from "../auth/security/gql-auth.guard";
+import { CurrentUser } from "../auth/security/current-user.decorator";
 import { User } from "../users/user.entity";
 import { FollowerView } from "./dto/follower-view.type";
 

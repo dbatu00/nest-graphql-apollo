@@ -5,8 +5,8 @@ import { UseGuards } from "@nestjs/common";
 import { ActivityService } from "./activity.service";
 import { ActivityGQL } from "./activity.types";
 
-import { CurrentUser } from "src/auth/current-user.decorator";
-import { GqlAuthGuard } from "src/auth/gql-auth.guard";
+import { CurrentUser } from "src/auth/security/current-user.decorator";
+import { GqlAuthGuard } from "src/auth/security/gql-auth.guard";
 import { User } from "src/users/user.entity";
 
 @Resolver(() => ActivityGQL)

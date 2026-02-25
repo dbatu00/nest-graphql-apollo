@@ -8,9 +8,9 @@ import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as argon2 from "argon2";
 import { createHash, randomBytes } from "crypto";
-import { VerificationToken } from "./verification-token.entity";
-import { VerificationEmailService } from "./verification-email.service";
-import type { VerificationLinkResult } from "./verification-link.types";
+import { VerificationToken } from "./verification/verification-token.entity";
+import { VerificationEmailService } from "./verification/verification-email.service";
+import type { VerificationLinkResult } from "./verification/verification-link.types";
 
 @Injectable()
 export class AuthService {

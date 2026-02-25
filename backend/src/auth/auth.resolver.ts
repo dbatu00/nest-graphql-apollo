@@ -2,10 +2,10 @@
 import { Resolver, Mutation, Args, Query } from "@nestjs/graphql";
 import { AuthService } from "./auth.service";
 import { AuthPayload } from "./auth.types";
-import { GqlAuthGuard } from "./gql-auth.guard";
+import { GqlAuthGuard } from "./security/gql-auth.guard";
 import { UseGuards } from "@nestjs/common";
 import { User } from "src/users/user.entity";
-import { CurrentUser } from "./current-user.decorator";
+import { CurrentUser } from "./security/current-user.decorator";
 
 
 @Resolver()
