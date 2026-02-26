@@ -1,5 +1,5 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtStrategy } from '../jwt.strategy';
+import { JwtStrategy } from '../security/jwt.strategy';
 
 describe('JwtStrategy', () => {
     const usersService = {

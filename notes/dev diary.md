@@ -112,3 +112,137 @@ Implementation note:
 
 - If more hard-delete entities are added later (for example comments), prefer a typed purge helper (example: `purgeActivitiesByTarget`) and keep `deleteActivitiesForPost` as a thin wrapper.
 - Do not merge purge and logging into one “super” write method; it makes intent less clear and tests harder to reason about.
+
+---
+
+## 2026-02-25 — Auth hardening (email verification MVP)
+
+Decisions implemented:
+
+- Removed legacy plaintext-password fallback at login.
+  - Login now accepts only Argon2-hashed credentials.
+  - Reason: avoids silent downgrade paths and removes mixed credential semantics.
+
+
+
+- Added unique constraint for verification token hash.
+  - `verification_tokens.tokenHash` is now unique/indexed.
+  - Reason: removes collision ambiguity and strengthens token lookup guarantees.
+
+- Standardized verification-token failures to one client-safe message.
+  - “Invalid, expired, or already-used verification token”
+  - Reason: simple and consistent UX without leaking token state detail.
+
+---
+
+## 2026-02-25 — Verification delivery via SMTP
+
+Decision:
+
+- Move from token-only dev verification toward actual email delivery.
+
+Implementation direction:
+
+- Added SMTP-backed verification sender in backend signup flow.
+- If SMTP is configured, verification token is sent via email and omitted from API payload.
+- If SMTP is not configured, backend keeps a dev fallback by logging token for local testing.
+
+Why this helps now:
+
+- Keeps MVP velocity while allowing realistic end-to-end verification testing.
+- Supports testing many local users through MailHog/Mailpit without real inbox management.
+
+---
+
+## 2026-02-26 — Verification resend throttling notes
+
+Current behavior (agreed shape):
+
+- Expired verification link click attempts resend.
+- If resend passes throttle, user sees "expired + resent".
+- If resend is throttled, user gets a throttle message.
+- In-app resend still goes through the same verification throttle checks.
+
+Malicious idea considered:
+
+- Large-scale abuse scenario (for example mass-created accounts all triggering verification resend) is realistic enough to plan for.
+
+How to track + reset (current stage):
+
+- DB-backed token events are acceptable at this product stage.
+- Reset is time-based by design: rolling windows naturally cool down as records age out of window checks.
+- Throttle state is not manually "reset" in normal flow; it decays automatically over time.
+
+Scale path (later):
+
+- Move hot-path counters to Redis/token-bucket style limits.
+- Keep DB for audit/history and add analytics events for abuse monitoring.
+
+---
+
+## 2026-02-26 — Why email-link resend is in controller, app resend is in resolver
+
+Decision boundary:
+
+- Email link click (`/auth/verify-email?token=...`) is a browser URL entry-point, so it belongs in an HTTP controller.
+- In-app resend is an authenticated app/API action, so it belongs in GraphQL resolver flow.
+
+Reasoning:
+
+- Controllers are the clean fit for external link-based flows (email verify, reset links, webhooks).
+- Resolvers are the clean fit for authenticated client operations already living in app GraphQL contracts.
+- This split keeps UX behavior consistent while preventing resolver contracts from carrying browser-link concerns.
+
+---
+
+## 2026-02-27 — Keep `emailVerified` in signup payload
+
+Question:
+
+- Is `emailVerified: user.emailVerified` in signup return unnecessary?
+
+Decision:
+
+- Keep it in the signup payload.
+
+Reasoning:
+
+- Maintains a stable `AuthPayload` shape across both `signUp` and `login`.
+- Keeps frontend auth flow generic and simpler (single payload contract).
+- Future-proofs edge cases where verification state at signup may differ from default assumptions.
+
+---
+
+## 2026-02-27 — Config getter helpers in auth service
+
+Question:
+
+- Are dedicated getter methods for auth/env values overkill?
+
+Decision:
+
+- Keep explicit getters plus numeric validation helpers.
+
+Reasoning:
+
+- Centralizes runtime validation at read points.
+- Avoids repetitive parse/guard code at each call site.
+- Improves strict TypeScript narrowing for config values (`number | undefined` to validated `number`).
+
+---
+
+## 2026-02-27 — Email send outside DB transaction
+
+Question:
+
+- Should `sendVerificationEmail(...)` be part of DB transaction?
+
+Decision:
+
+- Keep SMTP send outside DB transaction.
+
+Reasoning:
+
+- Email delivery is external I/O and can be slow/unreliable.
+- Holding DB transactions during SMTP increases lock time and failure blast radius.
+- Current approach uses post-commit send with compensation handling for resend delivery failures.

@@ -80,6 +80,8 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         ...config,
         NODE_ENV: nodeEnv,
         PORT: asNumber(config.PORT, 3000),
+        APP_BASE_URL: asString(config.APP_BASE_URL) ?? 'http://localhost:3000',
+        AUTH_MIN_PASSWORD_LENGTH: asNumber(config.AUTH_MIN_PASSWORD_LENGTH, 8),
         JWT_SECRET: jwtSecret,
         // Kept configurable so we can tighten/rotate policy without changing code.
         JWT_EXPIRES_IN: asString(config.JWT_EXPIRES_IN) ?? '15m',
@@ -99,5 +101,15 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         GRAPHQL_MAX_DEPTH: asNumber(config.GRAPHQL_MAX_DEPTH, 8),
         RATE_LIMIT_TTL: asNumber(config.RATE_LIMIT_TTL, 60_000),
         RATE_LIMIT_LIMIT: asNumber(config.RATE_LIMIT_LIMIT, 120),
+        SMTP_HOST: asString(config.SMTP_HOST),
+        SMTP_PORT: asNumber(config.SMTP_PORT, 1025),
+        SMTP_USER: asString(config.SMTP_USER),
+        SMTP_PASS: asString(config.SMTP_PASS),
+        SMTP_SECURE: asBoolean(config.SMTP_SECURE, false),
+        EMAIL_FROM: asString(config.EMAIL_FROM) ?? 'no-reply@local.dev',
+        EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: asNumber(config.EMAIL_VERIFICATION_TOKEN_TTL_SECONDS, 24 * 60 * 60),
+        EMAIL_VERIFICATION_RESEND_COOLDOWN_MS: asNumber(config.EMAIL_VERIFICATION_RESEND_COOLDOWN_MS, 60_000),
+        EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR: asNumber(config.EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR, 5),
+        EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS: asNumber(config.EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS, 5),
     };
 }

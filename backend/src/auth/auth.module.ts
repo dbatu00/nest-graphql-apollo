@@ -10,12 +10,15 @@ import { AuthService } from "./auth.service";
 import { AuthResolver } from "./auth.resolver";
 import { Auth } from "./auth.entity";
 import { User } from "../users/user.entity";
-import { JwtStrategy } from "./jwt.strategy";
+import { JwtStrategy } from "./security/jwt.strategy";
 import { UsersModule } from "src/users/users.module";
+import { VerificationToken } from "./verification/verification-token.entity";
+import { VerificationEmailService } from "./verification/verification-email.service";
+import { AuthController } from "./auth.controller";
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Auth, User]),
+    TypeOrmModule.forFeature([Auth, User, VerificationToken]),
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -36,7 +39,9 @@ import { UsersModule } from "src/users/users.module";
     AuthService,
     AuthResolver,
     JwtStrategy,
+    VerificationEmailService,
   ],
+  controllers: [AuthController],
   exports: [AuthService],
 })
 export class AuthModule { }

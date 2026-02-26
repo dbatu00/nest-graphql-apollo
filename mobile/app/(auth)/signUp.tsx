@@ -4,9 +4,12 @@ import { router } from "expo-router";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { commonStyles } from "@/styles/common";
 import { SIGNUP_MUTATION } from "@/graphql/operations";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignUp() {
+  const { setSession } = useAuth();
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -16,8 +19,14 @@ export default function SignUp() {
   const handleSignUp = async () => {
     setError("");
 
-    if (!username || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       setError("All fields are required");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("Please enter a valid email");
       return;
     }
 
@@ -29,14 +38,29 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      await graphqlFetch(SIGNUP_MUTATION, { username, password });
+      const res = await graphqlFetch<{
+        signUp: {
+          token: string;
+          emailVerified: boolean;
+          user: {
+            id: number;
+            username: string;
+            displayName?: string;
+          };
+        };
+      }>(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
+
+      await setSession({
+        token: res.signUp.token,
+        user: res.signUp.user,
+        emailVerified: res.signUp.emailVerified,
+      });
 
       setSuccess(true);
 
-      // Delay, then redirect to login
       setTimeout(() => {
-        router.replace("/(auth)/login");
-      }, 2000);
+        router.replace(res.signUp.emailVerified ? "/(app)/feed" : ("/(auth)/verify-mail" as never));
+      }, 600);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign up failed");
     } finally {
@@ -56,6 +80,16 @@ export default function SignUp() {
           onChangeText={setUsername}
           autoCapitalize="none"
           style={commonStyles.input}
+        />
+
+        <TextInput
+          placeholder="Email"
+          placeholderTextColor="#d1d5db"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          style={[commonStyles.input, { marginTop: 12 }]}
         />
 
         <TextInput
@@ -96,9 +130,18 @@ export default function SignUp() {
 
         {success ? (
           <Text style={{ color: "#059669", marginTop: 10, textAlign: "center", fontSize: 14 }}>
-            Signup successful. Redirecting to login…
+            Signup successful. Redirecting…
           </Text>
         ) : null}
+
+        <Pressable
+          onPress={() => router.push("/(auth)/login")}
+          style={{ marginTop: 16 }}
+        >
+          <Text style={{ textAlign: "center", color: "#2563eb", fontWeight: "500" }}>
+            Back to login
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

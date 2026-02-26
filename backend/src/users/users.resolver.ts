@@ -2,7 +2,7 @@
 import { Resolver, Query, Args, Int, ResolveField, Parent } from '@nestjs/graphql';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
-import { CurrentUser } from 'src/auth/current-user.decorator';
+import { CurrentUser } from 'src/auth/security/current-user.decorator';
 
 @Resolver(() => User)
 export class UsersResolver {

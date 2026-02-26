@@ -12,8 +12,8 @@ import {
 import { UseGuards } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { Post } from './post.entity';
-import { GqlAuthGuard } from '../auth/gql-auth.guard';
-import { CurrentUser } from '../auth/current-user.decorator';
+import { GqlAuthGuard } from '../auth/security/gql-auth.guard';
+import { CurrentUser } from '../auth/security/current-user.decorator';
 import { User } from '../users/user.entity';
 
 @Resolver(() => Post)

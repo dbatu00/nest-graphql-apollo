@@ -1,11 +1,19 @@
 import { View, Text, TouchableOpacity, Platform } from "react-native";
-import { logout } from "@/utils/logout";
+import { router } from "expo-router";
+import { useAuth } from "@/hooks/useAuth";
 
 type Props = {
   title: string;
 };
 
 export function FeedHeader({ title }: Props) {
+  const { logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  };
+
   return (
     <View
       style={{
@@ -31,7 +39,7 @@ export function FeedHeader({ title }: Props) {
         </Text>
 
         <TouchableOpacity
-          onPress={logout}
+          onPress={handleLogout}
           style={{
             paddingHorizontal: 14,
             paddingVertical: 8,
