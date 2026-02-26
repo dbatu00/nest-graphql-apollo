@@ -19,7 +19,7 @@ import { ActivityResolver } from '../activity/activity.resolver';
 import { AuthModule } from '../auth/auth.module';
 import { AuthService } from '../auth/auth.service';
 import { AuthResolver } from '../auth/auth.resolver';
-import { JwtStrategy } from '../auth/jwt.strategy';
+import { JwtStrategy } from '../auth/security/jwt.strategy';
 
 describe('Feature Modules Metadata', () => {
     it('UsersModule provides and exports UsersService', () => {

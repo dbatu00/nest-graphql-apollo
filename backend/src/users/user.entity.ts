@@ -26,6 +26,13 @@ export class User {
   @Column({ nullable: true })
   displayName?: string;
 
+  @Column({ unique: true })
+  email: string;
+
+  @Field()
+  @Column({ default: false })
+  emailVerified: boolean;
+
   @Field({ nullable: true })
   @Column({ length: 160, nullable: true })
   bio?: string;

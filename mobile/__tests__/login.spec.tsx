@@ -4,8 +4,8 @@ import { router } from "expo-router";
 
 import Login from "../app/(auth)/login";
 import { graphqlFetch } from "../utils/graphqlFetch";
-import { saveToken } from "../utils/token";
 import { LOGIN_MUTATION } from "../graphql/operations";
+import { useAuth } from "../hooks/useAuth";
 
 jest.mock("expo-router", () => ({
   router: {
@@ -18,13 +18,16 @@ jest.mock("../utils/graphqlFetch", () => ({
   graphqlFetch: jest.fn(),
 }));
 
-jest.mock("../utils/token", () => ({
-  saveToken: jest.fn(),
+jest.mock("../hooks/useAuth", () => ({
+  useAuth: jest.fn(),
 }));
 
 describe("Login screen", () => {
+  const setSession = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useAuth as jest.Mock).mockReturnValue({ setSession });
   });
 
   it("shows validation error when username or password is missing", () => {
@@ -40,6 +43,7 @@ describe("Login screen", () => {
     (graphqlFetch as jest.Mock).mockResolvedValueOnce({
       login: {
         token: "jwt-token",
+        emailVerified: true,
         user: {
           id: 1,
           username: "deniz",
@@ -61,8 +65,39 @@ describe("Login screen", () => {
       });
     });
 
-    expect(saveToken).toHaveBeenCalledWith("jwt-token");
+    expect(setSession).toHaveBeenCalledWith({
+      token: "jwt-token",
+      emailVerified: true,
+      user: {
+        id: 1,
+        username: "deniz",
+        displayName: "Deniz",
+      },
+    });
     expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(app)/feed");
+  });
+
+  it("routes to verify mail when login payload is unverified", async () => {
+    (graphqlFetch as jest.Mock).mockResolvedValueOnce({
+      login: {
+        token: "jwt-token",
+        emailVerified: false,
+        user: {
+          id: 1,
+          username: "deniz",
+        },
+      },
+    });
+
+    const { getByPlaceholderText, getAllByText } = render(<Login />);
+
+    fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Password"), "secret");
+    fireEvent.press(getAllByText("Login")[1]);
+
+    await waitFor(() => {
+      expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(auth)/verify-mail");
+    });
   });
 
   it("shows graphql error message on login failure", async () => {

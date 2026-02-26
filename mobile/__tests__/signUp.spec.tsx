@@ -5,10 +5,12 @@ import { router } from "expo-router";
 import SignUp from "../app/(auth)/signUp";
 import { graphqlFetch } from "../utils/graphqlFetch";
 import { SIGNUP_MUTATION } from "../graphql/operations";
+import { useAuth } from "../hooks/useAuth";
 
 jest.mock("expo-router", () => ({
   router: {
     replace: jest.fn(),
+    push: jest.fn(),
   },
 }));
 
@@ -16,9 +18,16 @@ jest.mock("../utils/graphqlFetch", () => ({
   graphqlFetch: jest.fn(),
 }));
 
+jest.mock("../hooks/useAuth", () => ({
+  useAuth: jest.fn(),
+}));
+
 describe("SignUp screen", () => {
+  const setSession = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useAuth as jest.Mock).mockReturnValue({ setSession });
   });
 
   afterEach(() => {
@@ -38,6 +47,7 @@ describe("SignUp screen", () => {
     const { getByPlaceholderText, getAllByText, getByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Email"), "deniz@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "secret1");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "secret2");
     fireEvent.press(getAllByText("Sign Up")[1]);
@@ -46,17 +56,20 @@ describe("SignUp screen", () => {
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
-  it("submits signup and redirects to login after delay", async () => {
+  it("submits signup and redirects to verify screen after delay", async () => {
     jest.useFakeTimers();
     (graphqlFetch as jest.Mock).mockResolvedValueOnce({
       signUp: {
         user: { id: 1, username: "deniz" },
+        token: "signup-token",
+        emailVerified: false,
       },
     });
 
     const { getByPlaceholderText, getAllByText, getByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Email"), "deniz@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "secret");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "secret");
     fireEvent.press(getAllByText("Sign Up")[1]);
@@ -64,15 +77,30 @@ describe("SignUp screen", () => {
     await waitFor(() => {
       expect(graphqlFetch).toHaveBeenCalledWith(SIGNUP_MUTATION, {
         username: "deniz",
+        email: "deniz@example.com",
         password: "secret",
       });
     });
 
-    expect(getByText("Signup successful. Redirecting to login…")).toBeTruthy();
+    expect(setSession).toHaveBeenCalledWith({
+      token: "signup-token",
+      emailVerified: false,
+      user: { id: 1, username: "deniz" },
+    });
 
-    jest.advanceTimersByTime(2000);
+    expect(getByText("Signup successful. Redirecting…")).toBeTruthy();
 
-    expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(auth)/login");
+    jest.advanceTimersByTime(600);
+
+    expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(auth)/verify-mail");
+  });
+
+  it("navigates back to login", () => {
+    const { getByText } = render(<SignUp />);
+
+    fireEvent.press(getByText("Back to login"));
+
+    expect((router.push as jest.Mock)).toHaveBeenCalledWith("/(auth)/login");
   });
 
   it("shows graphql error message on signup failure", async () => {
@@ -81,6 +109,7 @@ describe("SignUp screen", () => {
     const { getByPlaceholderText, getAllByText, getByText } = render(<SignUp />);
 
     fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Email"), "deniz@example.com");
     fireEvent.changeText(getByPlaceholderText("Password"), "secret");
     fireEvent.changeText(getByPlaceholderText("Confirm Password"), "secret");
     fireEvent.press(getAllByText("Sign Up")[1]);

@@ -71,6 +71,9 @@ Frontend test status (mobile, 2026-02-22):
 - [ ] Fix profile activity follow button accuracy/behavior.
 - [ ] Verify tab refresh behavior on refresh vs tab switch.
 - [ ] Add infinite scroll.
+- allow entering username or email for login
+- on login/signup enter button activates buttons
+- decide on web page tab titles
 
 ## P3 — Optional Architecture Refactor
 
@@ -110,3 +113,12 @@ const likes = await this.likesRepo
 
 return likes.map(l => l.post);
 ```
+
+
+---------
+
+is retryafter seconds field necessary?
+export type VerificationLinkResult = {
+    status: VerificationLinkStatus;
+    retryAfterSeconds?: number;
+};

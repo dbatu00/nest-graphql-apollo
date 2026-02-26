@@ -14,3 +14,4 @@ backend: app module has hardcoded postgres credentials - high
 backend: typeorm synchronize=true in app module - medium
 backend: deletePost flow is not transactional (activity delete + post remove split) - medium
 backend: activity resolver throws generic Error instead of framework exception - low
+mobile: transient network/me fetch failure clears token and logs user out in refreshAuth - high

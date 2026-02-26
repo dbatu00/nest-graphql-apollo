@@ -1,28 +1,21 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { JwtStrategy } from '../jwt.strategy';
+import { JwtStrategy } from '../security/jwt.strategy';
 
 describe('JwtStrategy', () => {
-    const originalJwtSecret = process.env.JWT_SECRET;
-
     const usersService = {
         findById: jest.fn(),
+    };
+
+    const configService = {
+        getOrThrow: jest.fn().mockReturnValue('test-secret'),
     };
 
     let strategy: JwtStrategy;
 
     beforeEach(() => {
         jest.clearAllMocks();
-        process.env.JWT_SECRET = 'test-secret';
-        strategy = new JwtStrategy(usersService as any);
-    });
-
-    afterAll(() => {
-        if (originalJwtSecret === undefined) {
-            delete process.env.JWT_SECRET;
-            return;
-        }
-
-        process.env.JWT_SECRET = originalJwtSecret;
+        configService.getOrThrow.mockReturnValue('test-secret');
+        strategy = new JwtStrategy(usersService as any, configService as any);
     });
 
     it('returns user from validate when found', async () => {

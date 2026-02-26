@@ -13,7 +13,7 @@ jest.mock('@nestjs/graphql', () => ({
 }));
 
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { CurrentUser } from '../current-user.decorator';
+import { CurrentUser } from '../security/current-user.decorator';
 
 describe('CurrentUser decorator', () => {
     it('extracts req.user from GraphQL context', () => {

@@ -8,6 +8,7 @@ export async function getCurrentUser() {
         id: number;
         username: string;
         displayName?: string;
+        emailVerified: boolean;
       };
     }>(ME_QUERY);
 

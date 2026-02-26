@@ -30,19 +30,21 @@ describe('AppModule', () => {
     it('keeps TypeORM options shape explicit in module wiring', () => {
         const source = readFileSync(join(__dirname, '..', 'app.module.ts'), 'utf8');
 
-        expect(source).toContain("TypeOrmModule.forRoot({");
+        expect(source).toContain("TypeOrmModule.forRootAsync({");
         expect(source).toContain("type: 'postgres'");
-        expect(source).toContain("host: 'localhost'");
-        expect(source).toContain("port: 5432");
-        expect(source).toContain("synchronize: true");
+        expect(source).toContain("configService.getOrThrow<string>('DB_HOST')");
+        expect(source).toContain("configService.getOrThrow<number>('DB_PORT')");
+        expect(source).toContain("const synchronize = configService.getOrThrow<boolean>('DB_SYNCHRONIZE')");
+        expect(source).toContain("synchronize,");
+        expect(source).toContain('validate: validateEnvironment');
     });
 
     it('keeps AuthModule JWT registration options explicit', () => {
         const authSource = readFileSync(join(__dirname, '..', 'auth', 'auth.module.ts'), 'utf8');
 
-        expect(authSource).toContain('JwtModule.register({');
-        expect(authSource).toContain('secret: process.env.JWT_SECRET');
-        expect(authSource).toContain("signOptions: { expiresIn: \"15m\" }");
+        expect(authSource).toContain('JwtModule.registerAsync({');
+        expect(authSource).toContain('secret: configService.getOrThrow<string>("JWT_SECRET")');
+        expect(authSource).toContain('configService.get<string>("JWT_EXPIRES_IN") ?? "15m"');
 
         const authExports = Reflect.getMetadata(MODULE_KEYS.EXPORTS, AuthModule) ?? [];
         expect(authExports).toContain(AuthService);

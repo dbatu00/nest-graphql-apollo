@@ -94,17 +94,15 @@ npm run web
 
 - Navigation is file-based with Expo Router route groups.
 - Client GraphQL calls are centralized in `utils/graphqlFetch.tsx`.
-- Token is attached as bearer auth when present.
+- Token is attached as bearer auth when present and stored via secure platform storage on native (`expo-secure-store`) with web `localStorage` fallback.
 - Current-user identity is fetched using the `me` query helper.
 
 ## Current Caveats
 
-- Token persistence currently uses `localStorage` (`utils/token.tsx`), which is weaker for native device security than platform-secure stores.
 - Root-level `useAuth` includes simulated behavior and is not yet a hardened production auth source of truth.
 - Some UI styles are still inline/hardcoded and not fully centralized.
 
 ## Suggested Next Steps
 
-1. Migrate token storage to secure platform storage.
-2. Unify auth state flow across hooks/routes.
-3. Expand tests beyond utility-level behavior into flow-level coverage.
+1. Unify auth state flow across hooks/routes.
+2. Expand tests beyond utility-level behavior into flow-level coverage.

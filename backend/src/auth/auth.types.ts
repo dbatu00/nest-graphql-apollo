@@ -9,4 +9,7 @@ export class AuthPayload {
 
     @Field()
     token: string;
+
+    @Field()
+    emailVerified: boolean;
 }

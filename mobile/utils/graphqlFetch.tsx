@@ -10,7 +10,7 @@ export async function graphqlFetch<T>(
     throw new Error("EXPO_PUBLIC_API_URL is not defined");
   }
 
-  const token = getToken();
+  const token = await getToken();
 
   try {
     const res = await fetch(url, {

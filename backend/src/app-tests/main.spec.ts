@@ -21,12 +21,30 @@ describe('main bootstrap', () => {
     it('creates app, enables cors, and listens on configured port', async () => {
         process.env.PORT = '4555';
 
+        const use = jest.fn();
+        const useGlobalPipes = jest.fn();
         const enableCors = jest.fn();
         const listen = jest.fn().mockResolvedValue(undefined);
-        const create = jest.fn().mockResolvedValue({ enableCors, listen });
+        const get = jest.fn().mockReturnValue({
+            get: (key: string) => {
+                if (key === 'PORT') {
+                    return 4555;
+                }
+
+                if (key === 'CORS_ORIGINS') {
+                    return ['http://localhost:19006'];
+                }
+
+                return undefined;
+            },
+        });
+        const create = jest.fn().mockResolvedValue({ use, useGlobalPipes, enableCors, listen, get });
 
         jest.doMock('@nestjs/core', () => ({
             NestFactory: { create },
+        }));
+        jest.doMock('../app.module', () => ({
+            AppModule: class MockAppModule { },
         }));
 
         jest.isolateModules(() => {
@@ -37,7 +55,15 @@ describe('main bootstrap', () => {
 
         expect(create).toHaveBeenCalledTimes(1);
         expect(enableCors).toHaveBeenCalledTimes(1);
-        expect(listen).toHaveBeenCalledWith('4555');
+        expect(enableCors).toHaveBeenCalledWith({
+            origin: ['http://localhost:19006'],
+            methods: ['GET', 'POST', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization'],
+            credentials: true,
+        });
+        expect(use).toHaveBeenCalledTimes(1);
+        expect(useGlobalPipes).toHaveBeenCalledTimes(1);
+        expect(listen).toHaveBeenCalledWith(4555);
     });
 
     it('logs and exits when bootstrap fails', async () => {
@@ -49,6 +75,9 @@ describe('main bootstrap', () => {
 
         jest.doMock('@nestjs/core', () => ({
             NestFactory: { create },
+        }));
+        jest.doMock('../app.module', () => ({
+            AppModule: class MockAppModule { },
         }));
 
         jest.isolateModules(() => {

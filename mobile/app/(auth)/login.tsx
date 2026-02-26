@@ -3,10 +3,11 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { commonStyles } from "../../styles/common";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { saveToken } from "@/utils/token";
 import { LOGIN_MUTATION } from "@/graphql/operations";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
+  const { setSession } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,6 +27,7 @@ export default function Login() {
       const res = await graphqlFetch<{
         login: {
           token: string;
+          emailVerified: boolean;
           user: {
             id: number;
             username: string;
@@ -34,8 +36,17 @@ export default function Login() {
         };
       }>(LOGIN_MUTATION, { username, password });
 
-      saveToken(res.login.token);
-      router.replace("/(app)/feed");
+      await setSession({
+        token: res.login.token,
+        user: res.login.user,
+        emailVerified: res.login.emailVerified,
+      });
+
+      if (res.login.emailVerified) {
+        router.replace("/(app)/feed");
+      } else {
+        router.replace("/(auth)/verify-mail" as never);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Invalid credentials");
     } finally {

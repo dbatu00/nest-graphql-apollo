@@ -2,10 +2,10 @@
 import { Resolver, Mutation, Args, Query } from "@nestjs/graphql";
 import { AuthService } from "./auth.service";
 import { AuthPayload } from "./auth.types";
-import { GqlAuthGuard } from "./gql-auth.guard";
+import { GqlAuthGuard } from "./security/gql-auth.guard";
 import { UseGuards } from "@nestjs/common";
 import { User } from "src/users/user.entity";
-import { CurrentUser } from "./current-user.decorator";
+import { CurrentUser } from "./security/current-user.decorator";
 
 
 @Resolver()
@@ -24,9 +24,10 @@ export class AuthResolver {
     @Mutation(() => AuthPayload)
     signUp(
         @Args("username") username: string,
+        @Args("email") email: string,
         @Args("password") password: string
     ) {
-        return this.authService.signUp(username, password);
+        return this.authService.signUp(username, email, password);
     }
 
     @Mutation(() => AuthPayload)
@@ -35,5 +36,16 @@ export class AuthResolver {
         @Args("password") password: string
     ) {
         return this.authService.login(username, password);
+    }
+
+    @Mutation(() => Boolean)
+    verifyEmail(@Args("token") token: string) {
+        return this.authService.verifyEmail(token);
+    }
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    resendMyVerificationEmail(@CurrentUser() user: User) {
+        return this.authService.resendMyVerificationEmail(user.id);
     }
 }

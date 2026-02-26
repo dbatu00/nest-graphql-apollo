@@ -34,7 +34,7 @@ describe("Index route", () => {
 
   it("redirects to feed when user exists", async () => {
     (useAuth as jest.Mock).mockReturnValue({
-      user: { id: 1, username: "deniz" },
+      user: { id: 1, username: "deniz", emailVerified: true },
       loading: false,
     });
 
@@ -42,6 +42,19 @@ describe("Index route", () => {
 
     await waitFor(() => {
       expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(app)/feed");
+    });
+  });
+
+  it("redirects to verify mail when user is not verified", async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      user: { id: 1, username: "deniz", emailVerified: false },
+      loading: false,
+    });
+
+    render(<Index />);
+
+    await waitFor(() => {
+      expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(auth)/verify-mail");
     });
   });
 
