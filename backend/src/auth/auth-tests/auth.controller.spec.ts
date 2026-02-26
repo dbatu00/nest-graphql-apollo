@@ -66,6 +66,17 @@ describe('AuthController', () => {
         expect(res.send).toHaveBeenCalled();
     });
 
+    it('renders delivery failure page when resend email delivery fails', async () => {
+        const res = createResponseMock();
+        authService.processVerificationLink.mockResolvedValue({ status: 'expired_delivery_failed' });
+
+        await controller.verifyEmailFromLink('delivery-failed-token', res as any);
+
+        expect(res.status).toHaveBeenCalledWith(503);
+        expect(res.type).toHaveBeenCalledWith('html');
+        expect(res.send).toHaveBeenCalled();
+    });
+
     it('renders invalid page for invalid tokens', async () => {
         const res = createResponseMock();
         authService.processVerificationLink.mockResolvedValue({ status: 'invalid' });

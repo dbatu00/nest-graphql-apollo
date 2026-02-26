@@ -113,3 +113,12 @@ const likes = await this.likesRepo
 
 return likes.map(l => l.post);
 ```
+
+
+---------
+
+is retryafter seconds field necessary?
+export type VerificationLinkResult = {
+    status: VerificationLinkStatus;
+    retryAfterSeconds?: number;
+};

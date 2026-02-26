@@ -1,6 +1,3 @@
-export type VerificationLinkStatus = "verified" | "expired_resent" | "expired_throttled" | "invalid";
-
 export type VerificationLinkResult = {
-    status: VerificationLinkStatus;
-    retryAfterSeconds?: number;
+    status: "verified" | "expired_resent" | "expired_throttled" | "expired_delivery_failed" | "invalid";
 };

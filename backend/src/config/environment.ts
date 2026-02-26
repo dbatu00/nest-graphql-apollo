@@ -81,6 +81,7 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         NODE_ENV: nodeEnv,
         PORT: asNumber(config.PORT, 3000),
         APP_BASE_URL: asString(config.APP_BASE_URL) ?? 'http://localhost:3000',
+        AUTH_MIN_PASSWORD_LENGTH: asNumber(config.AUTH_MIN_PASSWORD_LENGTH, 8),
         JWT_SECRET: jwtSecret,
         // Kept configurable so we can tighten/rotate policy without changing code.
         JWT_EXPIRES_IN: asString(config.JWT_EXPIRES_IN) ?? '15m',
@@ -109,5 +110,6 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: asNumber(config.EMAIL_VERIFICATION_TOKEN_TTL_SECONDS, 24 * 60 * 60),
         EMAIL_VERIFICATION_RESEND_COOLDOWN_MS: asNumber(config.EMAIL_VERIFICATION_RESEND_COOLDOWN_MS, 60_000),
         EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR: asNumber(config.EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR, 5),
+        EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS: asNumber(config.EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS, 5),
     };
 }

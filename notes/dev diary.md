@@ -192,3 +192,57 @@ Reasoning:
 - Controllers are the clean fit for external link-based flows (email verify, reset links, webhooks).
 - Resolvers are the clean fit for authenticated client operations already living in app GraphQL contracts.
 - This split keeps UX behavior consistent while preventing resolver contracts from carrying browser-link concerns.
+
+---
+
+## 2026-02-27 — Keep `emailVerified` in signup payload
+
+Question:
+
+- Is `emailVerified: user.emailVerified` in signup return unnecessary?
+
+Decision:
+
+- Keep it in the signup payload.
+
+Reasoning:
+
+- Maintains a stable `AuthPayload` shape across both `signUp` and `login`.
+- Keeps frontend auth flow generic and simpler (single payload contract).
+- Future-proofs edge cases where verification state at signup may differ from default assumptions.
+
+---
+
+## 2026-02-27 — Config getter helpers in auth service
+
+Question:
+
+- Are dedicated getter methods for auth/env values overkill?
+
+Decision:
+
+- Keep explicit getters plus numeric validation helpers.
+
+Reasoning:
+
+- Centralizes runtime validation at read points.
+- Avoids repetitive parse/guard code at each call site.
+- Improves strict TypeScript narrowing for config values (`number | undefined` to validated `number`).
+
+---
+
+## 2026-02-27 — Email send outside DB transaction
+
+Question:
+
+- Should `sendVerificationEmail(...)` be part of DB transaction?
+
+Decision:
+
+- Keep SMTP send outside DB transaction.
+
+Reasoning:
+
+- Email delivery is external I/O and can be slow/unreliable.
+- Holding DB transactions during SMTP increases lock time and failure blast radius.
+- Current approach uses post-commit send with compensation handling for resend delivery failures.

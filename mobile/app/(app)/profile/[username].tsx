@@ -12,8 +12,8 @@ import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
 import { useActivities } from "@/hooks/useActivities";
+import { useAuth } from "@/hooks/useAuth";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { logout } from "@/utils/logout";
 import { FOLLOWERS_QUERY, FOLLOWING_QUERY } from "@/graphql/operations";
 
 type Tab =
@@ -34,6 +34,7 @@ export default function UsernameScreen() {
   const { username } =
     useLocalSearchParams<{ username: string }>();
   const router = useRouter();
+  const { logout } = useAuth();
 
   const [tab, setTab] = useState<Tab>("posts");
 
@@ -112,6 +113,11 @@ export default function UsernameScreen() {
     );
   };
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  };
+
   /* ---------------- RENDER ---------------- */
 
   return (
@@ -162,7 +168,7 @@ export default function UsernameScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={logout}
+              onPress={handleLogout}
               style={{
                 paddingHorizontal: 14,
                 paddingVertical: 8,

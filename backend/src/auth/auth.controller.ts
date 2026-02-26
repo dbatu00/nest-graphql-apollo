@@ -35,6 +35,11 @@ export class AuthController {
             return;
         }
 
+        if (result.status === "expired_delivery_failed") {
+            res.status(503).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired, and we could not send a new verification email right now. Please try again shortly."));
+            return;
+        }
+
         res.status(400).type("html").send(this.renderHtmlPage("Verification failed", "This verification link is invalid or already used."));
     }
 

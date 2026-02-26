@@ -15,8 +15,10 @@ export default function Index() {
   useEffect(() => {
     if (loading) return;
 
-    if (user) {
+    if (user?.emailVerified) {
       router.replace("/(app)/feed");
+    } else if (user && !user.emailVerified) {
+      router.replace("/(auth)/verify-mail" as never);
     } else {
       router.replace("/(auth)/login");
     }

@@ -7,6 +7,6 @@ export async function logout() {
   } catch (err: unknown) {
     console.error('[logout] token clear failed', err);
   } finally {
-    router.replace('/login');
+    router.replace('/(auth)/login');
   }
 }

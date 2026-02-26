@@ -1,5 +1,5 @@
 // Auth business logic: sign-up, login, and token issuing.
-import { Injectable, UnauthorizedException, BadRequestException, Logger } from "@nestjs/common";
+import { Injectable, UnauthorizedException, BadRequestException, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
 import { Auth } from "./auth.entity";
@@ -15,10 +15,6 @@ import type { VerificationLinkResult } from "./verification/verification-link.ty
 @Injectable()
 export class AuthService {
     private readonly logger = new Logger(AuthService.name);
-    private static readonly MIN_PASSWORD_LENGTH = 8;
-    private static readonly DEFAULT_VERIFICATION_RESEND_COOLDOWN_MS = 60_000;
-    private static readonly DEFAULT_VERIFICATION_RESEND_MAX_PER_HOUR = 5;
-    private static readonly DEFAULT_VERIFICATION_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 
     constructor(
         @InjectRepository(Auth)
@@ -96,7 +92,14 @@ export class AuthService {
                 return user;
             });
 
-            await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+            try {
+                await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+            } catch (error) {
+                this.logger.error(
+                    `Verification email delivery failed after signup userId=${user.id}`,
+                    error instanceof Error ? error.stack : undefined,
+                );
+            }
 
             this.logger.log(`User signed up: ${username}`);
 
@@ -137,10 +140,6 @@ export class AuthService {
             if (!isValidPassword) {
                 this.logger.warn(`Invalid login attempt for username: ${username}`);
                 throw new UnauthorizedException("Invalid credentials");
-            }
-
-            if (!credential.user.emailVerified) {
-                throw new UnauthorizedException("Email is not verified");
             }
 
             this.logger.log(`User logged in: ${username}`);
@@ -204,6 +203,17 @@ export class AuthService {
         const resendStatus = await this.issueAndSendVerificationToken(user);
         if (resendStatus === "throttled") {
             this.logger.warn(`Resend throttled for userId=${userId}`);
+            throw new HttpException(
+                "Too many resend requests. Please wait before requesting another verification email.",
+                HttpStatus.TOO_MANY_REQUESTS,
+            );
+        }
+
+        if (resendStatus === "delivery_failed") {
+            throw new HttpException(
+                "Could not deliver verification email right now. Please try again.",
+                HttpStatus.SERVICE_UNAVAILABLE,
+            );
         }
 
         return true;
@@ -233,6 +243,12 @@ export class AuthService {
             if (resendStatus === "throttled") {
                 this.logger.warn(`Verification link expired and resend throttled userId=${verificationToken.user.id}`);
             }
+
+            if (resendStatus === "delivery_failed") {
+                this.logger.warn(`Verification link expired and resend delivery failed userId=${verificationToken.user.id}`);
+                return { status: "expired_delivery_failed" };
+            }
+
             return resendStatus === "sent"
                 ? { status: "expired_resent" }
                 : { status: "expired_throttled" };
@@ -263,8 +279,9 @@ export class AuthService {
             throw new BadRequestException("Username and password are required");
         }
 
-        if (password.length < AuthService.MIN_PASSWORD_LENGTH) {
-            throw new BadRequestException(`Password must be at least ${AuthService.MIN_PASSWORD_LENGTH} characters`);
+        const minPasswordLength = this.getAuthMinPasswordLength();
+        if (password.length < minPasswordLength) {
+            throw new BadRequestException(`Password must be at least ${minPasswordLength} characters`);
         }
     }
 
@@ -277,17 +294,14 @@ export class AuthService {
     }
 
     private createTokenExpiry(): Date {
-        const rawTtl = Number(this.configService.get<number>("EMAIL_VERIFICATION_TOKEN_TTL_SECONDS"));
-        const ttlSeconds = Number.isFinite(rawTtl) && rawTtl > 0
-            ? rawTtl
-            : AuthService.DEFAULT_VERIFICATION_TOKEN_TTL_SECONDS;
+        const ttlSeconds = this.getEmailVerificationTokenTtlSeconds();
 
         const expiry = new Date();
         expiry.setSeconds(expiry.getSeconds() + ttlSeconds);
         return expiry;
     }
 
-    private async issueAndSendVerificationToken(user: User): Promise<"sent" | "throttled"> {
+    private async issueAndSendVerificationToken(user: User): Promise<"sent" | "throttled" | "delivery_failed"> {
         // Cooldown and rolling-window checks are config-driven and validated by environment config.
         const latestToken = await this.verificationTokenRepo
             .createQueryBuilder("verification")
@@ -297,16 +311,6 @@ export class AuthService {
             })
             .orderBy("verification.createdAt", "DESC")
             .getOne();
-
-        const cooldownMs = this.configService.get<number>("EMAIL_VERIFICATION_RESEND_COOLDOWN_MS")
-            ?? AuthService.DEFAULT_VERIFICATION_RESEND_COOLDOWN_MS;
-
-        if (latestToken) {
-            const ageMs = Date.now() - latestToken.createdAt.getTime();
-            if (ageMs < cooldownMs) {
-                return "throttled";
-            }
-        }
 
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         const sentLastHour = await this.verificationTokenRepo
@@ -318,15 +322,32 @@ export class AuthService {
             })
             .getCount();
 
-        const maxPerHour = this.configService.get<number>("EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR")
-            ?? AuthService.DEFAULT_VERIFICATION_RESEND_MAX_PER_HOUR;
+        const freeResendAttempts = this.getEmailVerificationResendFreeAttempts();
 
-        if (sentLastHour >= maxPerHour) {
-            return "throttled";
+        if (sentLastHour < freeResendAttempts) {
+            this.logger.debug(`Resend bypassed throttle (free window) userId=${user.id} sentLastHour=${sentLastHour}`);
+        } else {
+            const cooldownMs = this.getEmailVerificationResendCooldownMs();
+
+            if (latestToken) {
+                const ageMs = Date.now() - latestToken.createdAt.getTime();
+                if (ageMs < cooldownMs) {
+                    return "throttled";
+                }
+            }
+
+            const maxPerHour = this.getEmailVerificationResendMaxPerHour();
+
+            if (sentLastHour >= maxPerHour) {
+                return "throttled";
+            }
         }
 
         const verificationToken = this.generateRawToken();
         const verificationTokenHash = this.hashToken(verificationToken);
+
+        const consumedTokenIds: number[] = [];
+        let createdTokenId: number | null = null;
 
         await this.dataSource.transaction(async (manager) => {
             const activeTokens = await manager
@@ -336,6 +357,8 @@ export class AuthService {
                     type: "email_verification",
                 })
                 .getMany();
+
+            consumedTokenIds.push(...activeTokens.map((activeToken) => activeToken.id));
 
             if (activeTokens.length > 0) {
                 const now = new Date();
@@ -352,11 +375,81 @@ export class AuthService {
                 expiresAt: this.createTokenExpiry(),
             });
 
-            await manager.save(tokenEntity);
+            const createdToken = await manager.save(tokenEntity);
+            createdTokenId = typeof createdToken?.id === "number" ? createdToken.id : null;
         });
 
-        await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+        try {
+            await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+        } catch (error) {
+            this.logger.error(
+                `Verification email delivery failed for userId=${user.id}`,
+                error instanceof Error ? error.stack : undefined,
+            );
+            await this.rollbackVerificationTokenIssue(createdTokenId, consumedTokenIds);
+            return "delivery_failed";
+        }
+
         this.logger.log(`Verification email sent userId=${user.id}`);
         return "sent";
+    }
+
+    private async rollbackVerificationTokenIssue(createdTokenId: number | null, consumedTokenIds: number[]): Promise<void> {
+        await this.dataSource.transaction(async (manager) => {
+            if (createdTokenId !== null) {
+                await manager.delete(VerificationToken, { id: createdTokenId });
+            }
+
+            if (consumedTokenIds.length > 0) {
+                await manager
+                    .createQueryBuilder()
+                    .update(VerificationToken)
+                    .set({ consumedAt: () => "NULL" })
+                    .whereInIds(consumedTokenIds)
+                    .execute();
+            }
+        });
+    }
+
+    private getAuthMinPasswordLength(): number {
+        return this.getPositiveIntegerConfig("AUTH_MIN_PASSWORD_LENGTH");
+    }
+
+    private getEmailVerificationTokenTtlSeconds(): number {
+        return this.getPositiveIntegerConfig("EMAIL_VERIFICATION_TOKEN_TTL_SECONDS");
+    }
+
+    private getEmailVerificationResendCooldownMs(): number {
+        return this.getNonNegativeIntegerConfig("EMAIL_VERIFICATION_RESEND_COOLDOWN_MS");
+    }
+
+    private getEmailVerificationResendMaxPerHour(): number {
+        return this.getNonNegativeIntegerConfig("EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR");
+    }
+
+    private getEmailVerificationResendFreeAttempts(): number {
+        return this.getNonNegativeIntegerConfig("EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS");
+    }
+
+    private getPositiveIntegerConfig(key: string): number {
+        const rawValue = this.configService.get<number>(key);
+        if (typeof rawValue !== "number") {
+            throw new Error(`${key} must be set`);
+        }
+        if (!Number.isInteger(rawValue) || rawValue <= 0) {
+            throw new Error(`${key} must be a positive integer`);
+        }
+        return rawValue;
+    }
+
+    private getNonNegativeIntegerConfig(key: string): number {
+        const rawValue = this.configService.get<number>(key);
+        if (typeof rawValue !== "number") {
+            throw new Error(`${key} must be set`);
+        }
+        if (!Number.isInteger(rawValue) || rawValue < 0) {
+            throw new Error(`${key} must be a non-negative integer`);
+        }
+        return rawValue;
     }
 }

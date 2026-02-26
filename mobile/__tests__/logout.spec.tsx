@@ -21,7 +21,7 @@ describe("logout", () => {
     await logout();
 
     expect(clearToken).toHaveBeenCalledTimes(1);
-    expect(router.replace).toHaveBeenCalledWith("/login");
+    expect(router.replace).toHaveBeenCalledWith("/(auth)/login");
   });
 
   it("still redirects when token clear throws", async () => {
@@ -30,7 +30,7 @@ describe("logout", () => {
 
     await expect(logout()).resolves.toBeUndefined();
     expect(errorSpy).toHaveBeenCalled();
-    expect(router.replace).toHaveBeenCalledWith("/login");
+    expect(router.replace).toHaveBeenCalledWith("/(auth)/login");
 
     errorSpy.mockRestore();
   });

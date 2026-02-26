@@ -4,8 +4,10 @@ import { router } from "expo-router";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { commonStyles } from "@/styles/common";
 import { SIGNUP_MUTATION } from "@/graphql/operations";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignUp() {
+  const { setSession } = useAuth();
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,14 +38,29 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      await graphqlFetch(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
+      const res = await graphqlFetch<{
+        signUp: {
+          token: string;
+          emailVerified: boolean;
+          user: {
+            id: number;
+            username: string;
+            displayName?: string;
+          };
+        };
+      }>(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
+
+      await setSession({
+        token: res.signUp.token,
+        user: res.signUp.user,
+        emailVerified: res.signUp.emailVerified,
+      });
 
       setSuccess(true);
 
-      // Delay, then redirect to login
       setTimeout(() => {
-        router.replace("/(auth)/login");
-      }, 2000);
+        router.replace(res.signUp.emailVerified ? "/(app)/feed" : ("/(auth)/verify-mail" as never));
+      }, 600);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Sign up failed");
     } finally {
@@ -113,9 +130,18 @@ export default function SignUp() {
 
         {success ? (
           <Text style={{ color: "#059669", marginTop: 10, textAlign: "center", fontSize: 14 }}>
-            Signup successful. Redirecting to login…
+            Signup successful. Redirecting…
           </Text>
         ) : null}
+
+        <Pressable
+          onPress={() => router.push("/(auth)/login")}
+          style={{ marginTop: 16 }}
+        >
+          <Text style={{ textAlign: "center", color: "#2563eb", fontWeight: "500" }}>
+            Back to login
+          </Text>
+        </Pressable>
       </View>
     </View>
   );

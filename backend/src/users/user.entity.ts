@@ -29,6 +29,7 @@ export class User {
   @Column({ unique: true })
   email: string;
 
+  @Field()
   @Column({ default: false })
   emailVerified: boolean;
 

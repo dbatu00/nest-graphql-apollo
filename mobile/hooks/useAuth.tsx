@@ -1,29 +1,135 @@
-import { useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { getCurrentUser } from "@/utils/currentUser";
+import { clearToken, getEmailVerified, getToken, saveEmailVerified, saveToken } from "@/utils/token";
 
-type User = {
+export type AuthUser = {
   id: number;
   username: string;
   displayName?: string;
-} | null;
+  emailVerified: boolean;
+};
 
-export function useAuth() {
-  const [user, setUser] = useState<User>(null);
+type AuthContextValue = {
+  user: AuthUser | null;
+  loading: boolean;
+  setSession: (args: {
+    token: string;
+    user: {
+      id: number;
+      username: string;
+      displayName?: string;
+    };
+    emailVerified: boolean;
+  }) => Promise<void>;
+  setEmailVerified: (value: boolean) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshAuth: () => Promise<AuthUser | null>;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Temporary async auth simulation until token-backed auth state is unified.
-    const timeoutId = setTimeout(() => {
-      setUser(null);
-      setLoading(false);
-    }, 100);
+  const refreshAuth = useCallback(async () => {
+    try {
+      const token = await getToken();
+      if (!token) {
+        setUser(null);
+        return null;
+      }
 
-    return () => clearTimeout(timeoutId);
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        await clearToken();
+        setUser(null);
+        return null;
+      }
+
+      const persistedEmailVerified = await getEmailVerified();
+      const resolvedEmailVerified =
+        typeof currentUser.emailVerified === "boolean"
+          ? currentUser.emailVerified
+          : (persistedEmailVerified ?? false);
+
+      await saveEmailVerified(resolvedEmailVerified);
+
+      const nextUser: AuthUser = {
+        id: currentUser.id,
+        username: currentUser.username,
+        displayName: currentUser.displayName,
+        emailVerified: resolvedEmailVerified,
+      };
+
+      setUser(nextUser);
+      return nextUser;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return {
+  useEffect(() => {
+    refreshAuth();
+  }, [refreshAuth]);
+
+  const setSession = useCallback(async (args: {
+    token: string;
+    user: {
+      id: number;
+      username: string;
+      displayName?: string;
+    };
+    emailVerified: boolean;
+  }) => {
+    await saveToken(args.token);
+    await saveEmailVerified(args.emailVerified);
+
+    setUser({
+      id: args.user.id,
+      username: args.user.username,
+      displayName: args.user.displayName,
+      emailVerified: args.emailVerified,
+    });
+  }, []);
+
+  const setEmailVerified = useCallback(async (value: boolean) => {
+    await saveEmailVerified(value);
+    setUser((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        emailVerified: value,
+      };
+    });
+  }, []);
+
+  const logout = useCallback(async () => {
+    await clearToken();
+    setUser(null);
+  }, []);
+
+  const value = useMemo<AuthContextValue>(() => ({
     user,
     loading,
-    login: (u: User) => setUser(u),
-    logout: () => setUser(null),
-  };
+    setSession,
+    setEmailVerified,
+    logout,
+    refreshAuth,
+  }), [user, loading, setSession, setEmailVerified, logout, refreshAuth]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
+  return context;
 }

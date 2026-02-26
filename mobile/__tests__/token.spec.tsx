@@ -1,4 +1,4 @@
-import { clearToken, getToken, saveToken } from "../utils/token";
+import { clearToken, getEmailVerified, getToken, saveEmailVerified, saveToken } from "../utils/token";
 
 describe("token utils", () => {
   beforeEach(() => {
@@ -22,6 +22,50 @@ describe("token utils", () => {
     await clearToken();
 
     expect(localStorage.removeItem).toHaveBeenCalledWith("auth_token");
+    expect(localStorage.removeItem).toHaveBeenCalledWith("auth_email_verified");
+  });
+
+  it("saveEmailVerified writes encoded value", async () => {
+    await saveEmailVerified(true);
+    await saveEmailVerified(false);
+
+    expect(localStorage.setItem).toHaveBeenCalledWith("auth_email_verified", "true");
+    expect(localStorage.setItem).toHaveBeenCalledWith("auth_email_verified", "false");
+  });
+
+  it("getEmailVerified decodes true/false values", async () => {
+    (localStorage.getItem as jest.Mock)
+      .mockReturnValueOnce("true")
+      .mockReturnValueOnce("false")
+      .mockReturnValueOnce(null);
+
+    await expect(getEmailVerified()).resolves.toBe(true);
+    await expect(getEmailVerified()).resolves.toBe(false);
+    await expect(getEmailVerified()).resolves.toBeNull();
+  });
+
+  it("saveEmailVerified swallows storage errors", async () => {
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    (localStorage.setItem as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("storage failed");
+    });
+
+    await expect(saveEmailVerified(true)).resolves.toBeUndefined();
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
+
+  it("getEmailVerified returns null on storage errors", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    (localStorage.getItem as jest.Mock).mockImplementationOnce(() => {
+      throw new Error("storage failed");
+    });
+
+    await expect(getEmailVerified()).resolves.toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 
   it("saveToken swallows storage errors", async () => {
