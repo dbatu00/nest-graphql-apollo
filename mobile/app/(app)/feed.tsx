@@ -5,7 +5,9 @@ import {
   ScrollView,
   Animated,
   Platform,
+  Easing,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { commonStyles as styles } from "@/styles/common";
 import { FeedHeader } from "@/components/layout/FeedHeader";
@@ -19,6 +21,10 @@ export default function Feed() {
 
   const [content, setContent] = useState("");
   const scrollY = useRef(new Animated.Value(0)).current;
+  const loaderSpin = useRef(new Animated.Value(0)).current;
+  const [showLoadingIndicator, setShowLoadingIndicator] = useState(feed.loading);
+  const loadingStartedAtRef = useRef<number | null>(feed.loading ? Date.now() : null);
+  const hideLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Composer shrinks from 200px (3 lines) to 30px (1 line) as you scroll
   const composerHeight = scrollY.interpolate({
@@ -39,9 +45,73 @@ export default function Feed() {
     setContent("");
   };
 
+  React.useEffect(() => {
+    if (feed.loading) {
+      if (hideLoaderTimeoutRef.current) {
+        clearTimeout(hideLoaderTimeoutRef.current);
+        hideLoaderTimeoutRef.current = null;
+      }
+
+      loadingStartedAtRef.current = Date.now();
+      setShowLoadingIndicator(true);
+      return;
+    }
+
+    const startedAt = loadingStartedAtRef.current;
+
+    if (!startedAt) {
+      setShowLoadingIndicator(false);
+      return;
+    }
+
+    const elapsed = Date.now() - startedAt;
+    const remaining = Math.max(0, 500 - elapsed);
+
+    hideLoaderTimeoutRef.current = setTimeout(() => {
+      setShowLoadingIndicator(false);
+      loadingStartedAtRef.current = null;
+      hideLoaderTimeoutRef.current = null;
+    }, remaining);
+  }, [feed.loading]);
+
+  React.useEffect(() => {
+    if (!showLoadingIndicator) {
+      loaderSpin.setValue(0);
+      return;
+    }
+
+    const spinLoop = Animated.loop(
+      Animated.timing(loaderSpin, {
+        toValue: 1,
+        duration: 800,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+
+    spinLoop.start();
+
+    return () => {
+      spinLoop.stop();
+    };
+  }, [showLoadingIndicator, loaderSpin]);
+
+  React.useEffect(() => {
+    return () => {
+      if (hideLoaderTimeoutRef.current) {
+        clearTimeout(hideLoaderTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const loaderRotate = loaderSpin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
   return (
     <View style={styles.container}>
-      <FeedHeader title="Feed" />
+      <FeedHeader title="Feed" onRefresh={feed.refresh} isRefreshing={feed.loading} />
       
       <Animated.View
         style={{
@@ -77,7 +147,13 @@ export default function Feed() {
         </Animated.View>
       </Animated.View>
 
-      {feed.loading && <Text>Loading…</Text>}
+      {showLoadingIndicator && (
+        <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 8 }}>
+          <Animated.View style={{ transform: [{ rotate: loaderRotate }] }}>
+            <Ionicons name="refresh" size={18} color="#2563eb" />
+          </Animated.View>
+        </View>
+      )}
       {feed.error && <Text>{feed.error}</Text>}
 
       <Animated.ScrollView

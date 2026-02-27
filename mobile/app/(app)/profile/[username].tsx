@@ -7,10 +7,13 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
+import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
+import { UserSettingsButton } from "@/components/common/UserSettingsButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import { graphqlFetch } from "@/utils/graphqlFetch";
@@ -164,24 +167,34 @@ export default function UsernameScreen() {
                 alignItems: "center",
               }}
             >
-              <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13 }}>Home</Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons name="home-outline" size={14} color="#fff" />
+                <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13, marginLeft: 6 }}>Home</Text>
+              </View>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderWidth: 0,
-                borderColor: "transparent",
-                borderRadius: 8,
-                backgroundColor: "rgba(37, 99, 235, 0.2)",
-                minWidth: 70,
-                alignItems: "center",
+            <UserSettingsButton
+              onPress={() => {
+                if (!username) {
+                  return;
+                }
+
+                router.push({
+                  pathname: "/profile/[username]/settings",
+                  params: { username },
+                });
               }}
-            >
-              <Text style={{ fontWeight: "600", color: "#2563eb", fontSize: 13 }}>Logout</Text>
-            </TouchableOpacity>
+              minWidth={70}
+              borderColor="#2563eb"
+            />
+
+            <FeedLogoutButton
+              onPress={handleLogout}
+              style={{ marginLeft: 8 }}
+              minWidth={70}
+              iconColor="#2563eb"
+              textColor="#2563eb"
+            />
           </View>
         </View>
       </View>

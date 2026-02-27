@@ -206,11 +206,13 @@ export const ActivityRow = ({
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => handleOpenLikesModal(targetPost.id)}
-              >
-                <Text>{targetPost.likesCount ?? 0}</Text>
-              </TouchableOpacity>
+              {(targetPost.likesCount ?? 0) > 0 && (
+                <TouchableOpacity
+                  onPress={() => handleOpenLikesModal(targetPost.id)}
+                >
+                  <Text>{targetPost.likesCount}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
