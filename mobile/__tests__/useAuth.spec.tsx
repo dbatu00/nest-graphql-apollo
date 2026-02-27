@@ -104,6 +104,43 @@ describe("useAuth", () => {
     expect(result.current.user).toBeNull();
   });
 
+  it("preserves session when refreshAuth hits transient failure", async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.setSession({
+        token: "new-token",
+        user: { id: 10, username: "bob" },
+        emailVerified: true,
+      });
+    });
+
+    (getToken as jest.Mock).mockResolvedValue("new-token");
+    (getCurrentUser as jest.Mock).mockRejectedValueOnce(new Error("network failed"));
+
+    await act(async () => {
+      const refreshed = await result.current.refreshAuth();
+      expect(refreshed).toEqual({
+        id: 10,
+        username: "bob",
+        displayName: undefined,
+        emailVerified: true,
+      });
+    });
+
+    expect(clearToken).not.toHaveBeenCalled();
+    expect(result.current.user).toEqual({
+      id: 10,
+      username: "bob",
+      displayName: undefined,
+      emailVerified: true,
+    });
+  });
+
   it("setSession and setEmailVerified update persisted state", async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
 

@@ -246,3 +246,30 @@ Reasoning:
 - Email delivery is external I/O and can be slow/unreliable.
 - Holding DB transactions during SMTP increases lock time and failure blast radius.
 - Current approach uses post-commit send with compensation handling for resend delivery failures.
+
+---
+
+## 2026-02-28 — Transient logout fix in mobile auth refresh
+
+Problem observed:
+
+- Any `getCurrentUser()` failure became `null`, and `refreshAuth()` treated `null` as invalid session.
+- Result: temporary network/backend issues could clear token and force logout.
+
+Decision:
+
+- Split current-user failures into two categories:
+  - auth-invalid failures (unauthorized/forbidden/token/jwt-like messages) -> return `null`
+  - transient failures (network/server/etc.) -> throw
+- In `refreshAuth()`, only clear token on auth-invalid (`null`) response.
+- On transient failure, keep existing session and return last known user.
+
+Implementation notes:
+
+- `mobile/utils/currentUser.tsx` now rethrows transient failures.
+- `mobile/hooks/useAuth.tsx` now catches transient failures and preserves session via a `useRef` snapshot (`userRef.current`).
+
+Outcome:
+
+- Invalid/expired tokens still log out correctly.
+- Temporary outages no longer cause forced logout.

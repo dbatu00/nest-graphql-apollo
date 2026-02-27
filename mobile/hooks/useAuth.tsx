@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getCurrentUser } from "@/utils/currentUser";
 import { clearToken, getEmailVerified, getToken, saveEmailVerified, saveToken } from "@/utils/token";
 
@@ -31,6 +31,11 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const userRef = useRef<AuthUser | null>(null);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const refreshAuth = useCallback(async () => {
     try {
@@ -40,7 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const currentUser = await getCurrentUser();
+      let currentUser: Awaited<ReturnType<typeof getCurrentUser>>;
+      try {
+        currentUser = await getCurrentUser();
+      } catch (err: unknown) {
+        console.warn("[useAuth] refreshAuth transient failure", err);
+        return userRef.current;
+      }
+
       if (!currentUser) {
         await clearToken();
         setUser(null);

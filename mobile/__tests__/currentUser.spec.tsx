@@ -19,11 +19,21 @@ describe("getCurrentUser", () => {
     expect(graphqlFetch).toHaveBeenCalledWith(ME_QUERY);
   });
 
-  it("returns null and warns when query fails", async () => {
+  it("returns null for auth failures", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
+    (graphqlFetch as jest.Mock).mockRejectedValueOnce(new Error("Unauthorized"));
+
+    await expect(getCurrentUser()).resolves.toBeNull();
+    expect(warnSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  it("rethrows transient failures", async () => {
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     (graphqlFetch as jest.Mock).mockRejectedValueOnce(new Error("network failed"));
 
-    await expect(getCurrentUser()).resolves.toBeNull();
+    await expect(getCurrentUser()).rejects.toThrow("network failed");
     expect(warnSpy).toHaveBeenCalled();
 
     warnSpy.mockRestore();
