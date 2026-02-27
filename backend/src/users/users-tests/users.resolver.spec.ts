@@ -3,6 +3,7 @@ import { UsersResolver } from '../users.resolver';
 describe('UsersResolver', () => {
     const usersService = {
         findByUsername: jest.fn(),
+        updateMyProfile: jest.fn(),
         isFollowing: jest.fn(),
         countFollowers: jest.fn(),
         countFollowing: jest.fn(),
@@ -28,6 +29,28 @@ describe('UsersResolver', () => {
 
         await expect(resolver.userByUsername('missing')).resolves.toBeNull();
         expect(usersService.findByUsername).toHaveBeenCalledWith('missing');
+    });
+
+    it('updateMyProfile delegates to service with current user id', async () => {
+        const updated = { id: 1, username: 'deniz', displayName: 'Deniz', bio: 'hello' };
+        usersService.updateMyProfile.mockResolvedValue(updated);
+
+        await expect(
+            resolver.updateMyProfile({ id: 1 } as any, 'Deniz', 'hello')
+        ).resolves.toBe(updated as any);
+
+        expect(usersService.updateMyProfile).toHaveBeenCalledWith(1, {
+            displayName: 'Deniz',
+            bio: 'hello',
+        });
+    });
+
+    it('updateMyProfile propagates service errors', async () => {
+        usersService.updateMyProfile.mockRejectedValue(new Error('update failed'));
+
+        await expect(
+            resolver.updateMyProfile({ id: 1 } as any, 'Deniz', 'hello')
+        ).rejects.toThrow('update failed');
     });
 
     it('followedByMe returns false when no current user', async () => {

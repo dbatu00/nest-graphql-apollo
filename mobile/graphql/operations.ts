@@ -188,6 +188,17 @@ export const ADD_POST_MUTATION = `
   }
 `;
 
+export const UPDATE_MY_PROFILE_MUTATION = `
+  mutation UpdateMyProfile($displayName: String, $bio: String) {
+    updateMyProfile(displayName: $displayName, bio: $bio) {
+      id
+      username
+      displayName
+      bio
+    }
+  }
+`;
+
 export const GET_LIKED_USERS_QUERY = `
   query GetLikedUsers($postId: Int!) {
     post(id: $postId) {

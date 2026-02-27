@@ -67,6 +67,7 @@ type Query {
 }
 
 type Mutation {
+  updateMyProfile(displayName: String, bio: String): User!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   likePost(postId: Int!): Boolean!
