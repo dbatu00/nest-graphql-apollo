@@ -3,7 +3,6 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
-import { UserSettingsButton } from "@/components/common/UserSettingsButton";
 
 type Props = {
   title: string;
@@ -28,17 +27,6 @@ export function FeedHeader({ title, onRefresh, isRefreshing = false }: Props) {
   const handleLogout = async () => {
     await logout();
     router.replace("/(auth)/login");
-  };
-
-  const handleSettings = () => {
-    if (!user?.username) {
-      return;
-    }
-
-    router.push({
-      pathname: "/profile/[username]/settings",
-      params: { username: user.username },
-    });
   };
 
   return (
@@ -111,8 +99,6 @@ export function FeedHeader({ title, onRefresh, isRefreshing = false }: Props) {
               </Text>
             </View>
           </TouchableOpacity>
-
-          <UserSettingsButton onPress={handleSettings} style={{ marginLeft: 8 }} borderColor="#fff" />
 
           <FeedLogoutButton onPress={handleLogout} style={{ marginLeft: 8 }} />
         </View>

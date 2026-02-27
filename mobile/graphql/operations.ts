@@ -105,6 +105,7 @@ export const ME_QUERY = `
       id
       username
       displayName
+      bio
       emailVerified
     }
   }

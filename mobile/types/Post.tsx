@@ -5,6 +5,7 @@ export type Post = {
   user: {
     id: number;
     username: string;
+    displayName?: string;
     followedByMe: boolean;
   };
   likedByMe?: boolean; // ✅ optional for activity feed

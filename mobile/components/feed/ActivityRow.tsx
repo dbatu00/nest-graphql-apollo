@@ -80,15 +80,18 @@ export const ActivityRow = ({
     if (type === "post") return null;
 
     if (type === "like") {
+      const actorLabel = actor.displayName?.trim() || actor.username;
+      const targetPostUserLabel = targetPost?.user.displayName?.trim() || targetPost?.user.username;
+
       return (
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={styles.headerText}>
             <ProfileLink username={actor.username}>
-              {actor.username}
+              {actorLabel}
             </ProfileLink>
             {" liked "}
             <ProfileLink username={targetPost?.user.username ?? ""}>
-              {targetPost?.user.username}
+              {targetPostUserLabel}
             </ProfileLink>
             {"'s post"}
           </Text>
@@ -100,15 +103,18 @@ export const ActivityRow = ({
     }
 
     if (type === "follow") {
+      const actorLabel = actor.displayName?.trim() || actor.username;
+      const targetUserLabel = targetUser?.displayName?.trim() || targetUser?.username;
+
       return (
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <Text style={styles.headerText}>
             <ProfileLink username={actor.username}>
-              {actor.username}
+              {actorLabel}
             </ProfileLink>
             {" followed "}
             <ProfileLink username={targetUser?.username ?? ""}>
-              {targetUser?.username}
+              {targetUserLabel}
             </ProfileLink>
           </Text>
           <Text style={styles.timestamp}>
@@ -132,7 +138,7 @@ export const ActivityRow = ({
           user={{
             id: targetPost.user.id,
             username: targetPost.user.username,
-            displayName: targetPost.user.username,
+            displayName: targetPost.user.displayName,
             followedByMe: targetPost.user.followedByMe,
           }}
           currentUserId={currentUserId}

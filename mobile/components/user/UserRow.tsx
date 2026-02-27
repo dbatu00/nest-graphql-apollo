@@ -27,6 +27,7 @@ export function UserRow({
 }: UserRowProps) {
   const isSelf = currentUserId === user.id;
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
+  const label = user.displayName?.trim() || user.username;
 
   const cardStyle = !isCompact ? {
     backgroundColor: "#fff",
@@ -68,7 +69,7 @@ export function UserRow({
             borderRadius: 8,
           }}
         >
-          <Text style={{ fontWeight: "600", fontSize: isCompact ? 13 : 14, color: "#1e40af" }}>{user.username}</Text>
+          <Text style={{ fontWeight: "600", fontSize: isCompact ? 13 : 14, color: "#1e40af" }}>{label}</Text>
         </View>
       </ProfileLink>
 

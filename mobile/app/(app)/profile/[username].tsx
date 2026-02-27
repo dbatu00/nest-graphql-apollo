@@ -17,7 +17,7 @@ import { UserSettingsButton } from "@/components/common/UserSettingsButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { FOLLOWERS_QUERY, FOLLOWING_QUERY } from "@/graphql/operations";
+import { FOLLOWERS_QUERY, FOLLOWING_QUERY, USER_PROFILE_QUERY } from "@/graphql/operations";
 
 type Tab =
   | "posts"
@@ -33,11 +33,16 @@ type FollowUser = {
   followedByMe?: boolean;
 };
 
+type ProfileMeta = {
+  displayName?: string;
+  bio?: string;
+};
+
 export default function UsernameScreen() {
   const { username } =
     useLocalSearchParams<{ username: string }>();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const [tab, setTab] = useState<Tab>("posts");
 
@@ -63,6 +68,43 @@ export default function UsernameScreen() {
   const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
   const [followLoading, setFollowLoading] =
     useState(false);
+  const [profileMeta, setProfileMeta] = useState<ProfileMeta | null>(null);
+
+  useEffect(() => {
+    if (!username) {
+      setProfileMeta(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfileMeta = async () => {
+      try {
+        const data = await graphqlFetch<{
+          userByUsername: {
+            displayName?: string;
+            bio?: string;
+          } | null;
+        }>(USER_PROFILE_QUERY, { username });
+
+        if (cancelled) {
+          return;
+        }
+
+        setProfileMeta(data.userByUsername ?? null);
+      } catch {
+        if (!cancelled) {
+          setProfileMeta(null);
+        }
+      }
+    };
+
+    loadProfileMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [username]);
 
   useEffect(() => {
     if (
@@ -121,6 +163,9 @@ export default function UsernameScreen() {
     router.replace("/(auth)/login");
   };
 
+  const profileDisplayName = profileMeta?.displayName?.trim() || username;
+  const profileBio = profileMeta?.bio?.trim();
+
   /* ---------------- RENDER ---------------- */
 
   return (
@@ -142,16 +187,40 @@ export default function UsernameScreen() {
           android: { elevation: 1 },
         }),
       }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: "700",
-              color: "#1f2937",
-            }}
-          >
-            @{username}
-          </Text>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: "700",
+                color: "#1f2937",
+              }}
+              numberOfLines={1}
+            >
+              {profileDisplayName}
+            </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "500",
+                color: "#6b7280",
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+            >
+              @{username}
+            </Text>
+            <Text
+              style={{
+                marginTop: 8,
+                fontSize: 13,
+                color: profileBio ? "#374151" : "#9ca3af",
+              }}
+              numberOfLines={2}
+            >
+              {profileBio || "No bio yet"}
+            </Text>
+          </View>
           
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TouchableOpacity
@@ -173,20 +242,22 @@ export default function UsernameScreen() {
               </View>
             </TouchableOpacity>
 
-            <UserSettingsButton
-              onPress={() => {
-                if (!username) {
-                  return;
-                }
+            {user?.username === username && (
+              <UserSettingsButton
+                onPress={() => {
+                  if (!username) {
+                    return;
+                  }
 
-                router.push({
-                  pathname: "/profile/[username]/settings",
-                  params: { username },
-                });
-              }}
-              minWidth={70}
-              borderColor="#2563eb"
-            />
+                  router.push({
+                    pathname: "/profile/[username]/settings",
+                    params: { username },
+                  });
+                }}
+                minWidth={70}
+                borderColor="#2563eb"
+              />
+            )}
 
             <FeedLogoutButton
               onPress={handleLogout}

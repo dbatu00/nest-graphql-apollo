@@ -12,16 +12,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { UPDATE_MY_PROFILE_MUTATION, USER_PROFILE_QUERY } from "@/graphql/operations";
+import { ME_QUERY, UPDATE_MY_PROFILE_MUTATION } from "@/graphql/operations";
 import { useAuth } from "@/hooks/useAuth";
 
-type ProfileQueryData = {
-  userByUsername: {
+type MyProfileData = {
+  me: {
     id: number;
     username: string;
     displayName?: string;
     bio?: string;
-  } | null;
+  };
 };
 
 type UpdateProfileData = {
@@ -36,7 +36,7 @@ type UpdateProfileData = {
 export default function ProfileSettingsScreen() {
   const { username } = useLocalSearchParams<{ username: string | string[] }>();
   const router = useRouter();
-  const { refreshAuth } = useAuth();
+  const { user, loading: authLoading, refreshAuth } = useAuth();
   const resolvedUsername = Array.isArray(username) ? username[0] : username;
 
   const [displayName, setDisplayName] = useState("");
@@ -48,10 +48,27 @@ export default function ProfileSettingsScreen() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    if (resolvedUsername && user.username !== resolvedUsername) {
+      router.replace({
+        pathname: "/profile/[username]",
+        params: { username: resolvedUsername },
+      });
+      return;
+    }
+
     let cancelled = false;
 
     async function load() {
-      if (!resolvedUsername) {
+      if (!user?.username) {
         setLoading(false);
         setError("Missing username");
         return;
@@ -61,21 +78,14 @@ export default function ProfileSettingsScreen() {
       setError(null);
 
       try {
-        const data = await graphqlFetch<ProfileQueryData>(USER_PROFILE_QUERY, {
-          username: resolvedUsername,
-        });
+        const data = await graphqlFetch<MyProfileData>(ME_QUERY);
 
         if (cancelled) {
           return;
         }
 
-        if (!data.userByUsername) {
-          setError("Profile not found");
-          return;
-        }
-
-        setDisplayName(data.userByUsername.displayName ?? "");
-        setBio(data.userByUsername.bio ?? "");
+        setDisplayName((data.me.displayName ?? "").trim());
+        setBio((data.me.bio ?? "").trim());
       } catch (err: unknown) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -92,10 +102,10 @@ export default function ProfileSettingsScreen() {
     return () => {
       cancelled = true;
     };
-  }, [resolvedUsername]);
+  }, [authLoading, user, resolvedUsername, router]);
 
   const handleSave = async () => {
-    if (!resolvedUsername || saving) {
+    if (!user?.username || saving) {
       return;
     }
 
@@ -109,8 +119,8 @@ export default function ProfileSettingsScreen() {
         bio,
       });
 
-      setDisplayName(data.updateMyProfile.displayName ?? "");
-      setBio(data.updateMyProfile.bio ?? "");
+      setDisplayName((data.updateMyProfile.displayName ?? "").trim());
+      setBio((data.updateMyProfile.bio ?? "").trim());
       setSuccess("Profile updated");
       await refreshAuth();
     } catch (err: unknown) {
