@@ -6,6 +6,11 @@ type Props = {
   style?: StyleProp<ViewStyle>;
   minWidth?: number;
   borderColor?: string;
+  label?: string;
+  iconName?: keyof typeof Ionicons.glyphMap;
+  backgroundColor?: string;
+  textColor?: string;
+  iconColor?: string;
 };
 
 export function UserSettingsButton({
@@ -13,6 +18,11 @@ export function UserSettingsButton({
   style,
   minWidth = 80,
   borderColor = "#fff",
+  label = "Settings",
+  iconName = "settings-outline",
+  backgroundColor = "#fff",
+  textColor = "#1d4ed8",
+  iconColor = "#1d4ed8",
 }: Props) {
   return (
     <TouchableOpacity
@@ -24,7 +34,7 @@ export function UserSettingsButton({
           borderWidth: 1,
           borderColor,
           borderRadius: 8,
-          backgroundColor: "#fff",
+          backgroundColor,
           minWidth,
           alignItems: "center",
         },
@@ -32,9 +42,9 @@ export function UserSettingsButton({
       ]}
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Ionicons name="settings-outline" size={14} color="#1d4ed8" />
-        <Text style={{ fontWeight: "600", color: "#1d4ed8", fontSize: 13, marginLeft: 6 }}>
-          Settings
+        <Ionicons name={iconName} size={14} color={iconColor} />
+        <Text style={{ fontWeight: "600", color: textColor, fontSize: 13, marginLeft: 6 }}>
+          {label}
         </Text>
       </View>
     </TouchableOpacity>

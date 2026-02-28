@@ -37,6 +37,14 @@ export class User {
   @Column({ length: 160, nullable: true })
   bio?: string;
 
+  @Field({ nullable: true })
+  @Column({ nullable: true, length: 500 })
+  avatarUrl?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true, length: 500 })
+  coverUrl?: string;
+
 
   @Field(() => [Post])
   @OneToMany(() => Post, post => post.user)

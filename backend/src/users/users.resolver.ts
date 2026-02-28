@@ -27,10 +27,34 @@ export class UsersResolver {
     @CurrentUser() user: User,
     @Args('displayName', { nullable: true }) displayName?: string,
     @Args('bio', { nullable: true }) bio?: string,
+    @Args('avatarUrl', { nullable: true }) avatarUrl?: string,
+    @Args('coverUrl', { nullable: true }) coverUrl?: string,
   ): Promise<User> {
+    const input: {
+      displayName?: string;
+      bio?: string;
+      avatarUrl?: string;
+      coverUrl?: string;
+    } = {};
+
+    if (typeof displayName === 'string') {
+      input.displayName = displayName;
+    }
+
+    if (typeof bio === 'string') {
+      input.bio = bio;
+    }
+
+    if (typeof avatarUrl === 'string') {
+      input.avatarUrl = avatarUrl;
+    }
+
+    if (typeof coverUrl === 'string') {
+      input.coverUrl = coverUrl;
+    }
+
     return this.usersService.updateMyProfile(user.id, {
-      displayName,
-      bio,
+      ...input,
     });
   }
 

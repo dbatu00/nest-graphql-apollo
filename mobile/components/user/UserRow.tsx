@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, Platform } from "react-native";
+import { View, Text, Pressable, Platform, Image } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ProfileLink } from "@/components/common/ProfileLink";
 
@@ -8,6 +8,7 @@ type UserRowProps = {
     id: number;
     username: string;
     displayName?: string;
+    avatarUrl?: string;
     followedByMe?: boolean;
   };
   currentUserId?: number;
@@ -28,6 +29,8 @@ export function UserRow({
   const isSelf = currentUserId === user.id;
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
   const label = user.displayName?.trim() || user.username;
+  const avatarUri = user.avatarUrl?.trim()
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(label)}&background=dbeafe&color=1e40af&size=64`;
 
   const cardStyle = !isCompact ? {
     backgroundColor: "#fff",
@@ -60,18 +63,26 @@ export function UserRow({
       }}
     >
       {/* Name / Profile link */}
-      <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
-        <View
-          style={{
-            backgroundColor: "#dbeafe",
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{ fontWeight: "600", fontSize: isCompact ? 13 : 14, color: "#1e40af" }}>{label}</Text>
-        </View>
-      </ProfileLink>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
+          <Image
+            source={{ uri: avatarUri }}
+            style={{ width: 40, height: 40, borderRadius: 20, marginRight: 8 }}
+          />
+        </ProfileLink>
+
+        <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
+          <Text
+            style={{
+              fontWeight: "500",
+              fontSize: isCompact ? 13 : 14,
+              color: "#1f2937",
+            }}
+          >
+            {label}
+          </Text>
+        </ProfileLink>
+      </View>
 
       {/* Action button */}
       {isSelf ? (

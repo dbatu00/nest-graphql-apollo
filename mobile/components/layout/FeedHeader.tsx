@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { View, Text, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -5,12 +6,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
 
 type Props = {
-  title: string;
+  title?: string;
   onRefresh?: () => void | Promise<void>;
   isRefreshing?: boolean;
+  rightActions?: ReactNode;
 };
 
-export function FeedHeader({ title, onRefresh, isRefreshing = false }: Props) {
+export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false, rightActions }: Props) {
   const { user, logout } = useAuth();
 
   const handleProfile = () => {
@@ -78,30 +80,34 @@ export function FeedHeader({ title, onRefresh, isRefreshing = false }: Props) {
           )}
         </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <TouchableOpacity
-            onPress={handleProfile}
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderWidth: 0,
-              borderColor: "transparent",
-              borderRadius: 8,
-              backgroundColor: "rgba(255, 255, 255, 0.92)",
-              minWidth: 80,
-              alignItems: "center",
-            }}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Ionicons name="person-circle-outline" size={14} color="#1d4ed8" />
-              <Text style={{ fontWeight: "600", color: "#1d4ed8", fontSize: 13, marginLeft: 6 }}>
-                Profile
-              </Text>
-            </View>
-          </TouchableOpacity>
+        {rightActions ? (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>{rightActions}</View>
+        ) : (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TouchableOpacity
+              onPress={handleProfile}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: "transparent",
+                borderRadius: 8,
+                backgroundColor: "rgba(255, 255, 255, 0.92)",
+                minWidth: 80,
+                alignItems: "center",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons name="person-circle-outline" size={14} color="#1d4ed8" />
+                <Text style={{ fontWeight: "600", color: "#1d4ed8", fontSize: 13, marginLeft: 6 }}>
+                  Profile
+                </Text>
+              </View>
+            </TouchableOpacity>
 
-          <FeedLogoutButton onPress={handleLogout} style={{ marginLeft: 8 }} />
-        </View>
+            <FeedLogoutButton onPress={handleLogout} style={{ marginLeft: 8 }} />
+          </View>
+        )}
       </View>
     </View>
   );

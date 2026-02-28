@@ -111,7 +111,7 @@ export default function Feed() {
 
   return (
     <View style={styles.container}>
-      <FeedHeader title="Feed" onRefresh={feed.refresh} isRefreshing={feed.loading} />
+      <FeedHeader title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />
       
       <Animated.View
         style={{

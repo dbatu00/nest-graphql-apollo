@@ -24,6 +24,8 @@ type User {
   displayName: String
   emailVerified: Boolean!
   bio: String
+  avatarUrl: String
+  coverUrl: String
   posts: [Post!]!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -67,7 +69,7 @@ type Query {
 }
 
 type Mutation {
-  updateMyProfile(displayName: String, bio: String): User!
+  updateMyProfile(displayName: String, bio: String, avatarUrl: String, coverUrl: String): User!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   likePost(postId: Int!): Boolean!

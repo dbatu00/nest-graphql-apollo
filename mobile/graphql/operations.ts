@@ -10,6 +10,7 @@ export const FEED_QUERY = `
         id
         username
         displayName
+        avatarUrl
         followedByMe
       }
 
@@ -17,6 +18,7 @@ export const FEED_QUERY = `
         id
         username
         displayName
+        avatarUrl
         followedByMe
       }
 
@@ -30,6 +32,7 @@ export const FEED_QUERY = `
           id
           username
           displayName
+          avatarUrl
           followedByMe
         }
       }
@@ -44,6 +47,8 @@ export const USER_PROFILE_QUERY = `
       username
       displayName
       bio
+      avatarUrl
+      coverUrl
       followersCount
       followingCount
       posts {
@@ -65,6 +70,7 @@ export const LIKED_POSTS_QUERY = `
         id
         username
         displayName
+        avatarUrl
         followedByMe
       }
       likesCount
@@ -81,6 +87,7 @@ export const FOLLOWERS_WITH_FOLLOW_STATE_QUERY = `
         id
         username
         displayName
+        avatarUrl
       }
     }
   }
@@ -94,6 +101,7 @@ export const FOLLOWING_WITH_FOLLOW_STATE_QUERY = `
         id
         username
         displayName
+        avatarUrl
       }
     }
   }
@@ -106,6 +114,8 @@ export const ME_QUERY = `
       username
       displayName
       bio
+      avatarUrl
+      coverUrl
       emailVerified
     }
   }
@@ -190,12 +200,14 @@ export const ADD_POST_MUTATION = `
 `;
 
 export const UPDATE_MY_PROFILE_MUTATION = `
-  mutation UpdateMyProfile($displayName: String, $bio: String) {
-    updateMyProfile(displayName: $displayName, bio: $bio) {
+  mutation UpdateMyProfile($displayName: String, $bio: String, $avatarUrl: String, $coverUrl: String) {
+    updateMyProfile(displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl) {
       id
       username
       displayName
       bio
+      avatarUrl
+      coverUrl
     }
   }
 `;
@@ -207,6 +219,7 @@ export const GET_LIKED_USERS_QUERY = `
         id
         username
         displayName
+        avatarUrl
         followedByMe
       }
     }
@@ -219,6 +232,7 @@ export const FOLLOWERS_QUERY = `
       id
       username
       displayName
+      avatarUrl
       followedByMe
     }
   }
@@ -230,6 +244,7 @@ export const FOLLOWING_QUERY = `
       id
       username
       displayName
+      avatarUrl
       followedByMe
     }
   }

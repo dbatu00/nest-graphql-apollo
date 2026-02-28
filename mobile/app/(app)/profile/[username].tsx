@@ -6,14 +6,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
-import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
+import { FeedHeader } from "@/components/layout/FeedHeader";
 import { UserSettingsButton } from "@/components/common/UserSettingsButton";
+import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import { graphqlFetch } from "@/utils/graphqlFetch";
@@ -30,12 +32,15 @@ type FollowUser = {
   id: number;
   username: string;
   displayName?: string;
+  avatarUrl?: string;
   followedByMe?: boolean;
 };
 
 type ProfileMeta = {
   displayName?: string;
   bio?: string;
+  avatarUrl?: string;
+  coverUrl?: string;
 };
 
 export default function UsernameScreen() {
@@ -84,6 +89,8 @@ export default function UsernameScreen() {
           userByUsername: {
             displayName?: string;
             bio?: string;
+            avatarUrl?: string;
+            coverUrl?: string;
           } | null;
         }>(USER_PROFILE_QUERY, { username });
 
@@ -158,91 +165,34 @@ export default function UsernameScreen() {
     );
   };
 
+  const profileDisplayName = profileMeta?.displayName?.trim() || username;
+  const profileBio = profileMeta?.bio?.trim();
+  const profileAvatarUrl = profileMeta?.avatarUrl?.trim();
+  const profileCoverUrl = profileMeta?.coverUrl?.trim();
+  const isOwnProfile = user?.username === username;
+
   const handleLogout = async () => {
     await logout();
     router.replace("/(auth)/login");
   };
 
-  const profileDisplayName = profileMeta?.displayName?.trim() || username;
-  const profileBio = profileMeta?.bio?.trim();
-
   /* ---------------- RENDER ---------------- */
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={{ 
-        paddingHorizontal: 16, 
-        paddingVertical: 14,
-        backgroundColor: "#fff",
-        borderBottomWidth: 0,
-        marginBottom: 12,
-        ...Platform.select({
-          ios: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.04,
-            shadowRadius: 3,
-          },
-          android: { elevation: 1 },
-        }),
-      }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "700",
-                color: "#1f2937",
-              }}
-              numberOfLines={1}
-            >
-              {profileDisplayName}
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: "500",
-                color: "#6b7280",
-                marginTop: 2,
-              }}
-              numberOfLines={1}
-            >
-              @{username}
-            </Text>
-            <Text
-              style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: profileBio ? "#374151" : "#9ca3af",
-              }}
-              numberOfLines={2}
-            >
-              {profileBio || "No bio yet"}
-            </Text>
-          </View>
-          
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <TouchableOpacity
+      <FeedHeader
+        title="BookBook"
+        rightActions={(
+          <>
+            <UserSettingsButton
               onPress={() => router.push("/feed")}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderWidth: 0,
-                borderColor: "transparent",
-                borderRadius: 8,
-                backgroundColor: "#2563eb",
-                minWidth: 70,
-                alignItems: "center",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="home-outline" size={14} color="#fff" />
-                <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13, marginLeft: 6 }}>Home</Text>
-              </View>
-            </TouchableOpacity>
+              minWidth={70}
+              borderColor="rgba(255, 255, 255, 0.92)"
+              label="Home"
+              iconName="home-outline"
+            />
 
-            {user?.username === username && (
+            {isOwnProfile && (
               <UserSettingsButton
                 onPress={() => {
                   if (!username) {
@@ -255,7 +205,8 @@ export default function UsernameScreen() {
                   });
                 }}
                 minWidth={70}
-                borderColor="#2563eb"
+                borderColor="rgba(255, 255, 255, 0.92)"
+                style={{ marginLeft: 8 }}
               />
             )}
 
@@ -263,10 +214,107 @@ export default function UsernameScreen() {
               onPress={handleLogout}
               style={{ marginLeft: 8 }}
               minWidth={70}
-              iconColor="#2563eb"
-              textColor="#2563eb"
             />
+          </>
+        )}
+      />
+
+      {/* Profile card */}
+      <View style={{ 
+        paddingHorizontal: 16, 
+        paddingTop: 12,
+        borderBottomWidth: 0,
+        marginBottom: 12,
+      }}>
+        <View
+          style={{
+            height: 240,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#bfdbfe",
+            backgroundColor: "#eff6ff",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {profileCoverUrl ? (
+            <Image
+              source={{ uri: profileCoverUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={24} color="#60a5fa" />
+              <Text style={{ marginTop: 6, color: "#60a5fa", fontWeight: "500", fontSize: 12 }}>
+                Cover photo
+              </Text>
+            </>
+          )}
+
+          <View
+            style={{
+              position: "absolute",
+              left: 14,
+              bottom: 12,
+              width: 84,
+              height: 84,
+              borderRadius: 42,
+              borderWidth: 3,
+              borderColor: "#fff",
+              backgroundColor: "#dbeafe",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
+          >
+            {profileAvatarUrl ? (
+              <Image
+                source={{ uri: profileAvatarUrl }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="person-outline" size={34} color="#3b82f6" />
+            )}
           </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 4 }}>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1f2937",
+            }}
+            numberOfLines={1}
+          >
+            {profileDisplayName}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "500",
+              color: "#6b7280",
+              marginTop: 2,
+            }}
+            numberOfLines={1}
+          >
+            @{username}
+          </Text>
+          <Text
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              color: profileBio ? "#374151" : "#9ca3af",
+            }}
+            numberOfLines={2}
+          >
+            {profileBio || "No bio yet"}
+          </Text>
         </View>
       </View>
 

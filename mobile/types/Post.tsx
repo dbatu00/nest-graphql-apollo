@@ -6,6 +6,7 @@ export type Post = {
     id: number;
     username: string;
     displayName?: string;
+    avatarUrl?: string;
     followedByMe: boolean;
   };
   likedByMe?: boolean; // ✅ optional for activity feed
