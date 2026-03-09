@@ -22,6 +22,7 @@ type User {
   id: Int!
   username: String!
   displayName: String
+  email: String!
   emailVerified: Boolean!
   bio: String
   avatarUrl: String

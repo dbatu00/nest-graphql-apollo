@@ -122,3 +122,33 @@ get rid of unused fields on query calls made in client
 unify profile tab refresh behaviour -> either all refresh on change or none
 ------------
 get rid of jitters on web side loadings with min fix loading time and unify loading icon usage
+------------
+me query should be in auth?
+------------
+mobile/settings.tsx: 
+
+type MyProfileData = {
+  me: {
+    id: number;
+    username: string;
+    displayName?: string;
+    bio?: string;
+    avatarUrl?: string;
+    coverUrl?: string;
+    email: string;
+  };
+};
+
+type UpdateProfileData = {
+  updateMyProfile: {
+    id: number;
+    username: string;
+    displayName?: string;
+    bio?: string;
+    avatarUrl?: string;
+    coverUrl?: string;
+    email: string;
+  };
+};
+
+Redundant?

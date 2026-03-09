@@ -117,6 +117,7 @@ export const ME_QUERY = `
       avatarUrl
       coverUrl
       emailVerified
+      email
     }
   }
 `;
