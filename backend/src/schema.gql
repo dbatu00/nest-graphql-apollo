@@ -78,7 +78,9 @@ type Mutation {
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
   verifyEmail(token: String!): Boolean!
-  resendMyVerificationEmail: Boolean!
+  resendMyVerificationLink: Boolean!
+  changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
+  changeMyEmail(currentPassword: String!, newEmail: String!): Boolean!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!
 }

@@ -157,8 +157,8 @@ export const VERIFY_EMAIL_MUTATION = `
 `;
 
 export const RESEND_VERIFICATION_EMAIL_MUTATION = `
-  mutation ResendMyVerificationEmail {
-    resendMyVerificationEmail
+  mutation resendMyVerificationLink {
+    resendMyVerificationLink
   }
 `;
 

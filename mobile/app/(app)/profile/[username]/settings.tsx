@@ -58,6 +58,99 @@ const TABS = [
 ];
 
 export default function ProfileSettingsScreen() {
+  // --- Account mutation handlers ---
+  const handleChangeEmail = async () => {
+    setError(null);
+    setSuccess(null);
+    if (!newEmail.trim() || !confirmNewEmail.trim()) {
+      setError("Please enter and confirm your new email.");
+      return;
+    }
+    if (newEmail.trim() !== confirmNewEmail.trim()) {
+      setError("New email and confirmation do not match.");
+      return;
+    }
+    if (!currentPassword.trim()) {
+      setError("Current password is required to change email.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await graphqlFetch<{ changeMyEmail: boolean }>(
+        `mutation ChangeMyEmail($currentPassword: String!, $newEmail: String!) { changeMyEmail(currentPassword: $currentPassword, newEmail: $newEmail) }`,
+        { currentPassword, newEmail }
+      );
+      if (result.changeMyEmail) {
+        setSuccess("Email change requested. Please check your new email for a verification link.");
+        setCurrentEmail(newEmail);
+        setNewEmail("");
+        setConfirmNewEmail("");
+        await refreshAuth();
+      } else {
+        setError("Failed to change email.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to change email.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setError(null);
+    setSuccess(null);
+    if (!newPassword.trim() || !confirmNewPassword.trim()) {
+      setError("Please enter and confirm your new password.");
+      return;
+    }
+    if (newPassword.trim() !== confirmNewPassword.trim()) {
+      setError("New password and confirmation do not match.");
+      return;
+    }
+    if (!currentPassword.trim()) {
+      setError("Current password is required to change password.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await graphqlFetch<{ changeMyPassword: boolean }>(
+        `mutation ChangeMyPassword($currentPassword: String!, $newPassword: String!) { changeMyPassword(currentPassword: $currentPassword, newPassword: $newPassword) }`,
+        { currentPassword, newPassword }
+      );
+      if (result.changeMyPassword) {
+        setSuccess("Password changed successfully.");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        await refreshAuth();
+      } else {
+        setError("Failed to change password.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to change password.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResendVerificationLink = async () => {
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+    try {
+      const result = await graphqlFetch<{ resendMyVerificationLink: boolean }>(
+        `mutation { resendMyVerificationLink }`
+      );
+      if (result.resendMyVerificationLink) {
+        setSuccess("Verification link sent. Please check your email.");
+      } else {
+        setError("Failed to resend verification link.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification link.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const [activeTab, setActiveTab] = useState<"about" | "account">("about");
   const screenWidth = Dimensions.get("window").width;
   const screenHeight = Dimensions.get("window").height;
@@ -588,8 +681,8 @@ export default function ProfileSettingsScreen() {
           </View>
 
           <TouchableOpacity
-            onPress={() => { }}
-            disabled={true}
+            onPress={handleChangeEmail}
+            disabled={saving}
             style={{
               marginTop: 0,
               backgroundColor: "#2563eb",
@@ -597,10 +690,54 @@ export default function ProfileSettingsScreen() {
               alignItems: "center",
               justifyContent: "center",
               paddingVertical: 12,
-              opacity: 0.7,
+              opacity: saving ? 0.7 : 1,
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Save changes</Text>
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Email</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleChangePassword}
+            disabled={saving}
+            style={{
+              marginTop: 12,
+              backgroundColor: "#2563eb",
+              borderRadius: 10,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingVertical: 12,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Password</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleResendVerificationLink}
+            disabled={saving}
+            style={{
+              marginTop: 12,
+              backgroundColor: "#2563eb",
+              borderRadius: 10,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingVertical: 12,
+              opacity: saving ? 0.7 : 1,
+            }}
+          >
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Resend Verification Link</Text>
+            )}
           </TouchableOpacity>
         </ScrollView>
       )}

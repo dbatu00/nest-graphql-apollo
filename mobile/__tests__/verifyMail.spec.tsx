@@ -33,7 +33,7 @@ describe("VerifyMail screen", () => {
       refreshAuth,
     });
     refreshAuth.mockResolvedValue({ id: 1, username: "deniz", emailVerified: false });
-    (graphqlFetch as jest.Mock).mockResolvedValue({ resendMyVerificationEmail: true });
+    (graphqlFetch as jest.Mock).mockResolvedValue({ resendMyVerificationLink: true });
   });
 
   afterEach(() => {

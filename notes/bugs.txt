@@ -1,17 +1,10 @@
-# Bugs
 
-Status: active notes present.
+mobile: scroll jitter on bottom of feed - 2posts
+mobile: can access verify-link url while not logged in
 
-When adding bugs, use this format:
-
-scroll jitter on bottom of feed - 2posts
-
-backend: jwt secret logged on module load - high
 backend: follows resolver assumes raw/entities same length and can throw - medium
 backend: activity log accepts invalid like/follow payloads without targets - medium
-backend: auth uses plain-text password storage/compare - high
-backend: app module has hardcoded postgres credentials - high
 backend: typeorm synchronize=true in app module - medium
 backend: deletePost flow is not transactional (activity delete + post remove split) - medium
 backend: activity resolver throws generic Error instead of framework exception - low
-mobile: transient network/me fetch failure clears token and logs user out in refreshAuth - fixed (2026-02-28)
+backend: user gets throttled on verify but can change mail

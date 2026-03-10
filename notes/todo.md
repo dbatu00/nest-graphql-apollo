@@ -152,3 +152,15 @@ type UpdateProfileData = {
 };
 
 Redundant?
+
+----------------
+show format errors as the user is typing without waiting for server answer
+----------------
+exit button for verifymail page
+----------------
+when not logged in but go to a profile page, redirect to login first thing before loading empty component etc
+----------------
+settings: grey out save changes if there were no changes
+----------------
+settings: remember changes between tabs?
+----------------

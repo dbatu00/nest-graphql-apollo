@@ -27,7 +27,11 @@ export class AuthResolver {
         @Args("email") email: string,
         @Args("password") password: string
     ) {
-        return this.authService.signUp(username, email, password);
+        try {
+            return this.authService.signUp(username, email, password);
+        } catch (error) {
+            throw new Error(error?.message || "Sign up failed");
+        }
     }
 
     @Mutation(() => AuthPayload)
@@ -45,7 +49,32 @@ export class AuthResolver {
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
-    resendMyVerificationEmail(@CurrentUser() user: User) {
-        return this.authService.resendMyVerificationEmail(user.id);
+    resendMyVerificationLink(@CurrentUser() user: User) {
+        try {
+            return this.authService.resendMyVerificationLink(user.id);
+        } catch (error) {
+            throw new Error(error?.message || "Failed to resend verification link");
+        }
+    }
+
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    async changeMyPassword(
+        @CurrentUser() user: User,
+        @Args('currentPassword') currentPassword: string,
+        @Args('newPassword') newPassword: string
+    ): Promise<boolean> {
+        return this.authService.changeMyPassword(user.id, currentPassword, newPassword);
+    }
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    async changeMyEmail(
+        @CurrentUser() user: User,
+        @Args('currentPassword') currentPassword: string,
+        @Args('newEmail') newEmail: string
+    ): Promise<boolean> {
+        return this.authService.changeMyEmail(user.id, currentPassword, newEmail);
     }
 }
