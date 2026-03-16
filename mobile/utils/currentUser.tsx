@@ -1,5 +1,5 @@
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { ME_QUERY } from "@/graphql/operations";
+import { AUTH_ME_QUERY } from "@/graphql/operations";
 
 function isAuthFailure(err: unknown): boolean {
   const message = err instanceof Error ? err.message.toLowerCase() : "";
@@ -21,7 +21,7 @@ export async function getCurrentUser() {
         displayName?: string;
         emailVerified: boolean;
       };
-    }>(ME_QUERY);
+    }>(AUTH_ME_QUERY);
 
     return data.me;
   } catch (err: unknown) {

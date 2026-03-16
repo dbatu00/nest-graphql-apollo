@@ -35,7 +35,7 @@ describe("Login screen", () => {
 
     fireEvent.press(getAllByText("Login")[1]);
 
-    expect(getByText("Username and password required")).toBeTruthy();
+    expect(getByText("Username or email and password required")).toBeTruthy();
     expect(graphqlFetch).not.toHaveBeenCalled();
   });
 
@@ -54,14 +54,14 @@ describe("Login screen", () => {
 
     const { getByPlaceholderText, getAllByText } = render(<Login />);
 
-    fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
-    fireEvent.changeText(getByPlaceholderText("Password"), "secret");
+    fireEvent.changeText(getByPlaceholderText("Username or Email"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Password"), "secret123");
     fireEvent.press(getAllByText("Login")[1]);
 
     await waitFor(() => {
       expect(graphqlFetch).toHaveBeenCalledWith(LOGIN_MUTATION, {
-        username: "deniz",
-        password: "secret",
+        identifier: "deniz",
+        password: "secret123",
       });
     });
 
@@ -91,8 +91,8 @@ describe("Login screen", () => {
 
     const { getByPlaceholderText, getAllByText } = render(<Login />);
 
-    fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
-    fireEvent.changeText(getByPlaceholderText("Password"), "secret");
+    fireEvent.changeText(getByPlaceholderText("Username or Email"), "deniz@example.com");
+    fireEvent.changeText(getByPlaceholderText("Password"), "secret123");
     fireEvent.press(getAllByText("Login")[1]);
 
     await waitFor(() => {
@@ -105,8 +105,8 @@ describe("Login screen", () => {
 
     const { getByPlaceholderText, getAllByText, getByText } = render(<Login />);
 
-    fireEvent.changeText(getByPlaceholderText("Username"), "deniz");
-    fireEvent.changeText(getByPlaceholderText("Password"), "wrong");
+    fireEvent.changeText(getByPlaceholderText("Username or Email"), "deniz");
+    fireEvent.changeText(getByPlaceholderText("Password"), "wrongpass");
     fireEvent.press(getAllByText("Login")[1]);
 
     await waitFor(() => {

@@ -63,6 +63,7 @@ type Query {
   likedPosts(username: String!): [Post!]!
   post(id: Int!): Post!
   me: User!
+  isEmailUsed(email: String!): Boolean!
   followers(username: String!): [User!]!
   following(username: String!): [User!]!
   followersWithFollowState(username: String!): [FollowerView!]!
@@ -76,11 +77,17 @@ type Mutation {
   likePost(postId: Int!): Boolean!
   unlikePost(postId: Int!): Boolean!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
-  login(username: String!, password: String!): AuthPayload!
-  verifyEmail(token: String!): Boolean!
-  resendMyVerificationLink: Boolean!
+  login(identifier: String!, password: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
   changeMyEmail(currentPassword: String!, newEmail: String!): Boolean!
+  resendMyVerificationLink: EmailSendResult!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!
+}
+
+enum EmailSendResult {
+  SENT
+  THROTTLED
+  FAILED
+  ALREADY_VERIFIED
 }

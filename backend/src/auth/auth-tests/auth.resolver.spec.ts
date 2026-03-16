@@ -4,8 +4,9 @@ describe('AuthResolver', () => {
     const authService = {
         signUp: jest.fn(),
         login: jest.fn(),
+        isEmailUsed: jest.fn(),
         verifyEmail: jest.fn(),
-        resendMyVerificationLink: jest.fn(),
+        resendVerification: jest.fn(),
     };
 
     let resolver: AuthResolver;
@@ -52,17 +53,18 @@ describe('AuthResolver', () => {
         await expect(resolver.login('deniz', 'secret')).rejects.toThrow('login failed');
     });
 
-    it('verifyEmail forwards token to service', async () => {
-        authService.verifyEmail.mockResolvedValue(true);
+    it('isEmailUsed forwards email to service', async () => {
+        authService.isEmailUsed.mockResolvedValue(true);
 
-        await expect(resolver.verifyEmail('token123')).resolves.toBe(true);
-        expect(authService.verifyEmail).toHaveBeenCalledWith('token123');
+        await expect(resolver.isEmailUsed('deniz@example.com')).resolves.toBe(true);
+        expect(authService.isEmailUsed).toHaveBeenCalledWith('deniz@example.com');
     });
 
+
     it('resendMyVerificationLink forwards current user id to service', async () => {
-        authService.resendMyVerificationLink.mockResolvedValue(true);
+        authService.resendVerification.mockResolvedValue(true);
 
         await expect(resolver.resendMyVerificationLink({ id: 7 } as any)).resolves.toBe(true);
-        expect(authService.resendMyVerificationLink).toHaveBeenCalledWith(7);
+        expect(authService.resendVerification).toHaveBeenCalledWith(7);
     });
 });

@@ -2,9 +2,9 @@
 
 ## P0 — Security & Configuration (Ship Blockers)
 
-- [ ] Hash passwords (bcrypt/argon2) instead of storing plain text.
-- [ ] Remove JWT secret logging from auth module startup.
-- [ ] Move hardcoded DB credentials to environment variables.
+- [X ] Hash passwords (bcrypt/argon2) instead of storing plain text.
+- [X ] Remove JWT secret logging from auth module startup.
+- [ X] Move hardcoded DB credentials to environment variables.
 - [ ] Add environment validation for required secrets/URLs.
 - [ ] Revisit token storage strategy for native mobile targets.
 - [ ] Disable `synchronize: true` outside local dev and move to migrations workflow.
@@ -12,9 +12,12 @@
 ## P1 — Auth & State Consistency
 
 - [ ] Make auth state single source of truth (replace simulated root auth flow).
+- [ ] Treat `me.emailVerified` as the single source of truth in mobile auth hydration.
+- [ ] Remove manual login/signup redirects and let root `AuthGate` own auth routing.
+- [ ] Simplify signup screen state shape (group form values + field errors).
 - [ ] Stop passing `currentUserId` around in client hooks.
 - [ ] Handle deleted logged-in user gracefully (auth/feed fallback).
-- [ ] Add logout and homepage actions on profile.
+- [X ] Add logout and homepage actions on profile.
 
 ## P1 — Data Integrity & Backend Robustness
 
@@ -30,7 +33,7 @@
 ## P2 — API/Service Cleanup
 
 - [x] Extract GraphQL query strings for readability.
-- [ ] Review resolver `async` usage consistency.
+- [X ] Review resolver `async` usage consistency.
 - [ ] Revisit `getFollowersWithFollowStat` return shape.
 - [ ] Move profile post loading from `findByUsername` to `@ResolveField()`.
 - [ ] Decouple `UsersService.findByUsername()` from post ordering.
@@ -164,3 +167,9 @@ settings: grey out save changes if there were no changes
 ----------------
 settings: remember changes between tabs?
 ----------------
+verification email service: move transporter creation and config reads to constructor
+----------------
+prune gql returns: 
+#: signup doesnt need to return emailverified
+----------------
+get rid of email verified where possible in client

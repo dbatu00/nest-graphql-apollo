@@ -1,7 +1,7 @@
 import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { AuthService } from "./auth.service";
-import { VerificationLinkResult } from "./verification/verification-link.types";
+import { VerificationLinkResult } from "./verification/verification-link-result.enum";
 
 @Controller("auth")
 export class AuthController {
@@ -17,25 +17,30 @@ export class AuthController {
             throw new BadRequestException("Verification token is required");
         }
 
-        // Service returns typed outcome; controller maps it to user-facing HTML and status code.
+        // Service returns enum result; controller maps it to user-facing HTML and status code.
         const result: VerificationLinkResult = await this.authService.processVerificationLink(token);
 
-        if (result.status === "verified") {
+        if (result === VerificationLinkResult.VERIFIED) {
             res.status(200).type("html").send(this.renderHtmlPage("Email verified", "Your email has been verified. You can return to the app and log in."));
             return;
         }
 
-        if (result.status === "expired_resent") {
+        if (result === VerificationLinkResult.ALREADY_VERIFIED) {
+            res.status(200).type("html").send(this.renderHtmlPage("Email verified", "Your email was already verified. You can return to the app and log in."));
+            return;
+        }
+
+        if (result === VerificationLinkResult.EXPIRED_RESENT) {
             res.status(400).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired. We sent a new verification email. Please check your inbox."));
             return;
         }
 
-        if (result.status === "expired_throttled") {
+        if (result === VerificationLinkResult.EXPIRED_THROTTLED) {
             res.status(429).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired. Please wait briefly before trying again."));
             return;
         }
 
-        if (result.status === "expired_delivery_failed") {
+        if (result === VerificationLinkResult.EXPIRED_DELIVERY_FAILED) {
             res.status(503).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired, and we could not send a new verification email right now. Please try again shortly."));
             return;
         }
