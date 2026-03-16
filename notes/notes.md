@@ -35,3 +35,18 @@ query ($id: Int!) {
 - DTO/output types are API-centric and intentionally scoped.
 - Different operations can return different shapes.
 - This avoids coupling public API contracts directly to DB schema.
+
+
+## React useEffect: Cleanup & State Update on Unmounted
+
+t0 component mounts
+t1 fetch request starts
+t2 user navigates away
+t3 component unmounts
+t4 fetch finishes
+t5 setState() runs
+=> memory leak
+
+References:
+- https://stackoverflow.com/questions/53949393/cant-perform-a-react-state-update-on-an-unmounted-component
+- https://overreacted.io/a-complete-guide-to-useeffect/#so-what-about-cleanup

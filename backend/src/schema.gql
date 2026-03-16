@@ -22,8 +22,11 @@ type User {
   id: Int!
   username: String!
   displayName: String
+  email: String!
   emailVerified: Boolean!
   bio: String
+  avatarUrl: String
+  coverUrl: String
   posts: [Post!]!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -67,6 +70,7 @@ type Query {
 }
 
 type Mutation {
+  updateMyProfile(displayName: String, bio: String, avatarUrl: String, coverUrl: String): User!
   addPost(content: String!): Post!
   deletePost(postId: Int!): Boolean!
   likePost(postId: Int!): Boolean!
@@ -74,7 +78,9 @@ type Mutation {
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(username: String!, password: String!): AuthPayload!
   verifyEmail(token: String!): Boolean!
-  resendMyVerificationEmail: Boolean!
+  resendMyVerificationLink: Boolean!
+  changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
+  changeMyEmail(currentPassword: String!, newEmail: String!): Boolean!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!
 }

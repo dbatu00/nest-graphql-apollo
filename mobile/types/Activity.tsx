@@ -12,6 +12,7 @@ export type Activity = {
     id: number;
     username: string;
     displayName?: string;
+    avatarUrl?: string;
     followedByMe?: boolean;
   };
 
@@ -19,6 +20,7 @@ export type Activity = {
     id: number;
     username: string;
     displayName?: string;
+    avatarUrl?: string;
     followedByMe?: boolean;
     active?: boolean;
   };

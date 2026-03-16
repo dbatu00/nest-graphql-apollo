@@ -236,7 +236,9 @@ describe("ActivityRow", () => {
       <ActivityRow activity={followActivity} />
     );
 
-    expect(getByText(/mike followed nina/i)).toBeTruthy();
+    expect(getByText(/mike/i)).toBeTruthy();
+    expect(getByText(/followed/i)).toBeTruthy();
+    expect(getByText(/nina/i)).toBeTruthy();
     expect(queryByText("♥")).toBeNull();
   });
 });

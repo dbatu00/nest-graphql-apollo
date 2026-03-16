@@ -57,4 +57,57 @@ export class UsersService {
     });
   }
 
+  async updateMyProfile(
+    userId: number,
+    input: {
+      displayName?: string;
+      bio?: string;
+      avatarUrl?: string;
+      coverUrl?: string;
+    },
+  ): Promise<User> {
+    const existingUser = await this.findById(userId);
+
+    if (!existingUser) {
+      throw new Error("User not found");
+    }
+
+    const updatePayload: {
+      displayName?: string | null;
+      bio?: string | null;
+      avatarUrl?: string | null;
+      coverUrl?: string | null;
+    } = {};
+
+    if (typeof input.displayName === "string") {
+      const normalizedDisplayName = input.displayName.trim();
+      updatePayload.displayName = normalizedDisplayName || null;
+    }
+
+    if (typeof input.bio === "string") {
+      const normalizedBio = input.bio.trim();
+      updatePayload.bio = normalizedBio || null;
+    }
+
+    if (typeof input.avatarUrl === "string") {
+      const normalizedAvatarUrl = input.avatarUrl.trim();
+      updatePayload.avatarUrl = normalizedAvatarUrl || null;
+    }
+
+    if (typeof input.coverUrl === "string") {
+      const normalizedCoverUrl = input.coverUrl.trim();
+      updatePayload.coverUrl = normalizedCoverUrl || null;
+    }
+
+    await this.userRepo.update({ id: userId }, updatePayload as Partial<User>);
+
+    const updatedUser = await this.findById(userId);
+
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
+
+    return updatedUser;
+  }
+
 }

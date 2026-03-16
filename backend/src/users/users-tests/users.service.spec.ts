@@ -5,6 +5,7 @@ import { Follow } from '../../follows/follow.entity';
 describe('UsersService', () => {
     const userRepo = {
         findOne: jest.fn(),
+        update: jest.fn(),
     };
 
     const followRepo = {
@@ -129,6 +130,65 @@ describe('UsersService', () => {
             followRepo.count.mockRejectedValue(new Error('countFollowing failed'));
 
             await expect(service.countFollowing(3)).rejects.toThrow('countFollowing failed');
+        });
+    });
+
+    describe('updateMyProfile', () => {
+        it('updates and trims displayName and bio', async () => {
+            const existingUser = { id: 1, username: 'deniz', displayName: 'old', bio: 'old bio' } as User;
+            const updatedUser = { ...existingUser, displayName: 'Deniz', bio: 'new bio' } as User;
+
+            userRepo.findOne
+                .mockResolvedValueOnce(existingUser)
+                .mockResolvedValueOnce(updatedUser);
+            userRepo.update.mockResolvedValue({ affected: 1 });
+
+            await expect(
+                service.updateMyProfile(1, {
+                    displayName: '  Deniz  ',
+                    bio: '  new bio  ',
+                })
+            ).resolves.toBe(updatedUser);
+
+            expect(userRepo.update).toHaveBeenCalledWith({ id: 1 }, {
+                displayName: 'Deniz',
+                bio: 'new bio',
+            });
+        });
+
+        it('clears values when blank strings are provided', async () => {
+            const existingUser = { id: 1, username: 'deniz', displayName: 'old', bio: 'old bio' } as User;
+            const updatedUser = { ...existingUser, displayName: undefined, bio: undefined } as User;
+
+            userRepo.findOne
+                .mockResolvedValueOnce(existingUser)
+                .mockResolvedValueOnce(updatedUser);
+            userRepo.update.mockResolvedValue({ affected: 1 });
+
+            await expect(
+                service.updateMyProfile(1, {
+                    displayName: '   ',
+                    bio: '   ',
+                })
+            ).resolves.toBe(updatedUser);
+
+            expect(userRepo.update).toHaveBeenCalledWith({ id: 1 }, {
+                displayName: null,
+                bio: null,
+            });
+        });
+
+        it('throws when user is missing', async () => {
+            userRepo.findOne.mockResolvedValue(null);
+
+            await expect(
+                service.updateMyProfile(999, {
+                    displayName: 'Deniz',
+                    bio: 'bio',
+                })
+            ).rejects.toThrow('User not found');
+
+            expect(userRepo.update).not.toHaveBeenCalled();
         });
     });
 });

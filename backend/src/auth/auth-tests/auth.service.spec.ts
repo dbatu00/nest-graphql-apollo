@@ -365,14 +365,14 @@ describe('AuthService', () => {
         });
     });
 
-    describe('resendMyVerificationEmail', () => {
+    describe('resendMyVerificationLink', () => {
         it('throws UnauthorizedException when user is missing', async () => {
             const userRepo = {
                 findOne: jest.fn<Promise<User | null>, [any]>().mockResolvedValue(null),
             };
             dataSource.getRepository.mockReturnValue(userRepo);
 
-            await expect(service.resendMyVerificationEmail(77)).rejects.toBeInstanceOf(UnauthorizedException);
+            await expect(service.resendMyVerificationLink(77)).rejects.toBeInstanceOf(UnauthorizedException);
         });
 
         it('returns true without sending when user email is already verified', async () => {
@@ -382,7 +382,7 @@ describe('AuthService', () => {
             };
             dataSource.getRepository.mockReturnValue(userRepo);
 
-            await expect(service.resendMyVerificationEmail(verifiedUser.id)).resolves.toBe(true);
+            await expect(service.resendMyVerificationLink(verifiedUser.id)).resolves.toBe(true);
             expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
             expect(dataSource.transaction).not.toHaveBeenCalled();
         });
@@ -402,7 +402,7 @@ describe('AuthService', () => {
                 .mockReturnValueOnce(latestTokenQb)
                 .mockReturnValueOnce(sentLastHourQb);
 
-            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).rejects.toMatchObject({
+            await expect(service.resendMyVerificationLink(unverifiedUser.id)).rejects.toMatchObject({
                 status: HttpStatus.TOO_MANY_REQUESTS,
             });
             expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
@@ -424,7 +424,7 @@ describe('AuthService', () => {
                 .mockReturnValueOnce(latestTokenQb)
                 .mockReturnValueOnce(sentLastHourQb);
 
-            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).rejects.toMatchObject({
+            await expect(service.resendMyVerificationLink(unverifiedUser.id)).rejects.toMatchObject({
                 status: HttpStatus.TOO_MANY_REQUESTS,
             });
             expect(verificationEmailService.sendVerificationEmail).not.toHaveBeenCalled();
@@ -456,7 +456,7 @@ describe('AuthService', () => {
             };
             dataSource.transaction.mockImplementation(async (callback: any) => callback(manager));
 
-            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).resolves.toBe(true);
+            await expect(service.resendMyVerificationLink(unverifiedUser.id)).resolves.toBe(true);
             expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalled();
         });
 
@@ -490,7 +490,7 @@ describe('AuthService', () => {
             };
             dataSource.transaction.mockImplementation(async (callback: any) => callback(manager));
 
-            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).resolves.toBe(true);
+            await expect(service.resendMyVerificationLink(unverifiedUser.id)).resolves.toBe(true);
             expect(verificationEmailService.sendVerificationEmail).toHaveBeenCalledWith(
                 email,
                 expect.any(String),
@@ -547,7 +547,7 @@ describe('AuthService', () => {
 
             verificationEmailService.sendVerificationEmail.mockRejectedValueOnce(new Error('smtp down'));
 
-            await expect(service.resendMyVerificationEmail(unverifiedUser.id)).rejects.toMatchObject({
+            await expect(service.resendMyVerificationLink(unverifiedUser.id)).rejects.toMatchObject({
                 status: HttpStatus.SERVICE_UNAVAILABLE,
             });
 

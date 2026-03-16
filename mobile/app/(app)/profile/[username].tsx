@@ -6,15 +6,20 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Image,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
+import { FeedHeader } from "@/components/layout/FeedHeader";
+import { UserSettingsButton } from "@/components/common/UserSettingsButton";
+import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { FOLLOWERS_QUERY, FOLLOWING_QUERY } from "@/graphql/operations";
+import { FOLLOWERS_QUERY, FOLLOWING_QUERY, USER_PROFILE_QUERY } from "@/graphql/operations";
 
 type Tab =
   | "posts"
@@ -27,14 +32,22 @@ type FollowUser = {
   id: number;
   username: string;
   displayName?: string;
+  avatarUrl?: string;
   followedByMe?: boolean;
+};
+
+type ProfileMeta = {
+  displayName?: string;
+  bio?: string;
+  avatarUrl?: string;
+  coverUrl?: string;
 };
 
 export default function UsernameScreen() {
   const { username } =
     useLocalSearchParams<{ username: string }>();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const [tab, setTab] = useState<Tab>("posts");
 
@@ -60,6 +73,45 @@ export default function UsernameScreen() {
   const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
   const [followLoading, setFollowLoading] =
     useState(false);
+  const [profileMeta, setProfileMeta] = useState<ProfileMeta | null>(null);
+
+  useEffect(() => {
+    if (!username) {
+      setProfileMeta(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadProfileMeta = async () => {
+      try {
+        const data = await graphqlFetch<{
+          userByUsername: {
+            displayName?: string;
+            bio?: string;
+            avatarUrl?: string;
+            coverUrl?: string;
+          } | null;
+        }>(USER_PROFILE_QUERY, { username });
+
+        if (cancelled) {
+          return;
+        }
+
+        setProfileMeta(data.userByUsername ?? null);
+      } catch {
+        if (!cancelled) {
+          setProfileMeta(null);
+        }
+      }
+    };
+
+    loadProfileMeta();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [username]);
 
   useEffect(() => {
     if (
@@ -113,6 +165,12 @@ export default function UsernameScreen() {
     );
   };
 
+  const profileDisplayName = profileMeta?.displayName?.trim() || username;
+  const profileBio = profileMeta?.bio?.trim();
+  const profileAvatarUrl = profileMeta?.avatarUrl?.trim();
+  const profileCoverUrl = profileMeta?.coverUrl?.trim();
+  const isOwnProfile = user?.username === username;
+
   const handleLogout = async () => {
     await logout();
     router.replace("/(auth)/login");
@@ -122,67 +180,141 @@ export default function UsernameScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      <FeedHeader
+        title="BookBook"
+        rightActions={(
+          <>
+            <UserSettingsButton
+              onPress={() => router.push("/feed")}
+              minWidth={70}
+              borderColor="rgba(255, 255, 255, 0.92)"
+              label="Home"
+              iconName="home-outline"
+            />
+
+            {isOwnProfile && (
+              <UserSettingsButton
+                onPress={() => {
+                  if (!username) {
+                    return;
+                  }
+
+                  router.push({
+                    pathname: "/profile/[username]/settings",
+                    params: { username },
+                  });
+                }}
+                minWidth={70}
+                borderColor="rgba(255, 255, 255, 0.92)"
+                style={{ marginLeft: 8 }}
+              />
+            )}
+
+            <FeedLogoutButton
+              onPress={handleLogout}
+              style={{ marginLeft: 8 }}
+              minWidth={70}
+            />
+          </>
+        )}
+      />
+
+      {/* Profile card */}
       <View style={{ 
         paddingHorizontal: 16, 
-        paddingVertical: 14,
-        backgroundColor: "#fff",
+        paddingTop: 12,
         borderBottomWidth: 0,
         marginBottom: 12,
-        ...Platform.select({
-          ios: {
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.04,
-            shadowRadius: 3,
-          },
-          android: { elevation: 1 },
-        }),
       }}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+        <View
+          style={{
+            height: 240,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#bfdbfe",
+            backgroundColor: "#eff6ff",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {profileCoverUrl ? (
+            <Image
+              source={{ uri: profileCoverUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={24} color="#60a5fa" />
+              <Text style={{ marginTop: 6, color: "#60a5fa", fontWeight: "500", fontSize: 12 }}>
+                Cover photo
+              </Text>
+            </>
+          )}
+
+          <View
+            style={{
+              position: "absolute",
+              left: 14,
+              bottom: 12,
+              width: 84,
+              height: 84,
+              borderRadius: 42,
+              borderWidth: 3,
+              borderColor: "#fff",
+              backgroundColor: "#dbeafe",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
+          >
+            {profileAvatarUrl ? (
+              <Image
+                source={{ uri: profileAvatarUrl }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="person-outline" size={34} color="#3b82f6" />
+            )}
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 4 }}>
           <Text
             style={{
               fontSize: 20,
               fontWeight: "700",
               color: "#1f2937",
             }}
+            numberOfLines={1}
+          >
+            {profileDisplayName}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "500",
+              color: "#6b7280",
+              marginTop: 2,
+            }}
+            numberOfLines={1}
           >
             @{username}
           </Text>
-          
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <TouchableOpacity
-              onPress={() => router.push("/feed")}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderWidth: 0,
-                borderColor: "transparent",
-                borderRadius: 8,
-                backgroundColor: "#2563eb",
-                minWidth: 70,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13 }}>Home</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderWidth: 0,
-                borderColor: "transparent",
-                borderRadius: 8,
-                backgroundColor: "rgba(37, 99, 235, 0.2)",
-                minWidth: 70,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ fontWeight: "600", color: "#2563eb", fontSize: 13 }}>Logout</Text>
-            </TouchableOpacity>
-          </View>
+          <Text
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              color: profileBio ? "#374151" : "#9ca3af",
+            }}
+            numberOfLines={2}
+          >
+            {profileBio || "No bio yet"}
+          </Text>
         </View>
       </View>
 

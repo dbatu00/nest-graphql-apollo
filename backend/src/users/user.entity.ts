@@ -26,6 +26,7 @@ export class User {
   @Column({ nullable: true })
   displayName?: string;
 
+  @Field()
   @Column({ unique: true })
   email: string;
 
@@ -36,6 +37,14 @@ export class User {
   @Field({ nullable: true })
   @Column({ length: 160, nullable: true })
   bio?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true, length: 500 })
+  avatarUrl?: string;
+
+  @Field({ nullable: true })
+  @Column({ nullable: true, length: 500 })
+  coverUrl?: string;
 
 
   @Field(() => [Post])

@@ -65,7 +65,7 @@ export default function VerifyMail() {
     const startTime = Date.now();
 
     try {
-      await graphqlFetch<{ resendMyVerificationEmail: boolean }>(RESEND_VERIFICATION_EMAIL_MUTATION);
+      await graphqlFetch<{ resendMyVerificationLink: boolean }>(RESEND_VERIFICATION_EMAIL_MUTATION);
       const elapsedMs = Date.now() - startTime;
       if (elapsedMs < MIN_ACTION_MS) {
         await sleep(MIN_ACTION_MS - elapsedMs);

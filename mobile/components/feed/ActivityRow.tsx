@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, ScrollView, Platform } from "react-native";
+import { View, Text, TouchableOpacity, Modal, ScrollView, Platform, Image } from "react-native";
+import { useRouter } from "expo-router";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
@@ -19,6 +20,7 @@ type LikedUser = {
   id: number;
   username: string;
   displayName?: string;
+  avatarUrl?: string;
   followedByMe?: boolean;
 };
 
@@ -30,6 +32,7 @@ export const ActivityRow = ({
   onToggleLike,
 }: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
+  const router = useRouter();
 
   const isNested = type === "like" || type === "share";
   const isOwner = currentUserId === targetPost?.user.id;
@@ -74,24 +77,31 @@ export const ActivityRow = ({
     }
   };
 
+
+
   /* ---------- HEADER ---------- */
 
   const renderHeader = () => {
     if (type === "post") return null;
 
+
     if (type === "like") {
+      const actorLabel = actor.displayName?.trim() || actor.username;
+      const actorAvatarUri = actor.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(actorLabel)}&background=e5e7eb&color=374151&size=64`;
+
       return (
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={styles.headerText}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1, paddingRight: 8 }}>
+            <Image
+              source={{ uri: actorAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginRight: 6 }}
+            />
             <ProfileLink username={actor.username}>
-              {actor.username}
+              <Text style={styles.headerNameText}>{actorLabel}</Text>
             </ProfileLink>
-            {" liked "}
-            <ProfileLink username={targetPost?.user.username ?? ""}>
-              {targetPost?.user.username}
-            </ProfileLink>
-            {"'s post"}
-          </Text>
+            <Text style={styles.headerText}> liked </Text>
+          </View>
           <Text style={styles.timestamp}>
             {new Date(createdAt).toLocaleString()}
           </Text>
@@ -100,17 +110,32 @@ export const ActivityRow = ({
     }
 
     if (type === "follow") {
+      const actorLabel = actor.displayName?.trim() || actor.username;
+      const targetUserLabel = targetUser?.displayName?.trim() || targetUser?.username;
+      const actorAvatarUri = actor.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(actorLabel)}&background=e5e7eb&color=374151&size=64`;
+      const targetUserAvatarUri = targetUser?.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(targetUserLabel ?? "")}&background=e5e7eb&color=374151&size=64`;
+
       return (
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={styles.headerText}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1, paddingRight: 8 }}>
+            <Image
+              source={{ uri: actorAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginRight: 6 }}
+            />
             <ProfileLink username={actor.username}>
-              {actor.username}
+              <Text style={styles.headerNameText}>{actorLabel}</Text>
             </ProfileLink>
-            {" followed "}
+            <Text style={styles.headerText}> followed </Text>
             <ProfileLink username={targetUser?.username ?? ""}>
-              {targetUser?.username}
+              <Text style={styles.headerNameText}>{targetUserLabel ?? ""}</Text>
             </ProfileLink>
-          </Text>
+            <Image
+              source={{ uri: targetUserAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginLeft: 6 }}
+            />
+          </View>
           <Text style={styles.timestamp}>
             {new Date(createdAt).toLocaleString()}
           </Text>
@@ -132,7 +157,8 @@ export const ActivityRow = ({
           user={{
             id: targetPost.user.id,
             username: targetPost.user.username,
-            displayName: targetPost.user.username,
+            displayName: targetPost.user.displayName,
+            avatarUrl: targetPost.user.avatarUrl,
             followedByMe: targetPost.user.followedByMe,
           }}
           currentUserId={currentUserId}
@@ -206,11 +232,13 @@ export const ActivityRow = ({
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => handleOpenLikesModal(targetPost.id)}
-              >
-                <Text>{targetPost.likesCount ?? 0}</Text>
-              </TouchableOpacity>
+              {(targetPost.likesCount ?? 0) > 0 && (
+                <TouchableOpacity
+                  onPress={() => handleOpenLikesModal(targetPost.id)}
+                >
+                  <Text>{targetPost.likesCount}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -312,9 +340,20 @@ const styles = {
     }),
   },
   headerText: {
-    marginBottom: 2,
+    marginBottom: 0,
     fontSize: 12,
-    color: "#6b7280",
+    lineHeight: 16,
+    color: "#1f2937",
+    includeFontPadding: false,
+    textAlignVertical: "center" as const,
+  },
+  headerNameText: {
+    fontSize: 12,
+    lineHeight: 16,
+    color: "#1f2937",
+    fontWeight: "500" as const,
+    includeFontPadding: false,
+    textAlignVertical: "center" as const,
   },
   nestedContainer: {
     marginLeft: 8,

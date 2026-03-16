@@ -1,13 +1,30 @@
-import { View, Text, TouchableOpacity, Platform } from "react-native";
+import { ReactNode } from "react";
+import { View, Text, TouchableOpacity, Platform, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
+import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
 
 type Props = {
-  title: string;
+  title?: string;
+  onRefresh?: () => void | Promise<void>;
+  isRefreshing?: boolean;
+  rightActions?: ReactNode;
 };
 
-export function FeedHeader({ title }: Props) {
-  const { logout } = useAuth();
+export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false, rightActions }: Props) {
+  const { user, logout } = useAuth();
+
+  const handleProfile = () => {
+    if (!user?.username) {
+      return;
+    }
+
+    router.push({
+      pathname: "/profile/[username]",
+      params: { username: user.username },
+    });
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -34,25 +51,63 @@ export function FeedHeader({ title }: Props) {
       }}
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={{ fontWeight: "700", fontSize: 20, color: "#fff", letterSpacing: 0.3 }}>
-          {title}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Text style={{ fontWeight: "700", fontSize: 20, color: "#fff", letterSpacing: 0.3 }}>
+            {title}
+          </Text>
 
-        <TouchableOpacity
-          onPress={handleLogout}
-          style={{
-            paddingHorizontal: 14,
-            paddingVertical: 8,
-            borderWidth: 0,
-            borderColor: "transparent",
-            borderRadius: 8,
-            backgroundColor: "rgba(255, 255, 255, 0.2)",
-            minWidth: 80,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ fontWeight: "600", color: "#fff", fontSize: 13 }}>Logout</Text>
-        </TouchableOpacity>
+          {onRefresh && (
+            <TouchableOpacity
+              onPress={onRefresh}
+              disabled={isRefreshing}
+              style={{
+                marginLeft: 8,
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(255, 255, 255, 0.2)",
+                opacity: isRefreshing ? 0.75 : 1,
+              }}
+            >
+              {isRefreshing ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="refresh-outline" size={16} color="#fff" />
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {rightActions ? (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>{rightActions}</View>
+        ) : (
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <TouchableOpacity
+              onPress={handleProfile}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderWidth: 0,
+                borderColor: "transparent",
+                borderRadius: 8,
+                backgroundColor: "rgba(255, 255, 255, 0.92)",
+                minWidth: 80,
+                alignItems: "center",
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons name="person-circle-outline" size={14} color="#1d4ed8" />
+                <Text style={{ fontWeight: "600", color: "#1d4ed8", fontSize: 13, marginLeft: 6 }}>
+                  Profile
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <FeedLogoutButton onPress={handleLogout} style={{ marginLeft: 8 }} />
+          </View>
+        )}
       </View>
     </View>
   );

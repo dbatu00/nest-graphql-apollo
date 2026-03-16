@@ -1,4 +1,3 @@
-// Auth business logic: sign-up, login, and token issuing.
 import { Injectable, UnauthorizedException, BadRequestException, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, DataSource } from "typeorm";
@@ -60,8 +59,6 @@ export class AuthService {
             }
 
             const passwordHash = await argon2.hash(password);
-            const verificationToken = this.generateRawToken();
-            const verificationTokenHash = this.hashToken(verificationToken);
 
             const user = await this.dataSource.transaction(async (manager) => {
                 const user = manager.create(User, {
@@ -80,23 +77,15 @@ export class AuthService {
 
                 await manager.save(auth);
 
-                const tokenEntity = manager.create(VerificationToken, {
-                    tokenHash: verificationTokenHash,
-                    type: "email_verification",
-                    user,
-                    expiresAt: this.createTokenExpiry(),
-                });
-
-                await manager.save(tokenEntity);
-
                 return user;
             });
 
+
             try {
-                await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+                await this.issueAndSendVerificationLink(user);
             } catch (error) {
                 this.logger.error(
-                    `Verification email delivery failed after signup userId=${user.id}`,
+                    `Verification link delivery failed after signup userId=${user.id}`,
                     error instanceof Error ? error.stack : undefined,
                 );
             }
@@ -126,12 +115,6 @@ export class AuthService {
 
             if (!credential) {
                 this.logger.warn(`Invalid login attempt for username: ${username}`);
-                throw new UnauthorizedException("Invalid credentials");
-            }
-
-            const isHash = credential.password.startsWith("$argon2");
-            if (!isHash) {
-                this.logger.warn(`Invalid credential hash format for username: ${username}`);
                 throw new UnauthorizedException("Invalid credentials");
             }
 
@@ -186,36 +169,94 @@ export class AuthService {
         return true;
     }
 
-    async resendMyVerificationEmail(userId: number): Promise<boolean> {
-        const user = await this.dataSource
-            .getRepository(User)
-            .findOne({ where: { id: userId } });
+    async resendMyVerificationLink(userId: number): Promise<boolean> {
+        try {
+            const user = await this.dataSource
+                .getRepository(User)
+                .findOne({ where: { id: userId } });
 
-        if (!user) {
-            throw new UnauthorizedException("User not found");
-        }
+            if (!user) {
+                throw new UnauthorizedException("User not found");
+            }
 
-        if (user.emailVerified) {
-            this.logger.debug(`Resend skipped: email already verified userId=${userId}`);
+            if (user.emailVerified) {
+                this.logger.debug(`Resend skipped: email already verified userId=${userId}`);
+                return true;
+            }
+
+            const resendStatus = await this.issueAndSendVerificationLink(user);
+            if (resendStatus === "throttled") {
+                this.logger.warn(`Resend throttled for userId=${userId}`);
+                throw new HttpException(
+                    "Too many resend requests. Please wait before requesting another verification email.",
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
+            }
+
+            if (resendStatus === "delivery_failed") {
+                throw new HttpException(
+                    "Could not deliver verification email right now. Please try again.",
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                );
+            }
+
             return true;
+        } catch (error) {
+            this.logger.error(`Resend verification link failed userId=${userId}`, error instanceof Error ? error.stack : undefined);
+            throw error;
+        }
+    }
+
+    async changeMyPassword(userId: number, currentPassword: string, newPassword: string): Promise<boolean> {
+        this.validateCredentials("username", newPassword);
+        const auth = await this.authRepo.findOne({
+            where: { user: { id: userId } },
+            relations: ["user"],
+        });
+
+        if (!auth) throw new UnauthorizedException("User not found");
+
+        const isValid = await argon2.verify(auth.password, currentPassword);
+        if (!isValid) throw new BadRequestException("Current password is incorrect");
+
+        auth.password = await argon2.hash(newPassword);
+        await this.authRepo.save(auth);
+        return true;
+    }
+
+    async changeMyEmail(userId: number, currentPassword: string, newEmail: string): Promise<boolean> {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail.trim())) {
+            throw new BadRequestException("Invalid email format");
+        }
+        const normalizedEmail = newEmail.trim().toLowerCase();
+
+        const user = await this.dataSource.getRepository(User).findOne({ where: { id: userId } });
+        if (!user) throw new UnauthorizedException("User not found");
+
+        const auth = await this.authRepo.findOne({ where: { user: { id: userId } }, relations: ["user"] });
+        if (!auth) throw new UnauthorizedException("User not found");
+
+        const isValid = await argon2.verify(auth.password, currentPassword);
+        if (!isValid) throw new BadRequestException("Current password is incorrect");
+
+        const existingEmail = await this.dataSource.getRepository(User).findOne({ where: { email: normalizedEmail } });
+        if (existingEmail && existingEmail.id !== userId) {
+            throw new BadRequestException("Email already exists");
         }
 
-        const resendStatus = await this.issueAndSendVerificationToken(user);
-        if (resendStatus === "throttled") {
-            this.logger.warn(`Resend throttled for userId=${userId}`);
-            throw new HttpException(
-                "Too many resend requests. Please wait before requesting another verification email.",
-                HttpStatus.TOO_MANY_REQUESTS,
+        user.email = normalizedEmail;
+        user.emailVerified = false;
+        await this.dataSource.getRepository(User).save(user);
+        // Send a new verification link after email change
+        try {
+            await this.issueAndSendVerificationLink(user);
+        } catch (error) {
+            this.logger.error(
+                `Verification link delivery failed after email change userId=${user.id}`,
+                error instanceof Error ? error.stack : undefined,
             );
         }
-
-        if (resendStatus === "delivery_failed") {
-            throw new HttpException(
-                "Could not deliver verification email right now. Please try again.",
-                HttpStatus.SERVICE_UNAVAILABLE,
-            );
-        }
-
         return true;
     }
 
@@ -239,7 +280,7 @@ export class AuthService {
                 return { status: "invalid" };
             }
 
-            const resendStatus = await this.issueAndSendVerificationToken(verificationToken.user);
+            const resendStatus = await this.issueAndSendVerificationLink(verificationToken.user);
             if (resendStatus === "throttled") {
                 this.logger.warn(`Verification link expired and resend throttled userId=${verificationToken.user.id}`);
             }
@@ -301,97 +342,104 @@ export class AuthService {
         return expiry;
     }
 
-    private async issueAndSendVerificationToken(user: User): Promise<"sent" | "throttled" | "delivery_failed"> {
-        // Cooldown and rolling-window checks are config-driven and validated by environment config.
-        const latestToken = await this.verificationTokenRepo
-            .createQueryBuilder("verification")
-            .where("verification.userId = :userId AND verification.type = :type", {
-                userId: user.id,
-                type: "email_verification",
-            })
-            .orderBy("verification.createdAt", "DESC")
-            .getOne();
+    private async issueAndSendVerificationLink(user: User): Promise<"sent" | "throttled" | "delivery_failed"> {
+        try {
+            // Cooldown and rolling-window checks are config-driven and validated by environment config.
+            const latestToken = await this.verificationTokenRepo
+                .createQueryBuilder("verification")
+                .where("verification.userId = :userId AND verification.type = :type", {
+                    userId: user.id,
+                    type: "email_verification",
+                })
+                .orderBy("verification.createdAt", "DESC")
+                .getOne();
 
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const sentLastHour = await this.verificationTokenRepo
-            .createQueryBuilder("verification")
-            .where("verification.userId = :userId AND verification.type = :type AND verification.createdAt >= :oneHourAgo", {
-                userId: user.id,
-                type: "email_verification",
-                oneHourAgo,
-            })
-            .getCount();
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+            const sentLastHour = await this.verificationTokenRepo
+                .createQueryBuilder("verification")
+                .where("verification.userId = :userId AND verification.type = :type AND verification.createdAt >= :oneHourAgo", {
+                    userId: user.id,
+                    type: "email_verification",
+                    oneHourAgo,
+                })
+                .getCount();
 
-        const freeResendAttempts = this.getEmailVerificationResendFreeAttempts();
+            const freeResendAttempts = this.getEmailVerificationResendFreeAttempts();
 
-        if (sentLastHour < freeResendAttempts) {
-            this.logger.debug(`Resend bypassed throttle (free window) userId=${user.id} sentLastHour=${sentLastHour}`);
-        } else {
-            const cooldownMs = this.getEmailVerificationResendCooldownMs();
+            if (sentLastHour < freeResendAttempts) {
+                this.logger.debug(`Resend bypassed throttle (free window) userId=${user.id} sentLastHour=${sentLastHour}`);
+            } else {
+                const cooldownMs = this.getEmailVerificationResendCooldownMs();
 
-            if (latestToken) {
-                const ageMs = Date.now() - latestToken.createdAt.getTime();
-                if (ageMs < cooldownMs) {
+                if (latestToken) {
+                    const ageMs = Date.now() - latestToken.createdAt.getTime();
+                    if (ageMs < cooldownMs) {
+                        return "throttled";
+                    }
+                }
+
+                const maxPerHour = this.getEmailVerificationResendMaxPerHour();
+
+                if (sentLastHour >= maxPerHour) {
                     return "throttled";
                 }
             }
 
-            const maxPerHour = this.getEmailVerificationResendMaxPerHour();
+            const verificationToken = this.generateRawToken();
+            const verificationTokenHash = this.hashToken(verificationToken);
 
-            if (sentLastHour >= maxPerHour) {
-                return "throttled";
-            }
-        }
+            const consumedTokenIds: number[] = [];
+            let createdTokenId: number | null = null;
 
-        const verificationToken = this.generateRawToken();
-        const verificationTokenHash = this.hashToken(verificationToken);
+            await this.dataSource.transaction(async (manager) => {
+                // Handle no tokens gracefully (signup case)
+                const activeTokens = await manager
+                    .createQueryBuilder(VerificationToken, "verification")
+                    .where("verification.userId = :userId AND verification.type = :type AND verification.consumedAt IS NULL", {
+                        userId: user.id,
+                        type: "email_verification",
+                    })
+                    .getMany();
 
-        const consumedTokenIds: number[] = [];
-        let createdTokenId: number | null = null;
+                consumedTokenIds.push(...activeTokens.map((activeToken) => activeToken.id));
 
-        await this.dataSource.transaction(async (manager) => {
-            const activeTokens = await manager
-                .createQueryBuilder(VerificationToken, "verification")
-                .where("verification.userId = :userId AND verification.type = :type AND verification.consumedAt IS NULL", {
-                    userId: user.id,
+                if (activeTokens.length > 0) {
+                    const now = new Date();
+                    activeTokens.forEach((activeToken) => {
+                        activeToken.consumedAt = now;
+                    });
+                    await manager.save(activeTokens);
+                }
+
+                // Always create a new token
+                const tokenEntity = manager.create(VerificationToken, {
+                    tokenHash: verificationTokenHash,
                     type: "email_verification",
-                })
-                .getMany();
-
-            consumedTokenIds.push(...activeTokens.map((activeToken) => activeToken.id));
-
-            if (activeTokens.length > 0) {
-                const now = new Date();
-                activeTokens.forEach((activeToken) => {
-                    activeToken.consumedAt = now;
+                    user,
+                    expiresAt: this.createTokenExpiry(),
                 });
-                await manager.save(activeTokens);
-            }
 
-            const tokenEntity = manager.create(VerificationToken, {
-                tokenHash: verificationTokenHash,
-                type: "email_verification",
-                user,
-                expiresAt: this.createTokenExpiry(),
+                const createdToken = await manager.save(tokenEntity);
+                createdTokenId = typeof createdToken?.id === "number" ? createdToken.id : null;
             });
 
-            const createdToken = await manager.save(tokenEntity);
-            createdTokenId = typeof createdToken?.id === "number" ? createdToken.id : null;
-        });
+            try {
+                await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+            } catch (error) {
+                this.logger.error(
+                    `Verification link delivery failed for userId=${user.id}`,
+                    error instanceof Error ? error.stack : undefined,
+                );
+                await this.rollbackVerificationTokenIssue(createdTokenId, consumedTokenIds);
+                return "delivery_failed";
+            }
 
-        try {
-            await this.verificationEmailService.sendVerificationEmail(user.email, verificationToken, user.username);
+            this.logger.log(`Verification link sent userId=${user.id}`);
+            return "sent";
         } catch (error) {
-            this.logger.error(
-                `Verification email delivery failed for userId=${user.id}`,
-                error instanceof Error ? error.stack : undefined,
-            );
-            await this.rollbackVerificationTokenIssue(createdTokenId, consumedTokenIds);
-            return "delivery_failed";
+            this.logger.error(`issueAndSendVerificationLink failed userId=${user.id}`, error instanceof Error ? error.stack : undefined);
+            throw error;
         }
-
-        this.logger.log(`Verification email sent userId=${user.id}`);
-        return "sent";
     }
 
     private async rollbackVerificationTokenIssue(createdTokenId: number | null, consumedTokenIds: number[]): Promise<void> {

@@ -24,6 +24,7 @@ type UserSummary = {
   id: number;
   username: string;
   displayName?: string;
+  avatarUrl?: string;
 };
 
 type FollowerViewAPI = {

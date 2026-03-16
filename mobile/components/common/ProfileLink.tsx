@@ -30,9 +30,13 @@ export function ProfileLink({ username, children, onNavigate }: Props) {
 
   return (
     <TouchableOpacity activeOpacity={0.6} onPress={handlePress}>
-      <Text style={{ fontWeight: "600" }}>
-        {children ?? `@${username}`}
-      </Text>
+      {children !== undefined && children !== null ? (
+        children
+      ) : (
+        <Text style={{ fontWeight: "600" }}>
+          {`@${username}`}
+        </Text>
+      )}
     </TouchableOpacity>
   );
 }

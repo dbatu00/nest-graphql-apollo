@@ -10,7 +10,7 @@ module.exports = {
   },
 
   transformIgnorePatterns: [
-    'node_modules/(?!(expo|expo-modules-core|@expo|@unimodules|react-native|@react-native|@react-navigation)/)',
+    'node_modules/(?!(expo|expo-router|expo-modules-core|@expo|@unimodules|react-native|@react-native|@react-navigation|expo-asset|expo-constants|expo-font|expo-haptics|expo-image|expo-linking|expo-secure-store|expo-splash-screen|expo-status-bar|expo-system-ui|expo-web-browser)/)',
   ],
 
   moduleNameMapper: pathsToModuleNameMapper(

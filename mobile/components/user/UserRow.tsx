@@ -1,4 +1,6 @@
-import { View, Text, Pressable, Platform } from "react-native";
+import { useState } from "react";
+import { View, Text, Pressable, Platform, Image } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ProfileLink } from "@/components/common/ProfileLink";
 
 type UserRowProps = {
@@ -6,6 +8,7 @@ type UserRowProps = {
     id: number;
     username: string;
     displayName?: string;
+    avatarUrl?: string;
     followedByMe?: boolean;
   };
   currentUserId?: number;
@@ -24,6 +27,10 @@ export function UserRow({
   onProfileNavigate,
 }: UserRowProps) {
   const isSelf = currentUserId === user.id;
+  const [isDeleteHovered, setIsDeleteHovered] = useState(false);
+  const label = user.displayName?.trim() || user.username;
+  const avatarUri = user.avatarUrl?.trim()
+    || `https://ui-avatars.com/api/?name=${encodeURIComponent(label)}&background=dbeafe&color=1e40af&size=64`;
 
   const cardStyle = !isCompact ? {
     backgroundColor: "#fff",
@@ -56,32 +63,52 @@ export function UserRow({
       }}
     >
       {/* Name / Profile link */}
-      <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
-        <View
-          style={{
-            backgroundColor: "#dbeafe",
-            paddingHorizontal: 10,
-            paddingVertical: 6,
-            borderRadius: 8,
-          }}
-        >
-          <Text style={{ fontWeight: "600", fontSize: isCompact ? 13 : 14, color: "#1e40af" }}>{user.username}</Text>
-        </View>
-      </ProfileLink>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
+          <Image
+            source={{ uri: avatarUri }}
+            style={{ width: 40, height: 40, borderRadius: 20, marginRight: 8 }}
+          />
+        </ProfileLink>
+
+        <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
+          <Text
+            style={{
+              fontWeight: "500",
+              fontSize: isCompact ? 13 : 14,
+              color: "#1f2937",
+            }}
+          >
+            {label}
+          </Text>
+        </ProfileLink>
+      </View>
 
       {/* Action button */}
       {isSelf ? (
         onDelete && (
           <Pressable
             onPress={() => onDelete(user.id)}
+            onHoverIn={() => setIsDeleteHovered(true)}
+            onHoverOut={() => setIsDeleteHovered(false)}
             style={{
-              backgroundColor: "#000",
-              paddingHorizontal: 12,
+              paddingHorizontal: 10,
               paddingVertical: 6,
               borderRadius: 6,
             }}
           >
-            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}>Delete</Text>
+            <MaterialCommunityIcons
+              name={isDeleteHovered ? "trash-can" : "trash-can-outline"}
+              size={16}
+              color={isDeleteHovered ? "#000000" : "#6b7280"}
+              style={{
+                transform: [
+                  { translateY: isDeleteHovered ? -1 : 0 },
+                  { rotate: isDeleteHovered && Platform.OS === "web" ? "-12deg" : "0deg" },
+                  { scale: isDeleteHovered ? 1.06 : 1 },
+                ],
+              }}
+            />
           </Pressable>
         )
       ) : (
@@ -98,9 +125,23 @@ export function UserRow({
               borderColor: user.followedByMe ? "#c7d2fe" : "#bfdbfe",
             }}
           >
-            <Text style={{ fontWeight: "600", color: user.followedByMe ? "#2563eb" : "#0284c7", fontSize: 12 }}>
-              {user.followedByMe ? "Following" : "Follow"}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name={user.followedByMe ? "account-check-outline" : "account-plus-outline"}
+                size={14}
+                color={user.followedByMe ? "#2563eb" : "#0284c7"}
+              />
+              <Text
+                style={{
+                  fontWeight: "600",
+                  color: user.followedByMe ? "#2563eb" : "#0284c7",
+                  fontSize: 12,
+                  marginLeft: 6,
+                }}
+              >
+                {user.followedByMe ? "Following" : "Follow"}
+              </Text>
+            </View>
           </Pressable>
         )
       )}
