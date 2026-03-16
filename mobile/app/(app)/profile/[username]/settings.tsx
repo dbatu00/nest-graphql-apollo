@@ -1,13 +1,19 @@
 import React, { useEffect, useState } from "react";
 import {
-  Dimensions, View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Platform, Modal, Image,
+  Dimensions, View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Platform, Modal, Image, Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import { graphqlFetch } from "@/utils/graphqlFetch";
-import { ME_QUERY, UPDATE_MY_PROFILE_MUTATION } from "@/graphql/operations";
+import {
+  CHANGE_MY_EMAIL_MUTATION,
+  CHANGE_MY_PASSWORD_MUTATION,
+  IS_EMAIL_USED_QUERY,
+  ME_QUERY,
+  UPDATE_MY_PROFILE_MUTATION,
+} from "@/graphql/operations";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedHeader } from "@/components/layout/FeedHeader";
 
@@ -58,99 +64,6 @@ const TABS = [
 ];
 
 export default function ProfileSettingsScreen() {
-  // --- Account mutation handlers ---
-  const handleChangeEmail = async () => {
-    setError(null);
-    setSuccess(null);
-    if (!newEmail.trim() || !confirmNewEmail.trim()) {
-      setError("Please enter and confirm your new email.");
-      return;
-    }
-    if (newEmail.trim() !== confirmNewEmail.trim()) {
-      setError("New email and confirmation do not match.");
-      return;
-    }
-    if (!currentPassword.trim()) {
-      setError("Current password is required to change email.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const result = await graphqlFetch<{ changeMyEmail: boolean }>(
-        `mutation ChangeMyEmail($currentPassword: String!, $newEmail: String!) { changeMyEmail(currentPassword: $currentPassword, newEmail: $newEmail) }`,
-        { currentPassword, newEmail }
-      );
-      if (result.changeMyEmail) {
-        setSuccess("Email change requested. Please check your new email for a verification link.");
-        setCurrentEmail(newEmail);
-        setNewEmail("");
-        setConfirmNewEmail("");
-        await refreshAuth();
-      } else {
-        setError("Failed to change email.");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to change email.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    setError(null);
-    setSuccess(null);
-    if (!newPassword.trim() || !confirmNewPassword.trim()) {
-      setError("Please enter and confirm your new password.");
-      return;
-    }
-    if (newPassword.trim() !== confirmNewPassword.trim()) {
-      setError("New password and confirmation do not match.");
-      return;
-    }
-    if (!currentPassword.trim()) {
-      setError("Current password is required to change password.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const result = await graphqlFetch<{ changeMyPassword: boolean }>(
-        `mutation ChangeMyPassword($currentPassword: String!, $newPassword: String!) { changeMyPassword(currentPassword: $currentPassword, newPassword: $newPassword) }`,
-        { currentPassword, newPassword }
-      );
-      if (result.changeMyPassword) {
-        setSuccess("Password changed successfully.");
-        setNewPassword("");
-        setConfirmNewPassword("");
-        await refreshAuth();
-      } else {
-        setError("Failed to change password.");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to change password.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleResendVerificationLink = async () => {
-    setError(null);
-    setSuccess(null);
-    setSaving(true);
-    try {
-      const result = await graphqlFetch<{ resendMyVerificationLink: boolean }>(
-        `mutation { resendMyVerificationLink }`
-      );
-      if (result.resendMyVerificationLink) {
-        setSuccess("Verification link sent. Please check your email.");
-      } else {
-        setError("Failed to resend verification link.");
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to resend verification link.");
-    } finally {
-      setSaving(false);
-    }
-  };
   const [activeTab, setActiveTab] = useState<"about" | "account">("about");
   const screenWidth = Dimensions.get("window").width;
   const screenHeight = Dimensions.get("window").height;
@@ -183,20 +96,61 @@ export default function ProfileSettingsScreen() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
+  const [currentPasswordForPassword, setCurrentPasswordForPassword] = useState("");
+  const [showEmailCurrentPassword, setShowEmailCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [showCurrentPasswordForPassword, setShowCurrentPasswordForPassword] = useState(false);
+
+  // Per-section error/success for Account tab
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [successNoticeVisible, setSuccessNoticeVisible] = useState(false);
+  const [successNoticeMessage, setSuccessNoticeMessage] = useState("");
+  const successNoticeY = React.useRef(new Animated.Value(-80)).current;
+
+  const showSuccessNotice = (message: string) => {
+    setSuccessNoticeMessage(message);
+    setSuccessNoticeVisible(true);
+    successNoticeY.setValue(-80);
+    Animated.timing(successNoticeY, {
+      toValue: 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   useEffect(() => {
-    // --- Auth loading: wait until finished ---
+    if (!successNoticeVisible) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      Animated.timing(successNoticeY, {
+        toValue: -80,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => {
+        setSuccessNoticeVisible(false);
+        setSuccessNoticeMessage("");
+      });
+    }, 1600);
+
+    return () => clearTimeout(timeoutId);
+  }, [successNoticeVisible, successNoticeY]);
+
+  useEffect(() => {
     if (authLoading) {
       return;
     }
 
-    // --- Redirect if not logged in ---
     if (!user) {
       router.replace("/(auth)/login");
       return;
     }
 
-    // --- Redirect if username mismatch ---
     if (resolvedUsername && user.username !== resolvedUsername) {
       router.replace({
         pathname: "/profile/[username]",
@@ -205,12 +159,9 @@ export default function ProfileSettingsScreen() {
       return;
     }
 
-    // --- Setup cancellation flag for async ---
     let cancelled = false;
 
-    // --- Load profile data ---
     async function load() {
-      // --- Validate username ---
       if (!user?.username) {
         setLoading(false);
         setError("Missing username");
@@ -221,20 +172,17 @@ export default function ProfileSettingsScreen() {
       setError(null);
 
       try {
-
         const data = await graphqlFetch<MyProfileData>(ME_QUERY);
 
         if (cancelled) {
           return;
         }
 
-
         const loadedDisplayName = (data.me.displayName ?? "").trim();
         const loadedBio = (data.me.bio ?? "").trim();
         const loadedAvatarUri = (data.me.avatarUrl ?? "").trim();
         const loadedCoverUri = (data.me.coverUrl ?? "").trim();
         const loadedEmail = (data.me.email ?? "").trim();
-
 
         setDisplayName(loadedDisplayName);
         setBio(loadedBio);
@@ -246,12 +194,10 @@ export default function ProfileSettingsScreen() {
         setInitialCoverUri(loadedCoverUri);
         setCurrentEmail(loadedEmail);
       } catch (err: unknown) {
-        // --- Error handling ---
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load profile");
         }
       } finally {
-        // --- Always clear loading ---
         if (!cancelled) {
           setLoading(false);
         }
@@ -260,7 +206,6 @@ export default function ProfileSettingsScreen() {
 
     load();
 
-    // --- Cleanup cancellation flag ---
     return () => {
       cancelled = true;
     };
@@ -271,7 +216,6 @@ export default function ProfileSettingsScreen() {
       return;
     }
 
-    // Check for changes before saving
     const noChanges =
       displayName.trim() === initialDisplayName.trim() &&
       bio.trim() === initialBio.trim() &&
@@ -309,6 +253,135 @@ export default function ProfileSettingsScreen() {
     }
   };
 
+  const handleChangeEmail = async () => {
+    setEmailError(null);
+
+    const email = newEmail.trim();
+    const confirm = confirmNewEmail.trim();
+    const password = currentPassword.trim();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!email && !confirm && !password) {
+      setEmailError("Please fill in the fields to change your email.");
+      return;
+    }
+
+    if (!email) {
+      setEmailError("Please enter a new email.");
+      return;
+    }
+
+    if (!confirm) {
+      setEmailError("Please confirm your new email.");
+      return;
+    }
+
+    if (!password) {
+      setEmailError("Please enter your current password.");
+      return;
+    }
+
+    if (!emailRegex.test(email)) {
+      setEmailError("Please enter a valid email address.");
+      return;
+    }
+
+    if (email !== confirm) {
+      setEmailError("Email and confirmation do not match.");
+      return;
+    }
+
+    if (email === currentEmail) {
+      setEmailError("This is already your current email.");
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const emailCheck = await graphqlFetch<{ isEmailUsed: boolean }>(IS_EMAIL_USED_QUERY, { email });
+
+      if (emailCheck.isEmailUsed) {
+        setEmailError("This email address is already in use.");
+        return;
+      }
+
+      //fail routes throw errors that propagate so no need for extra checks
+      await graphqlFetch<{ changeMyEmail: boolean }>(CHANGE_MY_EMAIL_MUTATION, {
+        currentPassword: password,
+        newEmail: email,
+      });
+
+      setCurrentEmail(email);
+      setNewEmail("");
+      setConfirmNewEmail("");
+      setCurrentPassword("");
+      await refreshAuth();
+      showSuccessNotice("Email changed successfully. Redirecting...");
+      await wait(2000);
+      router.replace("/(auth)/verify-mail");
+
+    } catch (err) {
+      if (err instanceof Error && err.message === "Too Many Requests") {
+        setEmailError("Too many verification emails sent. Please wait before trying again.");
+        return;
+      }
+      setEmailError(err instanceof Error ? err.message : "Failed to change email.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError(null);
+
+    if (!newPassword.trim() || !confirmNewPassword.trim()) {
+      setPasswordError("Please enter and confirm your new password.");
+      return;
+    }
+    if (newPassword.trim() !== confirmNewPassword.trim()) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+    if (newPassword.trim().length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    const currentPasswordValue = currentPasswordForPassword.trim();
+    if (!currentPasswordValue) {
+      setPasswordError("Current password is required to change password.");
+      return;
+    }
+    if (currentPasswordValue === newPassword.trim()) {
+      setPasswordError("The new password and current password you entered are the same.");
+      return;
+    }
+    if (currentPasswordForPassword.trim().length < 8) {
+      setPasswordError("Password must be at least 8 characters.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await graphqlFetch<{ changeMyPassword: boolean }>(CHANGE_MY_PASSWORD_MUTATION, {
+        currentPassword: currentPasswordValue,
+        newPassword: newPassword.trim(),
+      });
+      if (result.changeMyPassword) {
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setCurrentPasswordForPassword("");
+        showSuccessNotice("Password changed successfully.");
+      } else {
+        setPasswordError("Failed to change password.");
+      }
+    } catch (err: unknown) {
+      setPasswordError(err instanceof Error ? err.message : "Failed to change password.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const closePicker = () => setPickerType(null);
 
   const handleSelectImage = (uri: string) => {
@@ -334,6 +407,32 @@ export default function ProfileSettingsScreen() {
 
   return (
     <View style={styles.container}>
+      {successNoticeVisible && (
+        <Animated.View
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 16,
+            right: 16,
+            zIndex: 20,
+            backgroundColor: "#ecfdf5",
+            borderColor: "#86efac",
+            borderWidth: 1,
+            borderRadius: 12,
+            paddingVertical: 10,
+            paddingHorizontal: 12,
+            flexDirection: "row",
+            alignItems: "center",
+            transform: [{ translateY: successNoticeY }],
+          }}
+        >
+          <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
+          <Text style={{ color: "#166534", fontWeight: "600", marginLeft: 8 }}>
+            {successNoticeMessage}
+          </Text>
+        </Animated.View>
+      )}
+
       <FeedHeader title="BookBook" />
 
       {/* Tabs */}
@@ -361,7 +460,6 @@ export default function ProfileSettingsScreen() {
 
       {activeTab === "about" && (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 }}>
-          {/* ...existing code for About You tab... */}
           <View
             style={{
               height: coverHeight,
@@ -565,20 +663,17 @@ export default function ProfileSettingsScreen() {
             ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 }, android: { elevation: 1 } })
           }}>
 
-
             {/* Username (not editable) */}
-            {/* Username (plain text) */}
             <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Username</Text>
             <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 2 }}>{user?.username || "-"}</Text>
             <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 18 }}>
               Your username is not changeable.
             </Text>
 
-            {/* Email (plain text) */}
+            {/* ── Email section ── */}
             <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Current Email</Text>
             <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 18 }}>{currentEmail || "-"}</Text>
 
-            {/* New email fields */}
             <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Email</Text>
             <TextInput
               value={newEmail}
@@ -586,7 +681,6 @@ export default function ProfileSettingsScreen() {
               placeholder="Enter new email"
               autoCapitalize="none"
               keyboardType="email-address"
-              editable={true}
               style={{
                 borderWidth: 1,
                 borderColor: "#d1d5db",
@@ -605,7 +699,6 @@ export default function ProfileSettingsScreen() {
               placeholder="Confirm new email"
               autoCapitalize="none"
               keyboardType="email-address"
-              editable={true}
               style={{
                 borderWidth: 1,
                 borderColor: "#d1d5db",
@@ -614,131 +707,161 @@ export default function ProfileSettingsScreen() {
                 paddingVertical: 10,
                 backgroundColor: "#fff",
                 color: confirmNewEmail ? "#1e293b" : "#9ca3af",
-                marginBottom: 24,
+                marginBottom: 8,
               }}
               placeholderTextColor="#9ca3af"
             />
+            <View style={{ position: "relative", marginBottom: 8 }}>
+              <TextInput
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                placeholder="Current password"
+                secureTextEntry={!showEmailCurrentPassword}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#d1d5db",
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  paddingRight: 44,
+                  backgroundColor: "#fff",
+                  color: currentPassword ? "#1e293b" : "#9ca3af",
+                }}
+                placeholderTextColor="#9ca3af"
+              />
+              <TouchableOpacity
+                onPress={() => setShowEmailCurrentPassword(prev => !prev)}
+                style={{ position: "absolute", right: 12, top: 10 }}
+              >
+                <Ionicons name={showEmailCurrentPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
 
-            {/* New password fields */}
+            {!!emailError && (
+              <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{emailError}</Text>
+            )}
+
+            <TouchableOpacity
+              onPress={handleChangeEmail}
+              disabled={saving}
+              style={{
+                backgroundColor: "#2563eb",
+                borderRadius: 10,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 12,
+                opacity: saving ? 0.7 : 1,
+                marginBottom: 24,
+              }}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Email</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* ── Password section ── */}
             <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Password</Text>
-            <TextInput
-              value={newPassword}
-              onChangeText={setNewPassword}
-              placeholder="Enter new password"
-              secureTextEntry
-              editable={true}
-              style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                backgroundColor: "#fff",
-                color: newPassword ? "#1e293b" : "#9ca3af",
-                marginBottom: 8,
-              }}
-              placeholderTextColor="#9ca3af"
-            />
-            <TextInput
-              value={confirmNewPassword}
-              onChangeText={setConfirmNewPassword}
-              placeholder="Confirm new password"
-              secureTextEntry
-              editable={true}
-              style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                backgroundColor: "#fff",
-                color: confirmNewPassword ? "#1e293b" : "#9ca3af",
-                marginBottom: 24,
-              }}
-              placeholderTextColor="#9ca3af"
-            />
+            <View style={{ position: "relative", marginBottom: 8 }}>
+              <TextInput
+                value={newPassword}
+                onChangeText={setNewPassword}
+                placeholder="Enter new password"
+                secureTextEntry={!showNewPassword}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#d1d5db",
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  paddingRight: 44,
+                  backgroundColor: "#fff",
+                  color: newPassword ? "#1e293b" : "#9ca3af",
+                }}
+                placeholderTextColor="#9ca3af"
+              />
+              <TouchableOpacity
+                onPress={() => setShowNewPassword(prev => !prev)}
+                style={{ position: "absolute", right: 12, top: 10 }}
+              >
+                <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ position: "relative", marginBottom: 8 }}>
+              <TextInput
+                value={confirmNewPassword}
+                onChangeText={setConfirmNewPassword}
+                placeholder="Confirm new password"
+                secureTextEntry={!showConfirmNewPassword}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#d1d5db",
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  paddingRight: 44,
+                  backgroundColor: "#fff",
+                  color: confirmNewPassword ? "#1e293b" : "#9ca3af",
+                }}
+                placeholderTextColor="#9ca3af"
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmNewPassword(prev => !prev)}
+                style={{ position: "absolute", right: 12, top: 10 }}
+              >
+                <Ionicons name={showConfirmNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ position: "relative", marginBottom: 8 }}>
+              <TextInput
+                value={currentPasswordForPassword}
+                onChangeText={setCurrentPasswordForPassword}
+                placeholder="Current password"
+                secureTextEntry={!showCurrentPasswordForPassword}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#d1d5db",
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  paddingRight: 44,
+                  backgroundColor: "#fff",
+                  color: currentPasswordForPassword ? "#1e293b" : "#9ca3af",
+                }}
+                placeholderTextColor="#9ca3af"
+              />
+              <TouchableOpacity
+                onPress={() => setShowCurrentPasswordForPassword(prev => !prev)}
+                style={{ position: "absolute", right: 12, top: 10 }}
+              >
+                <Ionicons name={showCurrentPasswordForPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
 
-            {/* Current password for saving changes */}
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>Current Password</Text>
-            <TextInput
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="Enter current password to save changes"
-              secureTextEntry
-              editable={true}
+            {!!passwordError && (
+              <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{passwordError}</Text>
+            )}
+
+            <TouchableOpacity
+              onPress={handleChangePassword}
+              disabled={saving}
               style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
+                backgroundColor: "#2563eb",
                 borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                backgroundColor: "#fff",
-                color: currentPassword ? "#1e293b" : "#9ca3af",
-                marginBottom: 8,
+                alignItems: "center",
+                justifyContent: "center",
+                paddingVertical: 12,
+                opacity: saving ? 0.7 : 1,
               }}
-              placeholderTextColor="#9ca3af"
-            />
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Password</Text>
+              )}
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            onPress={handleChangeEmail}
-            disabled={saving}
-            style={{
-              marginTop: 0,
-              backgroundColor: "#2563eb",
-              borderRadius: 10,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingVertical: 12,
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Email</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleChangePassword}
-            disabled={saving}
-            style={{
-              marginTop: 12,
-              backgroundColor: "#2563eb",
-              borderRadius: 10,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingVertical: 12,
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Password</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={handleResendVerificationLink}
-            disabled={saving}
-            style={{
-              marginTop: 12,
-              backgroundColor: "#2563eb",
-              borderRadius: 10,
-              alignItems: "center",
-              justifyContent: "center",
-              paddingVertical: 12,
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Resend Verification Link</Text>
-            )}
-          </TouchableOpacity>
         </ScrollView>
       )}
 
@@ -777,7 +900,6 @@ export default function ProfileSettingsScreen() {
                     ? selectedCoverUri === uri
                     : selectedAvatarUri === uri;
 
-                // Make selection images smaller
                 const imageSize = pickerType === "cover"
                   ? Math.round(screenWidth * 0.22)
                   : Math.round(screenWidth * 0.16);

@@ -13,25 +13,35 @@ export default function SignUp() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
     setError("");
+    setUsernameError("");
+    setEmailError("");
 
     if (!username || !email || !password || !confirmPassword) {
       setError("All fields are required");
       return;
     }
 
+    const trimmedLowerCaseEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
-      setError("Please enter a valid email");
+    if (!emailRegex.test(trimmedLowerCaseEmail)) {
+      setEmailError("Please enter a valid email");
       return;
     }
 
     if (password !== confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -42,13 +52,9 @@ export default function SignUp() {
         signUp: {
           token: string;
           emailVerified: boolean;
-          user: {
-            id: number;
-            username: string;
-            displayName?: string;
-          };
+          user: { id: number; username: string; displayName?: string };
         };
-      }>(SIGNUP_MUTATION, { username, email: email.trim().toLowerCase(), password });
+      }>(SIGNUP_MUTATION, { username, email: trimmedLowerCaseEmail, password });
 
       await setSession({
         token: res.signUp.token,
@@ -62,7 +68,10 @@ export default function SignUp() {
         router.replace(res.signUp.emailVerified ? "/(app)/feed" : ("/(auth)/verify-mail" as never));
       }, 600);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Sign up failed");
+      const msg = err instanceof Error ? err.message : "Sign up failed";
+      if (msg.toLowerCase().includes("username")) setUsernameError(msg);
+      else if (msg.toLowerCase().includes("email")) setEmailError(msg);
+      else setError(msg);
     } finally {
       setLoading(false);
     }
@@ -81,6 +90,9 @@ export default function SignUp() {
           autoCapitalize="none"
           style={commonStyles.input}
         />
+        {usernameError ? (
+          <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{usernameError}</Text>
+        ) : null}
 
         <TextInput
           placeholder="Email"
@@ -91,6 +103,9 @@ export default function SignUp() {
           keyboardType="email-address"
           style={[commonStyles.input, { marginTop: 12 }]}
         />
+        {emailError ? (
+          <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{emailError}</Text>
+        ) : null}
 
         <TextInput
           placeholder="Password"
@@ -134,10 +149,7 @@ export default function SignUp() {
           </Text>
         ) : null}
 
-        <Pressable
-          onPress={() => router.push("/(auth)/login")}
-          style={{ marginTop: 16 }}
-        >
+        <Pressable onPress={() => router.push("/(auth)/login")} style={{ marginTop: 16 }}>
           <Text style={{ textAlign: "center", color: "#2563eb", fontWeight: "500" }}>
             Back to login
           </Text>
