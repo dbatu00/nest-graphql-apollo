@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getCurrentUser } from "@/utils/currentUser";
-import { clearToken, getEmailVerified, getToken, saveEmailVerified, saveToken } from "@/utils/token";
+import { clearToken, getToken, saveToken } from "@/utils/token";
 
 export type AuthUser = {
   id: number;
@@ -21,7 +21,6 @@ type AuthContextValue = {
     };
     emailVerified: boolean;
   }) => Promise<void>;
-  setEmailVerified: (value: boolean) => Promise<void>;
   logout: () => Promise<void>;
   refreshAuth: () => Promise<AuthUser | null>;
 };
@@ -59,19 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
 
-      const persistedEmailVerified = await getEmailVerified();
-      const resolvedEmailVerified =
-        typeof currentUser.emailVerified === "boolean"
-          ? currentUser.emailVerified
-          : (persistedEmailVerified ?? false);
-
-      await saveEmailVerified(resolvedEmailVerified);
-
       const nextUser: AuthUser = {
         id: currentUser.id,
         username: currentUser.username,
         displayName: currentUser.displayName,
-        emailVerified: resolvedEmailVerified,
+        emailVerified: currentUser.emailVerified,
       };
 
       setUser(nextUser);
@@ -95,27 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     emailVerified: boolean;
   }) => {
     await saveToken(args.token);
-    await saveEmailVerified(args.emailVerified);
 
     setUser({
       id: args.user.id,
       username: args.user.username,
       displayName: args.user.displayName,
       emailVerified: args.emailVerified,
-    });
-  }, []);
-
-  const setEmailVerified = useCallback(async (value: boolean) => {
-    await saveEmailVerified(value);
-    setUser((prev) => {
-      if (!prev) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        emailVerified: value,
-      };
     });
   }, []);
 
@@ -128,10 +104,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     loading,
     setSession,
-    setEmailVerified,
     logout,
     refreshAuth,
-  }), [user, loading, setSession, setEmailVerified, logout, refreshAuth]);
+  }), [user, loading, setSession, logout, refreshAuth]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

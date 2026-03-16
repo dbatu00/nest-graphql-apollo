@@ -122,9 +122,20 @@ export const ME_QUERY = `
   }
 `;
 
+export const AUTH_ME_QUERY = `
+  query {
+    me {
+      id
+      username
+      displayName
+      emailVerified
+    }
+  }
+`;
+
 export const LOGIN_MUTATION = `
-  mutation Login($username: String!, $password: String!) {
-    login(username: $username, password: $password) {
+  mutation Login($identifier: String!, $password: String!) {
+    login(identifier: $identifier, password: $password) {
       token
       emailVerified
       user {
@@ -150,15 +161,28 @@ export const SIGNUP_MUTATION = `
   }
 `;
 
-export const VERIFY_EMAIL_MUTATION = `
-  mutation VerifyEmail($token: String!) {
-    verifyEmail(token: $token)
-  }
-`;
 
 export const RESEND_VERIFICATION_EMAIL_MUTATION = `
   mutation resendMyVerificationLink {
     resendMyVerificationLink
+  }
+`;
+
+export const IS_EMAIL_USED_QUERY = `
+  query IsEmailUsed($email: String!) {
+    isEmailUsed(email: $email)
+  }
+`;
+
+export const CHANGE_MY_EMAIL_MUTATION = `
+  mutation ChangeMyEmail($currentPassword: String!, $newEmail: String!) {
+    changeMyEmail(currentPassword: $currentPassword, newEmail: $newEmail)
+  }
+`;
+
+export const CHANGE_MY_PASSWORD_MUTATION = `
+  mutation ChangeMyPassword($currentPassword: String!, $newPassword: String!) {
+    changeMyPassword(currentPassword: $currentPassword, newPassword: $newPassword)
   }
 `;
 

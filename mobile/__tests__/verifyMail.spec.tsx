@@ -53,6 +53,19 @@ describe("VerifyMail screen", () => {
     });
   });
 
+  it("redirects unauthenticated users to login", async () => {
+    (useAuth as jest.Mock).mockReturnValue({
+      user: null,
+      refreshAuth,
+    });
+
+    render(<VerifyMail />);
+
+    await waitFor(() => {
+      expect((router.replace as jest.Mock)).toHaveBeenCalledWith("/(auth)/login");
+    });
+  });
+
   it("shows info when continue is pressed but account is still unverified", async () => {
     const { getByText } = render(<VerifyMail />);
 
@@ -94,7 +107,7 @@ describe("VerifyMail screen", () => {
 
     await waitFor(() => {
       expect(graphqlFetch).toHaveBeenCalledWith(RESEND_VERIFICATION_EMAIL_MUTATION);
-      expect(getByText("A new verification email has been sent.")).toBeTruthy();
+      expect(getByText("Verification link sent. Please check your email.")).toBeTruthy();
     });
   });
 

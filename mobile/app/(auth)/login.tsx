@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
   const { setSession } = useAuth();
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -16,8 +16,14 @@ export default function Login() {
   const handleLogin = async () => {
     setError("");
 
-    if (!username || !password) {
-      setError("Username and password required");
+
+    if (!identifier || !password) {
+      setError("Username or email and password required");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
@@ -34,7 +40,7 @@ export default function Login() {
             displayName?: string;
           };
         };
-      }>(LOGIN_MUTATION, { username, password });
+      }>(LOGIN_MUTATION, { identifier, password });
 
       await setSession({
         token: res.login.token,
@@ -60,10 +66,10 @@ export default function Login() {
 
       <View style={{ width: 260 }}>
         <TextInput
-          placeholder="Username"
+          placeholder="Username or Email"
           placeholderTextColor="#d1d5db"
-          value={username}
-          onChangeText={setUsername}
+          value={identifier}
+          onChangeText={setIdentifier}
           autoCapitalize="none"
           style={commonStyles.input}
         />

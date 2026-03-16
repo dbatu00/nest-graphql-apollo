@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 import { RESEND_VERIFICATION_EMAIL_MUTATION } from "@/graphql/operations";
 import { useAuth } from "@/hooks/useAuth";
+import { EmailSendResult } from "@/types/Auth";
 
 const MIN_ACTION_MS = 900;
 
@@ -13,11 +14,29 @@ function sleep(ms: number) {
 
 export default function VerifyMail() {
   const { user, refreshAuth } = useAuth();
-  const resendSuccessMessage = "A new verification email has been sent.";
+  const resendSuccessMessage = "Verification link sent. Please check your email.";
   const [checking, setChecking] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
+
+  useEffect(() => {
+    if (!user) {
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    if (user.emailVerified) {
+      router.replace("/(app)/feed");
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      void refreshAuth();
+    }, 4000);
+
+    return () => clearInterval(intervalId);
+  }, [user, refreshAuth]);
 
   const checkVerificationStatus = async () => {
     setError("");
@@ -45,19 +64,6 @@ export default function VerifyMail() {
     }
   };
 
-  useEffect(() => {
-    if (user?.emailVerified) {
-      router.replace("/(app)/feed");
-      return;
-    }
-
-    const intervalId = setInterval(() => {
-      void refreshAuth();
-    }, 4000);
-
-    return () => clearInterval(intervalId);
-  }, [user?.emailVerified, refreshAuth]);
-
   const handleResend = async () => {
     setError("");
     setInfo("");
@@ -65,12 +71,23 @@ export default function VerifyMail() {
     const startTime = Date.now();
 
     try {
-      await graphqlFetch<{ resendMyVerificationLink: boolean }>(RESEND_VERIFICATION_EMAIL_MUTATION);
-      const elapsedMs = Date.now() - startTime;
-      if (elapsedMs < MIN_ACTION_MS) {
-        await sleep(MIN_ACTION_MS - elapsedMs);
+      const result = await graphqlFetch<{ resendMyVerificationLink: EmailSendResult }>(
+        RESEND_VERIFICATION_EMAIL_MUTATION
+      );
+
+      const messages: Record<EmailSendResult, string> = {
+        SENT: "Verification link sent. Please check your email.",
+        THROTTLED: "Please wait before requesting another email.",
+        FAILED: "Could not deliver email right now. Try again later.",
+        ALREADY_VERIFIED: "Your email is already verified",
+      };
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_ACTION_MS) {
+        await sleep(MIN_ACTION_MS - elapsed);
       }
-      setInfo(resendSuccessMessage);
+
+      setInfo(messages[result.resendMyVerificationLink] ?? "Unknown status");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not resend verification email");
     } finally {
