@@ -1,0 +1,6 @@
+export enum VerifyEmailResult {
+    SUCCESS = "SUCCESS",
+    INVALID_TOKEN = "INVALID_TOKEN",
+    TOKEN_ALREADY_USED = "TOKEN_ALREADY_USED",
+    TOKEN_EXPIRED = "TOKEN_EXPIRED",
+}
