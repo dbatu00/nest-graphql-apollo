@@ -8,3 +8,6 @@ backend: typeorm synchronize=true in app module - medium
 backend: deletePost flow is not transactional (activity delete + post remove split) - medium
 backend: activity resolver throws generic Error instead of framework exception - low
 backend: user gets throttled on verify but can change mail
+
+client: on email change both isemailused and changeemail are called. 
+if throttled the user can time oracle

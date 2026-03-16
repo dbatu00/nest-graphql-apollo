@@ -31,6 +31,26 @@
 
 ---
 
+
+## 2026-03-10 — Service Layer Defensive Checks
+
+**Topic:** Redundancy vs defensive practice in user checks
+
+### What happened
+
+- Noticed that user existence checks in `auth.service.ts` are often redundant due to `GqlAuthGuard` and `@CurrentUser` in resolvers.
+
+### Reasoning
+
+- While guards/decorators ensure authenticated access, service methods may be reused elsewhere (other controllers/services/tests).
+- Defensive checks in the service layer prevent misuse and unexpected errors, making the code more robust and future-proof.
+
+### Decision
+
+- Keep defensive checks in service methods for layered architecture and maintainability, even if currently redundant for resolver flow.
+
+---
+
 ## 2025-11-30 — Mock typing note
 
 `findOne: jest.Mock<Promise<T | null>, [any]>;`
@@ -273,3 +293,20 @@ Outcome:
 
 - Invalid/expired tokens still log out correctly.
 - Temporary outages no longer cause forced logout.
+
+
+## Dev Diary – 2026-03-13
+
+Reviewed email verification flow for new signups.
+
+Current behavior: token is created in DB regardless of email delivery success. If delivery fails, user sees “verify your email” screen but may not receive mail until they click resend.
+
+UX tradeoff noted: could expose delivery failures explicitly, but that adds complexity with little practical benefit.
+
+Decision: keep current fire-and-forget behavior for simplicity; logs capture failures for internal tracking.
+
+Frontend can still show resend option, which resolves missed deliveries.
+
+
+## Dev Diary - 15.03.2026
+Found that changeMyEmail was leaking password validity during cooldown — wrong password got a 401, correct password got a 429. Moved the throttle check before the password verify to fix it.
