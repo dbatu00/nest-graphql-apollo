@@ -20,14 +20,14 @@ describe('UsersResolver', () => {
         const user = { id: 1, username: 'deniz' };
         usersService.findByUsername.mockResolvedValue(user);
 
-        await expect(resolver.userByUsername('deniz')).resolves.toBe(user as any);
+        await expect(resolver.userByUsername({ username: 'deniz' } as any)).resolves.toBe(user as any);
         expect(usersService.findByUsername).toHaveBeenCalledWith('deniz');
     });
 
     it('userByUsername returns null when user does not exist', async () => {
         usersService.findByUsername.mockResolvedValue(null);
 
-        await expect(resolver.userByUsername('missing')).resolves.toBeNull();
+        await expect(resolver.userByUsername({ username: 'missing' } as any)).resolves.toBeNull();
         expect(usersService.findByUsername).toHaveBeenCalledWith('missing');
     });
 
@@ -36,7 +36,7 @@ describe('UsersResolver', () => {
         usersService.updateMyProfile.mockResolvedValue(updated);
 
         await expect(
-            resolver.updateMyProfile({ id: 1 } as any, 'Deniz', 'hello')
+            resolver.updateMyProfile({ id: 1 } as any, { displayName: 'Deniz', bio: 'hello' } as any)
         ).resolves.toBe(updated as any);
 
         expect(usersService.updateMyProfile).toHaveBeenCalledWith(1, {
@@ -49,7 +49,7 @@ describe('UsersResolver', () => {
         usersService.updateMyProfile.mockRejectedValue(new Error('update failed'));
 
         await expect(
-            resolver.updateMyProfile({ id: 1 } as any, 'Deniz', 'hello')
+            resolver.updateMyProfile({ id: 1 } as any, { displayName: 'Deniz', bio: 'hello' } as any)
         ).rejects.toThrow('update failed');
     });
 

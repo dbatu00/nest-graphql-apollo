@@ -10,6 +10,7 @@ import { UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { User } from "src/users/user.entity";
 import { CurrentUser } from "./security/current-user.decorator";
+import { ChangeMyEmailArgs, ChangeMyPasswordArgs, IsEmailUsedArgs, LoginArgs, SignUpArgs } from "./dto/auth.args";
 
 @Resolver()
 export class AuthResolver {
@@ -25,40 +26,31 @@ export class AuthResolver {
     }
 
     @Mutation(() => AuthPayload)
-    signUp(
-        @Args("username") username: string,
-        @Args("email") email: string,
-        @Args("password") password: string
-    ) {
-        return this.authService.signUp(username, email, password);
+    signUp(@Args() args: SignUpArgs) {
+        return this.authService.signUp(args.username, args.email, args.password);
     }
 
     @Mutation(() => AuthPayload)
-    login(
-        @Args("identifier") identifier: string,
-        @Args("password") password: string
-    ) {
-        return this.authService.login(identifier, password);
+    login(@Args() args: LoginArgs) {
+        return this.authService.login(args.identifier, args.password);
     }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     changeMyPassword(
         @CurrentUser() user: User,
-        @Args('currentPassword') currentPassword: string,
-        @Args('newPassword') newPassword: string
+        @Args() args: ChangeMyPasswordArgs,
     ) {
-        return this.authService.changeMyPassword(user.id, currentPassword, newPassword);
+        return this.authService.changeMyPassword(user.id, args.currentPassword, args.newPassword);
     }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     changeMyEmail(
         @CurrentUser() user: User,
-        @Args('currentPassword') currentPassword: string,
-        @Args('newEmail') newEmail: string
+        @Args() args: ChangeMyEmailArgs,
     ) {
-        return this.authService.changeMyEmail(user.id, newEmail, currentPassword);
+        return this.authService.changeMyEmail(user.id, args.newEmail, args.currentPassword);
     }
 
     @UseGuards(GqlAuthGuard)
@@ -72,8 +64,8 @@ export class AuthResolver {
         },
     })
     @Query(() => Boolean)
-    isEmailUsed(@Args('email') email: string) {
-        return this.authService.isEmailUsed(email);
+    isEmailUsed(@Args() args: IsEmailUsedArgs) {
+        return this.authService.isEmailUsed(args.email);
     }
 
     @UseGuards(GqlAuthGuard)

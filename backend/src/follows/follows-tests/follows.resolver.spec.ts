@@ -20,27 +20,27 @@ describe('FollowsResolver', () => {
     it('followUser delegates to service with user id + username', async () => {
         followsService.follow.mockResolvedValue(true);
 
-        await expect(resolver.followUser({ id: 1 } as any, 'alice')).resolves.toBe(true);
+        await expect(resolver.followUser({ id: 1 } as any, { username: 'alice' } as any)).resolves.toBe(true);
         expect(followsService.follow).toHaveBeenCalledWith(1, 'alice');
     });
 
     it('followUser propagates service errors', async () => {
         followsService.follow.mockRejectedValue(new Error('follow failed'));
 
-        await expect(resolver.followUser({ id: 1 } as any, 'alice')).rejects.toThrow('follow failed');
+        await expect(resolver.followUser({ id: 1 } as any, { username: 'alice' } as any)).rejects.toThrow('follow failed');
     });
 
     it('unfollowUser delegates to service with user id + username', async () => {
         followsService.unfollow.mockResolvedValue(true);
 
-        await expect(resolver.unfollowUser({ id: 1 } as any, 'alice')).resolves.toBe(true);
+        await expect(resolver.unfollowUser({ id: 1 } as any, { username: 'alice' } as any)).resolves.toBe(true);
         expect(followsService.unfollow).toHaveBeenCalledWith(1, 'alice');
     });
 
     it('unfollowUser propagates service errors', async () => {
         followsService.unfollow.mockRejectedValue(new Error('unfollow failed'));
 
-        await expect(resolver.unfollowUser({ id: 1 } as any, 'alice')).rejects.toThrow('unfollow failed');
+        await expect(resolver.unfollowUser({ id: 1 } as any, { username: 'alice' } as any)).rejects.toThrow('unfollow failed');
     });
 
     it('followers maps follow rows to follower users', async () => {
@@ -49,13 +49,13 @@ describe('FollowsResolver', () => {
             { follower: { id: 3 } },
         ]);
 
-        await expect(resolver.followers('alice')).resolves.toEqual([{ id: 2 }, { id: 3 }]);
+        await expect(resolver.followers({ username: 'alice' } as any)).resolves.toEqual([{ id: 2 }, { id: 3 }]);
     });
 
     it('followers propagates service errors', async () => {
         followsService.getFollowers.mockRejectedValue(new Error('followers failed'));
 
-        await expect(resolver.followers('alice')).rejects.toThrow('followers failed');
+        await expect(resolver.followers({ username: 'alice' } as any)).rejects.toThrow('followers failed');
     });
 
     it('following maps follow rows to following users', async () => {
@@ -64,13 +64,13 @@ describe('FollowsResolver', () => {
             { following: { id: 3 } },
         ]);
 
-        await expect(resolver.following('deniz')).resolves.toEqual([{ id: 2 }, { id: 3 }]);
+        await expect(resolver.following({ username: 'deniz' } as any)).resolves.toEqual([{ id: 2 }, { id: 3 }]);
     });
 
     it('following propagates service errors', async () => {
         followsService.getFollowing.mockRejectedValue(new Error('following failed'));
 
-        await expect(resolver.following('deniz')).rejects.toThrow('following failed');
+        await expect(resolver.following({ username: 'deniz' } as any)).rejects.toThrow('following failed');
     });
 
     it('followersWithFollowState normalizes boolean/string raw values', async () => {
@@ -79,7 +79,7 @@ describe('FollowsResolver', () => {
             raw: [{ followedByMe: true }, { followedByMe: 'true' }],
         });
 
-        await expect(resolver.followersWithFollowState('alice', { id: 1 } as any)).resolves.toEqual([
+        await expect(resolver.followersWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).resolves.toEqual([
             { user: { id: 2 }, followedByMe: true },
             { user: { id: 3 }, followedByMe: true },
         ]);
@@ -92,7 +92,7 @@ describe('FollowsResolver', () => {
             raw: [{ followedByMe: '1' }],
         });
 
-        await expect(resolver.followersWithFollowState('alice', { id: 1 } as any)).resolves.toEqual([
+        await expect(resolver.followersWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).resolves.toEqual([
             { user: { id: 2 }, followedByMe: false },
         ]);
     });
@@ -100,7 +100,7 @@ describe('FollowsResolver', () => {
     it('followersWithFollowState propagates service errors', async () => {
         followsService.getFollowersWithFollowState.mockRejectedValue(new Error('state failed'));
 
-        await expect(resolver.followersWithFollowState('alice', { id: 1 } as any)).rejects.toThrow('state failed');
+        await expect(resolver.followersWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).rejects.toThrow('state failed');
     });
 
     it('followersWithFollowState currently throws when raw/entities lengths mismatch', async () => {
@@ -109,7 +109,7 @@ describe('FollowsResolver', () => {
             raw: [{ followedByMe: true }],
         });
 
-        await expect(resolver.followersWithFollowState('alice', { id: 1 } as any)).rejects.toThrow();
+        await expect(resolver.followersWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).rejects.toThrow();
     });
 
     it('followingWithFollowState normalizes false raw values', async () => {
@@ -118,7 +118,7 @@ describe('FollowsResolver', () => {
             raw: [{ followedByMe: false }, { followedByMe: 'false' }],
         });
 
-        await expect(resolver.followingWithFollowState('alice', { id: 1 } as any)).resolves.toEqual([
+        await expect(resolver.followingWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).resolves.toEqual([
             { user: { id: 2 }, followedByMe: false },
             { user: { id: 3 }, followedByMe: false },
         ]);
@@ -128,7 +128,7 @@ describe('FollowsResolver', () => {
     it('followingWithFollowState propagates service errors', async () => {
         followsService.getFollowingWithFollowState.mockRejectedValue(new Error('state failed'));
 
-        await expect(resolver.followingWithFollowState('alice', { id: 1 } as any)).rejects.toThrow('state failed');
+        await expect(resolver.followingWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).rejects.toThrow('state failed');
     });
 
     it('followingWithFollowState currently throws when raw/entities lengths mismatch', async () => {
@@ -137,6 +137,6 @@ describe('FollowsResolver', () => {
             raw: [{ followedByMe: false }],
         });
 
-        await expect(resolver.followingWithFollowState('alice', { id: 1 } as any)).rejects.toThrow();
+        await expect(resolver.followingWithFollowState({ username: 'alice' } as any, { id: 1 } as any)).rejects.toThrow();
     });
 });

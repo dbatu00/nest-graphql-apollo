@@ -6,6 +6,7 @@ import { GqlAuthGuard } from "../auth/security/gql-auth.guard";
 import { CurrentUser } from "../auth/security/current-user.decorator";
 import { User } from "../users/user.entity";
 import { FollowerView } from "./dto/follower-view.type";
+import { UsernameArgs } from "./dto/follows.args";
 
 @Resolver()
 export class FollowsResolver {
@@ -15,33 +16,33 @@ export class FollowsResolver {
     @Mutation(() => Boolean)
     followUser(
         @CurrentUser() user: User,
-        @Args("username") username: string,
+        @Args() args: UsernameArgs,
     ) {
-        return this.followsService.follow(user.id, username);
+        return this.followsService.follow(user.id, args.username);
     }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     unfollowUser(
         @CurrentUser() user: User,
-        @Args("username") username: string,
+        @Args() args: UsernameArgs,
     ) {
-        return this.followsService.unfollow(user.id, username);
+        return this.followsService.unfollow(user.id, args.username);
     }
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [User])
-    followers(@Args("username") username: string) {
+    followers(@Args() args: UsernameArgs) {
         return this.followsService
-            .getFollowers(username)
+            .getFollowers(args.username)
             .then(rows => rows.map(r => r.follower));
     }
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [User])
-    following(@Args("username") username: string) {
+    following(@Args() args: UsernameArgs) {
         return this.followsService
-            .getFollowing(username)
+            .getFollowing(args.username)
             .then(rows => rows.map(r => r.following));
     }
 
@@ -50,12 +51,12 @@ export class FollowsResolver {
     @UseGuards(GqlAuthGuard)
     @Query(() => [FollowerView])
     async followersWithFollowState(
-        @Args("username") username: string,
+        @Args() args: UsernameArgs,
         @CurrentUser() user: User,
     ) {
         const { entities, raw } =
             await this.followsService.getFollowersWithFollowState(
-                username,
+                args.username,
                 user.id,
             );
 
@@ -71,12 +72,12 @@ export class FollowsResolver {
     @UseGuards(GqlAuthGuard)
     @Query(() => [FollowerView])
     async followingWithFollowState(
-        @Args("username") username: string,
+        @Args() args: UsernameArgs,
         @CurrentUser() user: User,
     ) {
         const { entities, raw } =
             await this.followsService.getFollowingWithFollowState(
-                username,
+                args.username,
                 user.id
             );
 

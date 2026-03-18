@@ -5,6 +5,7 @@ import { User } from './user.entity';
 import { CurrentUser } from 'src/auth/security/current-user.decorator';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/auth/security/gql-auth.guard';
+import { UpdateMyProfileArgs, UsernameArgs } from './dto/users.args';
 
 @Resolver(() => User)
 export class UsersResolver {
@@ -15,47 +16,17 @@ export class UsersResolver {
    * Used when visiting /user/:username
    */
   @Query(() => User, { nullable: true })
-  userByUsername(
-    @Args('username') username: string,
-  ): Promise<User | null> {
-    return this.usersService.findByUsername(username);
+  userByUsername(@Args() args: UsernameArgs): Promise<User | null> {
+    return this.usersService.findByUsername(args.username);
   }
 
   @UseGuards(GqlAuthGuard)
   @Mutation(() => User)
   updateMyProfile(
     @CurrentUser() user: User,
-    @Args('displayName', { nullable: true }) displayName?: string,
-    @Args('bio', { nullable: true }) bio?: string,
-    @Args('avatarUrl', { nullable: true }) avatarUrl?: string,
-    @Args('coverUrl', { nullable: true }) coverUrl?: string,
+    @Args() args: UpdateMyProfileArgs,
   ): Promise<User> {
-    const input: {
-      displayName?: string;
-      bio?: string;
-      avatarUrl?: string;
-      coverUrl?: string;
-    } = {};
-
-    if (typeof displayName === 'string') {
-      input.displayName = displayName;
-    }
-
-    if (typeof bio === 'string') {
-      input.bio = bio;
-    }
-
-    if (typeof avatarUrl === 'string') {
-      input.avatarUrl = avatarUrl;
-    }
-
-    if (typeof coverUrl === 'string') {
-      input.coverUrl = coverUrl;
-    }
-
-    return this.usersService.updateMyProfile(user.id, {
-      ...input,
-    });
+    return this.usersService.updateMyProfile(user.id, args);
   }
 
   @ResolveField(() => Boolean)

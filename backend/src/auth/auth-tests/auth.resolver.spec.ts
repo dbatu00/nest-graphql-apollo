@@ -29,34 +29,34 @@ describe('AuthResolver', () => {
         const payload = { user: { id: 1 }, token: 'jwt' };
         authService.signUp.mockResolvedValue(payload);
 
-        await expect(resolver.signUp('deniz', 'deniz@example.com', 'secret123')).resolves.toBe(payload);
+        await expect(resolver.signUp({ username: 'deniz', email: 'deniz@example.com', password: 'secret123' } as any)).resolves.toBe(payload);
         expect(authService.signUp).toHaveBeenCalledWith('deniz', 'deniz@example.com', 'secret123');
     });
 
     it('signUp propagates service errors', async () => {
         authService.signUp.mockRejectedValue(new Error('signup failed'));
 
-        await expect(resolver.signUp('deniz', 'deniz@example.com', 'secret123')).rejects.toThrow('signup failed');
+        await expect(resolver.signUp({ username: 'deniz', email: 'deniz@example.com', password: 'secret123' } as any)).rejects.toThrow('signup failed');
     });
 
     it('login forwards credentials to service', async () => {
         const payload = { user: { id: 1 }, token: 'jwt' };
         authService.login.mockResolvedValue(payload);
 
-        await expect(resolver.login('deniz', 'secret')).resolves.toBe(payload);
-        expect(authService.login).toHaveBeenCalledWith('deniz', 'secret');
+        await expect(resolver.login({ identifier: 'deniz', password: 'secret123' } as any)).resolves.toBe(payload);
+        expect(authService.login).toHaveBeenCalledWith('deniz', 'secret123');
     });
 
     it('login propagates service errors', async () => {
         authService.login.mockRejectedValue(new Error('login failed'));
 
-        await expect(resolver.login('deniz', 'secret')).rejects.toThrow('login failed');
+        await expect(resolver.login({ identifier: 'deniz', password: 'secret123' } as any)).rejects.toThrow('login failed');
     });
 
     it('isEmailUsed forwards email to service', async () => {
         authService.isEmailUsed.mockResolvedValue(true);
 
-        await expect(resolver.isEmailUsed('deniz@example.com')).resolves.toBe(true);
+        await expect(resolver.isEmailUsed({ email: 'deniz@example.com' } as any)).resolves.toBe(true);
         expect(authService.isEmailUsed).toHaveBeenCalledWith('deniz@example.com');
     });
 
