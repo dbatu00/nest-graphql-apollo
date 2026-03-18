@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
-import { graphqlFetch } from "@/utils/graphqlFetch";
 import { commonStyles } from "@/styles/common";
-import { SIGNUP_MUTATION } from "@/graphql/operations";
+import { signUp } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function SignUp() {
@@ -48,24 +47,18 @@ export default function SignUp() {
     setLoading(true);
 
     try {
-      const res = await graphqlFetch<{
-        signUp: {
-          token: string;
-          emailVerified: boolean;
-          user: { id: number; username: string; displayName?: string };
-        };
-      }>(SIGNUP_MUTATION, { username, email: trimmedLowerCaseEmail, password });
+      const authPayload = await signUp(username, trimmedLowerCaseEmail, password);
 
       await setSession({
-        token: res.signUp.token,
-        user: res.signUp.user,
-        emailVerified: res.signUp.emailVerified,
+        token: authPayload.token,
+        user: authPayload.user,
+        emailVerified: authPayload.emailVerified,
       });
 
       setSuccess(true);
 
       setTimeout(() => {
-        router.replace(res.signUp.emailVerified ? "/(app)/feed" : ("/(auth)/verify-mail" as never));
+        router.replace(authPayload.emailVerified ? "/(app)/feed" : ("/(auth)/verify-mail" as never));
       }, 600);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Sign up failed";

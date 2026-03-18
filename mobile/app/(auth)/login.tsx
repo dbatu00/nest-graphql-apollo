@@ -2,8 +2,7 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { commonStyles } from "../../styles/common";
-import { graphqlFetch } from "@/utils/graphqlFetch";
-import { LOGIN_MUTATION } from "@/graphql/operations";
+import { login } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
@@ -30,25 +29,15 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await graphqlFetch<{
-        login: {
-          token: string;
-          emailVerified: boolean;
-          user: {
-            id: number;
-            username: string;
-            displayName?: string;
-          };
-        };
-      }>(LOGIN_MUTATION, { identifier, password });
+      const authPayload = await login(identifier, password);
 
       await setSession({
-        token: res.login.token,
-        user: res.login.user,
-        emailVerified: res.login.emailVerified,
+        token: authPayload.token,
+        user: authPayload.user,
+        emailVerified: authPayload.emailVerified,
       });
 
-      if (res.login.emailVerified) {
+      if (authPayload.emailVerified) {
         router.replace("/(app)/feed");
       } else {
         router.replace("/(auth)/verify-mail" as never);

@@ -18,8 +18,7 @@ import { UserSettingsButton } from "@/components/common/UserSettingsButton";
 import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
-import { graphqlFetch } from "@/utils/graphqlFetch";
-import { FOLLOWERS_QUERY, FOLLOWING_QUERY, USER_PROFILE_QUERY } from "@/graphql/operations";
+import { fetchFollowers, fetchFollowing, fetchUserProfileMeta } from "@/graphql/client";
 
 type Tab =
   | "posts"
@@ -85,20 +84,13 @@ export default function UsernameScreen() {
 
     const loadProfileMeta = async () => {
       try {
-        const data = await graphqlFetch<{
-          userByUsername: {
-            displayName?: string;
-            bio?: string;
-            avatarUrl?: string;
-            coverUrl?: string;
-          } | null;
-        }>(USER_PROFILE_QUERY, { username });
+        const profile = await fetchUserProfileMeta(username);
 
         if (cancelled) {
           return;
         }
 
-        setProfileMeta(data.userByUsername ?? null);
+        setProfileMeta(profile ?? null);
       } catch {
         if (!cancelled) {
           setProfileMeta(null);
@@ -124,19 +116,11 @@ export default function UsernameScreen() {
       setFollowLoading(true);
 
       try {
-        const data = await graphqlFetch<{
-          followers?: FollowUser[];
-          following?: FollowUser[];
-        }>(
-          tab === "followers" ? FOLLOWERS_QUERY : FOLLOWING_QUERY,
-          { username }
-        );
+        const rows = tab === "followers"
+          ? await fetchFollowers(username)
+          : await fetchFollowing(username);
 
-        setFollowUsers(
-          tab === "followers"
-            ? data.followers ?? []
-            : data.following ?? []
-        );
+        setFollowUsers(rows);
       } catch {
         setFollowUsers([]);
       } finally {
@@ -220,8 +204,8 @@ export default function UsernameScreen() {
       />
 
       {/* Profile card */}
-      <View style={{ 
-        paddingHorizontal: 16, 
+      <View style={{
+        paddingHorizontal: 16,
         paddingTop: 12,
         borderBottomWidth: 0,
         marginBottom: 12,
@@ -389,51 +373,51 @@ export default function UsernameScreen() {
       {/* Followers / Following */}
       {(tab === "followers" ||
         tab === "following") && (
-        <View style={{ flex: 1 }}>
-          {followLoading && (
-            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-              <ActivityIndicator size="large" color="#2563eb" />
-            </View>
-          )}
+          <View style={{ flex: 1 }}>
+            {followLoading && (
+              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <ActivityIndicator size="large" color="#2563eb" />
+              </View>
+            )}
 
-          {!followLoading && (
-            <ScrollView style={{ paddingTop: 8 }}>
-              {followUsers.map(user => (
-                <View
-                  key={user.id}
-                  style={{
-                    backgroundColor: "#fff",
-                    marginHorizontal: 12,
-                    marginVertical: 6,
-                    borderRadius: 10,
-                    ...Platform.select({
-                      ios: {
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.04,
-                        shadowRadius: 2,
-                      },
-                      android: { elevation: 1 },
-                    }),
-                  }}
-                >
-                  <UserRow
-                    user={user}
-                    currentUserId={
-                      feed.currentUserId ??
-                      undefined
-                    }
-                    onToggleFollow={
-                      handleToggleFollowInList
-                    }
-                    isCompact={false}
-                  />
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-      )}
+            {!followLoading && (
+              <ScrollView style={{ paddingTop: 8 }}>
+                {followUsers.map(user => (
+                  <View
+                    key={user.id}
+                    style={{
+                      backgroundColor: "#fff",
+                      marginHorizontal: 12,
+                      marginVertical: 6,
+                      borderRadius: 10,
+                      ...Platform.select({
+                        ios: {
+                          shadowColor: "#000",
+                          shadowOffset: { width: 0, height: 1 },
+                          shadowOpacity: 0.04,
+                          shadowRadius: 2,
+                        },
+                        android: { elevation: 1 },
+                      }),
+                    }}
+                  >
+                    <UserRow
+                      user={user}
+                      currentUserId={
+                        feed.currentUserId ??
+                        undefined
+                      }
+                      onToggleFollow={
+                        handleToggleFollowInList
+                      }
+                      isCompact={false}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
       {/* Activity Based Tabs */}
       {tab !== "followers" &&

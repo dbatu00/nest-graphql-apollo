@@ -1,16 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
-import { graphqlFetch } from "@/utils/graphqlFetch";
 import { getCurrentUser } from "@/utils/currentUser";
 import { Activity } from "@/types/Activity";
 import {
-  ADD_POST_MUTATION,
-  DELETE_POST_MUTATION,
-  FEED_QUERY,
-  FOLLOW_USER_MUTATION,
-  LIKE_POST_MUTATION,
-  UNFOLLOW_USER_MUTATION,
-  UNLIKE_POST_MUTATION,
-} from "@/graphql/operations";
+  addPost,
+  deletePost,
+  fetchFeed,
+  followUser,
+  likePost,
+  unfollowUser,
+  unlikePost,
+} from "@/graphql/client";
 
 type Params = {
   username?: string;
@@ -39,12 +38,12 @@ export function useActivities(params: Params = {}) {
     setError(null);
 
     try {
-      const data = await graphqlFetch<{ feed: Activity[] }>(FEED_QUERY, {
+      const feed = await fetchFeed({
         username,
         types,
       });
 
-      setActivities(data.feed ?? []);
+      setActivities(feed);
     } catch (err: unknown) {
       console.error("[useActivities] feed refresh failed", err);
       setError("Failed to load feed");
@@ -95,10 +94,11 @@ export function useActivities(params: Params = {}) {
       );
 
       try {
-        await graphqlFetch(
-          shouldFollow ? FOLLOW_USER_MUTATION : UNFOLLOW_USER_MUTATION,
-          { username: targetUsername }
-        );
+        if (shouldFollow) {
+          await followUser(targetUsername);
+        } else {
+          await unfollowUser(targetUsername);
+        }
       } catch (err: unknown) {
         console.error("[useActivities] follow toggle failed", err);
         refresh(); // rollback via truth
@@ -138,10 +138,11 @@ export function useActivities(params: Params = {}) {
       );
 
       try {
-        await graphqlFetch(
-          currentlyLiked ? UNLIKE_POST_MUTATION : LIKE_POST_MUTATION,
-          { postId }
-        );
+        if (currentlyLiked) {
+          await unlikePost(postId);
+        } else {
+          await likePost(postId);
+        }
       } catch (err: unknown) {
         console.error("[useActivities] like toggle failed", err);
         refresh();
@@ -160,7 +161,7 @@ export function useActivities(params: Params = {}) {
       );
 
       try {
-        await graphqlFetch(DELETE_POST_MUTATION, { postId });
+        await deletePost(postId);
       } catch (err: unknown) {
         console.error("[useActivities] delete post failed", err);
         refresh();
@@ -176,7 +177,7 @@ export function useActivities(params: Params = {}) {
       if (!content.trim()) return;
 
       try {
-        await graphqlFetch(ADD_POST_MUTATION, { content });
+        await addPost(content);
 
         refresh();
       } catch (err: unknown) {

@@ -1,15 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
-import { graphqlFetch } from "@/utils/graphqlFetch";
 import { Post } from "@/types/Post";
 import { getCurrentUser } from "@/utils/currentUser";
 import {
-  FOLLOWERS_WITH_FOLLOW_STATE_QUERY,
-  FOLLOWING_WITH_FOLLOW_STATE_QUERY,
-  FOLLOW_USER_MUTATION,
-  LIKED_POSTS_QUERY,
-  UNFOLLOW_USER_MUTATION,
-  USER_PROFILE_QUERY,
-} from "@/graphql/operations";
+  fetchFollowersWithFollowState,
+  fetchFollowingWithFollowState,
+  fetchLikedPosts as fetchLikedPostsQuery,
+  fetchUserProfile,
+  followUser,
+  unfollowUser,
+} from "@/graphql/client";
 
 type Profile = {
   id: number;
@@ -25,11 +24,6 @@ type UserSummary = {
   username: string;
   displayName?: string;
   avatarUrl?: string;
-};
-
-type FollowerViewAPI = {
-  user: UserSummary;
-  followedByMe: boolean;
 };
 
 type FollowRow = {
@@ -67,14 +61,18 @@ export function useProfile(username: string) {
       try {
         setLoading(true);
 
-        const data = await graphqlFetch<{
-          userByUsername: Profile & { posts: Post[] };
-        }>(USER_PROFILE_QUERY, { username });
+        const userByUsername = await fetchUserProfile(username);
 
         if (cancelled) return;
 
-        setProfile(data.userByUsername);
-        setPosts(data.userByUsername.posts ?? []);
+        if (!userByUsername) {
+          setProfile(null);
+          setPosts([]);
+          return;
+        }
+
+        setProfile(userByUsername);
+        setPosts(userByUsername.posts ?? []);
       } catch (err: unknown) {
         console.error("[useProfile] profile fetch failed", err);
         if (!cancelled) {
@@ -99,12 +97,8 @@ export function useProfile(username: string) {
     if (!username) return;
 
     try {
-      const data = await graphqlFetch<{ likedPosts: Post[] }>(
-        LIKED_POSTS_QUERY,
-        { username }
-      );
-
-      setLikedPosts(data.likedPosts ?? []);
+      const liked = await fetchLikedPostsQuery(username);
+      setLikedPosts(liked);
     } catch (err: unknown) {
       console.error("[useProfile] liked posts fetch failed", err);
     }
@@ -115,12 +109,10 @@ export function useProfile(username: string) {
     if (!username) return;
 
     try {
-      const data = await graphqlFetch<{
-        followersWithFollowState: FollowerViewAPI[];
-      }>(FOLLOWERS_WITH_FOLLOW_STATE_QUERY, { username });
+      const rows = await fetchFollowersWithFollowState(username);
 
       setFollowers(
-        (data.followersWithFollowState ?? []).map(f => ({
+        rows.map(f => ({
           user: f.user,
           followedByMe: f.followedByMe,
         }))
@@ -135,12 +127,10 @@ export function useProfile(username: string) {
     if (!username) return;
 
     try {
-      const data = await graphqlFetch<{
-        followingWithFollowState: FollowerViewAPI[];
-      }>(FOLLOWING_WITH_FOLLOW_STATE_QUERY, { username });
+      const rows = await fetchFollowingWithFollowState(username);
 
       setFollowing(
-        (data.followingWithFollowState ?? []).map(f => ({
+        rows.map(f => ({
           user: f.user,
           followedByMe: f.followedByMe,
         }))
@@ -180,10 +170,11 @@ export function useProfile(username: string) {
       );
 
       try {
-        await graphqlFetch(
-          shouldFollow ? FOLLOW_USER_MUTATION : UNFOLLOW_USER_MUTATION,
-          { username: targetUsername }
-        );
+        if (shouldFollow) {
+          await followUser(targetUsername);
+        } else {
+          await unfollowUser(targetUsername);
+        }
       } catch (err: unknown) {
         console.error("[useProfile] follow toggle failed", err);
         // Roll back all optimistic surfaces if mutation fails.

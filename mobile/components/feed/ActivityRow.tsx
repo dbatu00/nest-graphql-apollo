@@ -5,8 +5,7 @@ import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
 import { feedStyles } from "@/styles/feed";
-import { graphqlFetch } from "@/utils/graphqlFetch";
-import { GET_LIKED_USERS_QUERY } from "@/graphql/operations";
+import { fetchLikedUsers } from "@/graphql/client";
 
 type Props = {
   activity: Activity;
@@ -47,11 +46,8 @@ export const ActivityRow = ({
       setLikedLoading(true);
       setLikedModalVisible(true);
 
-      const data = await graphqlFetch<{
-        post: { likedUsers: LikedUser[] };
-      }>(GET_LIKED_USERS_QUERY, { postId });
-
-      setLikedUsers(data.post.likedUsers);
+      const users = await fetchLikedUsers(postId);
+      setLikedUsers(users);
     } catch (err: unknown) {
       console.error("[ActivityRow] failed to load liked users", err);
       setLikedUsers([]);
@@ -171,7 +167,7 @@ export const ActivityRow = ({
           isCompact={true}
         />
 
-        <View 
+        <View
           style={{
             backgroundColor: "#f9fafb",
             borderRadius: 8,
@@ -193,7 +189,7 @@ export const ActivityRow = ({
           }}
         >
           <Text style={feedStyles.content}>{targetPost.content}</Text>
-          
+
           <Text style={{ fontSize: 12, color: "#d1d5db", marginTop: 4, alignSelf: "flex-end" }}>
             {new Date(targetPost.createdAt).toLocaleString()}
           </Text>
@@ -247,8 +243,8 @@ export const ActivityRow = ({
       {/* Liked Users Modal */}
       <Modal visible={likedModalVisible} animationType="slide">
         <View style={{ flex: 1, backgroundColor: "#f9fafb" }}>
-          <View style={{ 
-            paddingHorizontal: 16, 
+          <View style={{
+            paddingHorizontal: 16,
             paddingVertical: 16,
             backgroundColor: "#fff",
             borderBottomWidth: 0,

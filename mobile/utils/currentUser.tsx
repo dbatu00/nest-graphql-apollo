@@ -1,18 +1,9 @@
-import { graphqlFetch, isAuthGraphQLError } from "@/utils/graphqlFetch";
-import { AUTH_ME_QUERY } from "@/graphql/operations";
+import { getAuthMe } from "@/graphql/client";
+import { isAuthGraphQLError } from "@/utils/graphqlFetch";
 
 export async function getCurrentUser() {
   try {
-    const data = await graphqlFetch<{
-      me: {
-        id: number;
-        username: string;
-        displayName?: string;
-        emailVerified: boolean;
-      };
-    }>(AUTH_ME_QUERY);
-
-    return data.me;
+    return await getAuthMe();
   } catch (err: unknown) {
     if (isAuthGraphQLError(err)) {
       console.warn("[currentUser] auth failure while fetching current user", err);

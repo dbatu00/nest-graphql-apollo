@@ -6,40 +6,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
-import { graphqlFetch } from "@/utils/graphqlFetch";
 import {
-  CHANGE_MY_EMAIL_MUTATION,
-  CHANGE_MY_PASSWORD_MUTATION,
-  IS_EMAIL_USED_QUERY,
-  ME_QUERY,
-  UPDATE_MY_PROFILE_MUTATION,
-} from "@/graphql/operations";
+  changeMyEmail,
+  changeMyPassword,
+  getMyProfile,
+  isEmailUsed,
+  updateMyProfile,
+} from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedHeader } from "@/components/layout/FeedHeader";
-
-type MyProfileData = {
-  me: {
-    id: number;
-    username: string;
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
-    coverUrl?: string;
-    email: string;
-  };
-};
-
-type UpdateProfileData = {
-  updateMyProfile: {
-    id: number;
-    username: string;
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
-    coverUrl?: string;
-    email: string;
-  };
-};
 
 const coverOptions = [
   "https://picsum.photos/seed/bookbook-cover-1/1200/600",
@@ -172,17 +147,17 @@ export default function ProfileSettingsScreen() {
       setError(null);
 
       try {
-        const data = await graphqlFetch<MyProfileData>(ME_QUERY);
+        const me = await getMyProfile();
 
         if (cancelled) {
           return;
         }
 
-        const loadedDisplayName = (data.me.displayName ?? "").trim();
-        const loadedBio = (data.me.bio ?? "").trim();
-        const loadedAvatarUri = (data.me.avatarUrl ?? "").trim();
-        const loadedCoverUri = (data.me.coverUrl ?? "").trim();
-        const loadedEmail = (data.me.email ?? "").trim();
+        const loadedDisplayName = (me.displayName ?? "").trim();
+        const loadedBio = (me.bio ?? "").trim();
+        const loadedAvatarUri = (me.avatarUrl ?? "").trim();
+        const loadedCoverUri = (me.coverUrl ?? "").trim();
+        const loadedEmail = (me.email ?? "").trim();
 
         setDisplayName(loadedDisplayName);
         setBio(loadedBio);
@@ -233,17 +208,17 @@ export default function ProfileSettingsScreen() {
     setSuccess(null);
 
     try {
-      const data = await graphqlFetch<UpdateProfileData>(UPDATE_MY_PROFILE_MUTATION, {
+      const updatedProfile = await updateMyProfile({
         displayName,
         bio,
         avatarUrl: selectedAvatarUri,
         coverUrl: selectedCoverUri,
       });
 
-      setDisplayName((data.updateMyProfile.displayName ?? "").trim());
-      setBio((data.updateMyProfile.bio ?? "").trim());
-      setSelectedAvatarUri((data.updateMyProfile.avatarUrl ?? "").trim());
-      setSelectedCoverUri((data.updateMyProfile.coverUrl ?? "").trim());
+      setDisplayName((updatedProfile.displayName ?? "").trim());
+      setBio((updatedProfile.bio ?? "").trim());
+      setSelectedAvatarUri((updatedProfile.avatarUrl ?? "").trim());
+      setSelectedCoverUri((updatedProfile.coverUrl ?? "").trim());
       setSuccess("Profile updated");
       await refreshAuth();
     } catch (err: unknown) {
@@ -300,18 +275,15 @@ export default function ProfileSettingsScreen() {
     setSaving(true);
 
     try {
-      const emailCheck = await graphqlFetch<{ isEmailUsed: boolean }>(IS_EMAIL_USED_QUERY, { email });
+      const emailAlreadyUsed = await isEmailUsed(email);
 
-      if (emailCheck.isEmailUsed) {
+      if (emailAlreadyUsed) {
         setEmailError("This email address is already in use.");
         return;
       }
 
       //fail routes throw errors that propagate so no need for extra checks
-      await graphqlFetch<{ changeMyEmail: boolean }>(CHANGE_MY_EMAIL_MUTATION, {
-        currentPassword: password,
-        newEmail: email,
-      });
+      await changeMyEmail(password, email);
 
       setCurrentEmail(email);
       setNewEmail("");
@@ -363,11 +335,8 @@ export default function ProfileSettingsScreen() {
     }
     setSaving(true);
     try {
-      const result = await graphqlFetch<{ changeMyPassword: boolean }>(CHANGE_MY_PASSWORD_MUTATION, {
-        currentPassword: currentPasswordValue,
-        newPassword: newPassword.trim(),
-      });
-      if (result.changeMyPassword) {
+      const changed = await changeMyPassword(currentPasswordValue, newPassword.trim());
+      if (changed) {
         setNewPassword("");
         setConfirmNewPassword("");
         setCurrentPasswordForPassword("");

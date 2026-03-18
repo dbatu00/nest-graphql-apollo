@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
-import { graphqlFetch } from "@/utils/graphqlFetch";
-import { RESEND_VERIFICATION_EMAIL_MUTATION } from "@/graphql/operations";
+import { resendMyVerificationLink } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { EmailSendResult } from "@/types/Auth";
 
@@ -71,9 +70,7 @@ export default function VerifyMail() {
     const startTime = Date.now();
 
     try {
-      const result = await graphqlFetch<{ resendMyVerificationLink: EmailSendResult }>(
-        RESEND_VERIFICATION_EMAIL_MUTATION
-      );
+      const resendStatus = await resendMyVerificationLink();
 
       const messages: Record<EmailSendResult, string> = {
         SENT: "Verification link sent. Please check your email.",
@@ -87,7 +84,7 @@ export default function VerifyMail() {
         await sleep(MIN_ACTION_MS - elapsed);
       }
 
-      setInfo(messages[result.resendMyVerificationLink] ?? "Unknown status");
+      setInfo(messages[resendStatus] ?? "Unknown status");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Could not resend verification email");
     } finally {
