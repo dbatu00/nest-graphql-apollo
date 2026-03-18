@@ -41,6 +41,13 @@ describe('PostsResolver', () => {
         expect(postsService.getLikedPostsByUsername).toHaveBeenCalledWith('deniz');
     });
 
+    it('likedPosts forwards trimmed username from args object', async () => {
+        postsService.getLikedPostsByUsername.mockResolvedValue([{ id: 3 }]);
+
+        await expect(resolver.likedPosts({ username: '  deniz  ' } as any)).resolves.toEqual([{ id: 3 }]);
+        expect(postsService.getLikedPostsByUsername).toHaveBeenCalledWith('deniz');
+    });
+
     it('likedPosts propagates service errors', async () => {
         postsService.getLikedPostsByUsername.mockRejectedValue(new Error('liked failed'));
 
@@ -67,6 +74,14 @@ describe('PostsResolver', () => {
 
         await expect(resolver.addPost({ id: 1 } as any, { content: 'hello' } as any)).resolves.toBe(created as any);
         expect(postsService.addPost).toHaveBeenCalledWith(1, 'hello');
+    });
+
+    it('addPost forwards trimmed content from args object', async () => {
+        const created = { id: 10 };
+        postsService.addPost.mockResolvedValue(created);
+
+        await expect(resolver.addPost({ id: 1 } as any, { content: '  hello world  ' } as any)).resolves.toBe(created as any);
+        expect(postsService.addPost).toHaveBeenCalledWith(1, 'hello world');
     });
 
     it('deletePost uses postId and current user id', async () => {

@@ -33,6 +33,16 @@ describe('AuthResolver', () => {
         expect(authService.signUp).toHaveBeenCalledWith('deniz', 'deniz@example.com', 'secret123');
     });
 
+    it('signUp forwards normalized identity fields', async () => {
+        const payload = { user: { id: 1 }, token: 'jwt' };
+        authService.signUp.mockResolvedValue(payload);
+
+        await expect(
+            resolver.signUp({ username: '  deniz  ', email: '  deniz@example.com  ', password: 'secret123' } as any)
+        ).resolves.toBe(payload);
+        expect(authService.signUp).toHaveBeenCalledWith('deniz', 'deniz@example.com', 'secret123');
+    });
+
     it('signUp propagates service errors', async () => {
         authService.signUp.mockRejectedValue(new Error('signup failed'));
 
@@ -57,6 +67,13 @@ describe('AuthResolver', () => {
         authService.isEmailUsed.mockResolvedValue(true);
 
         await expect(resolver.isEmailUsed({ email: 'deniz@example.com' } as any)).resolves.toBe(true);
+        expect(authService.isEmailUsed).toHaveBeenCalledWith('deniz@example.com');
+    });
+
+    it('isEmailUsed forwards normalized email value', async () => {
+        authService.isEmailUsed.mockResolvedValue(true);
+
+        await expect(resolver.isEmailUsed({ email: '  deniz@example.com  ' } as any)).resolves.toBe(true);
         expect(authService.isEmailUsed).toHaveBeenCalledWith('deniz@example.com');
     });
 

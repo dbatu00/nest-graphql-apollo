@@ -24,6 +24,13 @@ describe('FollowsResolver', () => {
         expect(followsService.follow).toHaveBeenCalledWith(1, 'alice');
     });
 
+    it('followUser forwards normalized username value', async () => {
+        followsService.follow.mockResolvedValue(true);
+
+        await expect(resolver.followUser({ id: 1 } as any, { username: '  alice  ' } as any)).resolves.toBe(true);
+        expect(followsService.follow).toHaveBeenCalledWith(1, 'alice');
+    });
+
     it('followUser propagates service errors', async () => {
         followsService.follow.mockRejectedValue(new Error('follow failed'));
 

@@ -53,6 +53,23 @@ describe('UsersResolver', () => {
         ).rejects.toThrow('update failed');
     });
 
+    it('updateMyProfile allows empty avatar/cover values for clearing profile images', async () => {
+        const updated = { id: 1, username: 'deniz', avatarUrl: null, coverUrl: null };
+        usersService.updateMyProfile.mockResolvedValue(updated);
+
+        await expect(
+            resolver.updateMyProfile(
+                { id: 1 } as any,
+                { avatarUrl: '', coverUrl: '' } as any,
+            )
+        ).resolves.toBe(updated as any);
+
+        expect(usersService.updateMyProfile).toHaveBeenCalledWith(1, {
+            avatarUrl: '',
+            coverUrl: '',
+        });
+    });
+
     it('followedByMe returns false when no current user', async () => {
         await expect(resolver.followedByMe({ id: 2 } as any, undefined)).resolves.toBe(false);
         expect(usersService.isFollowing).not.toHaveBeenCalled();
