@@ -3,11 +3,11 @@ import {
     Resolver,
     Query,
     Mutation,
-    Args,
     Int,
     ResolveField,
     Parent,
     Context,
+    Args,
 } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { PostsService } from './posts.service';
@@ -15,6 +15,7 @@ import { Post } from './post.entity';
 import { GqlAuthGuard } from '../auth/security/gql-auth.guard';
 import { CurrentUser } from '../auth/security/current-user.decorator';
 import { User } from '../users/user.entity';
+import { AddPostArgs, PostByIdArgs, PostIdArgs, UsernameArgs } from './dto/posts.args';
 
 type ResolverContext = {
     req?: {
@@ -35,32 +36,32 @@ export class PostsResolver {
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [Post])
-    likedPosts(@Args('username') username: string) {
-        return this.postsService.getLikedPostsByUsername(username);
+    likedPosts(@Args() args: UsernameArgs) {
+        return this.postsService.getLikedPostsByUsername(args.username);
     }
 
     @UseGuards(GqlAuthGuard)
     @Query(() => Post)
-    post(@Args('id', { type: () => Int }) id: number) {
-        return this.postsService.findById(id);
+    post(@Args() args: PostByIdArgs) {
+        return this.postsService.findById(args.id);
     }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Post)
     async addPost(
         @CurrentUser() user: User,
-        @Args('content') content: string,
+        @Args() args: AddPostArgs,
     ) {
-        return this.postsService.addPost(user.id, content);
+        return this.postsService.addPost(user.id, args.content);
     }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     async deletePost(
         @CurrentUser() user: User,
-        @Args('postId', { type: () => Int }) postId: number,
+        @Args() args: PostIdArgs,
     ) {
-        return this.postsService.deletePost(postId, user.id);
+        return this.postsService.deletePost(args.postId, user.id);
     }
 
     // ------------------------
@@ -96,17 +97,17 @@ export class PostsResolver {
     @Mutation(() => Boolean)
     async likePost(
         @CurrentUser() user: User,
-        @Args('postId', { type: () => Int }) postId: number,
+        @Args() args: PostIdArgs,
     ) {
-        return this.postsService.likePost(user.id, postId);
+        return this.postsService.likePost(user.id, args.postId);
     }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     async unlikePost(
         @CurrentUser() user: User,
-        @Args('postId', { type: () => Int }) postId: number,
+        @Args() args: PostIdArgs,
     ) {
-        return this.postsService.unlikePost(user.id, postId);
+        return this.postsService.unlikePost(user.id, args.postId);
     }
 }

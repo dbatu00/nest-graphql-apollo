@@ -1,4 +1,5 @@
 import { ActivityResolver } from '../activity.resolver';
+import { UnauthorizedException } from '@nestjs/common';
 
 describe('ActivityResolver', () => {
     const activityService = {
@@ -13,9 +14,7 @@ describe('ActivityResolver', () => {
     });
 
     it('throws when authenticated user is missing', async () => {
-        expect(() => resolver.feed(undefined, undefined, undefined)).toThrow(
-            'Authenticated user not found',
-        );
+        expect(() => resolver.feed({}, undefined)).toThrow(UnauthorizedException);
         expect(activityService.getActivityFeed).not.toHaveBeenCalled();
     });
 
@@ -24,7 +23,7 @@ describe('ActivityResolver', () => {
         activityService.getActivityFeed.mockResolvedValue(rows);
 
         await expect(
-            resolver.feed('deniz', ['post', 'like'], { id: 1 } as any),
+            resolver.feed({ username: 'deniz', types: ['post', 'like'] }, { id: 1 } as any),
         ).resolves.toBe(rows as any);
         expect(activityService.getActivityFeed).toHaveBeenCalledWith('deniz', ['post', 'like']);
     });
@@ -34,7 +33,7 @@ describe('ActivityResolver', () => {
         activityService.getActivityFeed.mockResolvedValue(rows);
 
         await expect(
-            resolver.feed(undefined, undefined, { id: 1 } as any),
+            resolver.feed({}, { id: 1 } as any),
         ).resolves.toBe(rows as any);
         expect(activityService.getActivityFeed).toHaveBeenCalledWith(undefined, undefined);
     });
@@ -44,7 +43,7 @@ describe('ActivityResolver', () => {
         activityService.getActivityFeed.mockResolvedValue(rows);
 
         await expect(
-            resolver.feed('deniz', [], { id: 1 } as any),
+            resolver.feed({ username: 'deniz', types: [] }, { id: 1 } as any),
         ).resolves.toBe(rows as any);
         expect(activityService.getActivityFeed).toHaveBeenCalledWith('deniz', []);
     });
@@ -53,7 +52,7 @@ describe('ActivityResolver', () => {
         activityService.getActivityFeed.mockRejectedValue(new Error('feed failed'));
 
         await expect(
-            resolver.feed('deniz', ['post'], { id: 1 } as any),
+            resolver.feed({ username: 'deniz', types: ['post'] }, { id: 1 } as any),
         ).rejects.toThrow('feed failed');
     });
 });

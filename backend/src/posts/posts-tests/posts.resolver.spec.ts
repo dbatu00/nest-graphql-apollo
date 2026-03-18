@@ -37,42 +37,42 @@ describe('PostsResolver', () => {
     it('likedPosts delegates with username', async () => {
         postsService.getLikedPostsByUsername.mockResolvedValue([{ id: 3 }]);
 
-        await expect(resolver.likedPosts('deniz')).resolves.toEqual([{ id: 3 }]);
+        await expect(resolver.likedPosts({ username: 'deniz' } as any)).resolves.toEqual([{ id: 3 }]);
         expect(postsService.getLikedPostsByUsername).toHaveBeenCalledWith('deniz');
     });
 
     it('likedPosts propagates service errors', async () => {
         postsService.getLikedPostsByUsername.mockRejectedValue(new Error('liked failed'));
 
-        await expect(resolver.likedPosts('deniz')).rejects.toThrow('liked failed');
+        await expect(resolver.likedPosts({ username: 'deniz' } as any)).rejects.toThrow('liked failed');
     });
 
     it('post delegates with id', async () => {
         const post = { id: 5 };
         postsService.findById.mockResolvedValue(post);
 
-        await expect(resolver.post(5)).resolves.toBe(post as any);
+        await expect(resolver.post({ id: 5 } as any)).resolves.toBe(post as any);
         expect(postsService.findById).toHaveBeenCalledWith(5);
     });
 
     it('post propagates service errors', async () => {
         postsService.findById.mockRejectedValue(new Error('post failed'));
 
-        await expect(resolver.post(5)).rejects.toThrow('post failed');
+        await expect(resolver.post({ id: 5 } as any)).rejects.toThrow('post failed');
     });
 
     it('addPost uses current user id', async () => {
         const created = { id: 9 };
         postsService.addPost.mockResolvedValue(created);
 
-        await expect(resolver.addPost({ id: 1 } as any, 'hello')).resolves.toBe(created as any);
+        await expect(resolver.addPost({ id: 1 } as any, { content: 'hello' } as any)).resolves.toBe(created as any);
         expect(postsService.addPost).toHaveBeenCalledWith(1, 'hello');
     });
 
     it('deletePost uses postId and current user id', async () => {
         postsService.deletePost.mockResolvedValue(true);
 
-        await expect(resolver.deletePost({ id: 2 } as any, 10)).resolves.toBe(true);
+        await expect(resolver.deletePost({ id: 2 } as any, { postId: 10 } as any)).resolves.toBe(true);
         expect(postsService.deletePost).toHaveBeenCalledWith(10, 2);
     });
 
@@ -123,26 +123,26 @@ describe('PostsResolver', () => {
     it('likePost uses current user id', async () => {
         postsService.likePost.mockResolvedValue(true);
 
-        await expect(resolver.likePost({ id: 3 } as any, 88)).resolves.toBe(true);
+        await expect(resolver.likePost({ id: 3 } as any, { postId: 88 } as any)).resolves.toBe(true);
         expect(postsService.likePost).toHaveBeenCalledWith(3, 88);
     });
 
     it('likePost propagates service errors', async () => {
         postsService.likePost.mockRejectedValue(new Error('like failed'));
 
-        await expect(resolver.likePost({ id: 3 } as any, 88)).rejects.toThrow('like failed');
+        await expect(resolver.likePost({ id: 3 } as any, { postId: 88 } as any)).rejects.toThrow('like failed');
     });
 
     it('unlikePost uses current user id', async () => {
         postsService.unlikePost.mockResolvedValue(true);
 
-        await expect(resolver.unlikePost({ id: 3 } as any, 88)).resolves.toBe(true);
+        await expect(resolver.unlikePost({ id: 3 } as any, { postId: 88 } as any)).resolves.toBe(true);
         expect(postsService.unlikePost).toHaveBeenCalledWith(3, 88);
     });
 
     it('unlikePost propagates service errors', async () => {
         postsService.unlikePost.mockRejectedValue(new Error('unlike failed'));
 
-        await expect(resolver.unlikePost({ id: 3 } as any, 88)).rejects.toThrow('unlike failed');
+        await expect(resolver.unlikePost({ id: 3 } as any, { postId: 88 } as any)).rejects.toThrow('unlike failed');
     });
 });
