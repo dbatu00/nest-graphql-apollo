@@ -8,7 +8,7 @@
 nickname?: string | null; // TypeScript: optional property and can be null
 ```
 
-## Why not allow variable types at field level?
+## GraphQL variable typing decisions
 
 - Single type check per operation at the operation entry point.
 - Field-level typing would add recursive validation complexity.
@@ -29,15 +29,14 @@ query ($id: Int!) {
 }
 ```
 
-## Why both `user.entity` and `DeleteUserOutput`?
+## Entity vs DTO/output types
 
 - Entities are DB-centric and may include internal/sensitive fields.
 - DTO/output types are API-centric and intentionally scoped.
 - Different operations can return different shapes.
 - This avoids coupling public API contracts directly to DB schema.
 
-
-## React useEffect: Cleanup & State Update on Unmounted
+## React `useEffect` cleanup reminder
 
 t0 component mounts
 t1 fetch request starts

@@ -36,6 +36,7 @@ src/
   posts/
   follows/
   activity/
+  common/
   app.module.ts
   main.ts
   schema.gql (auto-generated)
@@ -95,6 +96,24 @@ http://localhost:3000/graphql
 - `npm run test:cov`
 - `npm run test:e2e`
 
+## Validation Conventions
+
+Resolver args are validated via `@ArgsType()` DTOs plus global `ValidationPipe`.
+
+Current conventions:
+
+- Shared username args live in `src/common/graphql/args/username.args.ts`
+- Shared string decorators (`Trim`, `NotBlank`) live in `src/common/validation/string.decorators.ts`
+- Resolver methods receive typed `@Args() args` objects (avoid primitive arg sprawl)
+- Optional URL fields use conditional validation to allow clear operations (empty string)
+
+When adding new resolver args:
+
+1. Prefer `@ArgsType()` DTOs
+2. Reuse shared decorators before introducing new local transforms
+3. Keep validation intent explicit (trimmed, non-blank, optional, URL, etc.)
+4. Add/adjust unit tests in resolver and DTO validation specs
+
 ## Data Model (High-Level)
 
 - `User`
@@ -111,11 +130,10 @@ http://localhost:3000/graphql
 - Feed excludes inactive like/follow activity records.
 - CORS is enabled globally.
 
-## Current Caveats (Dev Mode)
+## Current Caveats
 
-- Production-grade migrations are not yet wired (dev still uses `DB_SYNCHRONIZE=true`).
-- Auth is still app-local JWT; Firebase Auth integration is planned next.
-- Rate limits and GraphQL depth limits are in place but should be tuned per environment and traffic profile.
+- Production-grade migrations are not fully wired (local dev still relies on schema sync defaults).
+- Rate limits and GraphQL depth limits are enabled, but thresholds still need environment-specific tuning.
 
 ## Email Verification Testing (Local)
 
@@ -137,7 +155,7 @@ Behavior:
 
 ## Next Hardening Priorities
 
-1. Integrate Firebase Auth in dev mode (email verification optional).
-2. Verify Firebase token server-side and map to application user context.
-3. Add production migration flow and disable schema auto-sync outside development.
-4. Tune per-endpoint throttling thresholds and auth-specific limits.
+1. Finalize migration-first production DB workflow.
+2. Tighten environment-specific rate and auth throttling thresholds.
+3. Add deeper integration tests for high-risk mutations.
+4. Complete deployment profile docs (staging/prod runbooks).

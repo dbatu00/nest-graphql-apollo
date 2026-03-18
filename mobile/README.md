@@ -3,7 +3,7 @@
 React Native client for the social feed app.
 
 - Framework: Expo + React Native + Expo Router
-- Data layer: GraphQL via `graphqlFetch`
+- Data layer: GraphQL via typed client wrappers + `graphqlFetch`
 - State style: hook-driven (`useActivities`, `useProfile`, `useAuth`)
 
 ## Quick Start (Monorepo)
@@ -93,16 +93,17 @@ npm run web
 ## App Architecture Notes
 
 - Navigation is file-based with Expo Router route groups.
-- Client GraphQL calls are centralized in `utils/graphqlFetch.tsx`.
+- GraphQL operations are consumed through typed helpers in `graphql/client.ts`.
+- Low-level transport/error handling is centralized in `utils/graphqlFetch.tsx`.
 - Token is attached as bearer auth when present and stored via secure platform storage on native (`expo-secure-store`) with web `localStorage` fallback.
 - Current-user identity is fetched using the `me` query helper.
 
 ## Current Caveats
 
-- Root-level `useAuth` includes simulated behavior and is not yet a hardened production auth source of truth.
-- Some UI styles are still inline/hardcoded and not fully centralized.
+- Some screen styles are still inline and not fully centralized in style modules.
+- Screen-level integration test coverage is thinner than hook/service-level tests.
 
 ## Suggested Next Steps
 
 1. Unify auth state flow across hooks/routes.
-2. Expand tests beyond utility-level behavior into flow-level coverage.
+2. Expand flow-level integration tests for profile and feed screens.

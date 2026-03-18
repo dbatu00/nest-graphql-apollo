@@ -29,8 +29,6 @@
 - Clearer service boundaries
 - Better long-term maintainability
 
----
-
 
 ## 2026-03-10 — Service Layer Defensive Checks
 
@@ -49,8 +47,6 @@
 
 - Keep defensive checks in service methods for layered architecture and maintainability, even if currently redundant for resolver flow.
 
----
-
 ## 2025-11-30 — Mock typing note
 
 `findOne: jest.Mock<Promise<T | null>, [any]>;`
@@ -60,8 +56,6 @@ Why keep it:
 - Type-checks mock argument shape.
 - Flags wrong argument usage early.
 - Helps larger test suites stay safer.
-
----
 
 ## 2026-01-12 — Post author shape in GraphQL
 
@@ -74,8 +68,6 @@ Reasoning:
 - GraphQL models domain relationships, not DB foreign keys.
 - Backend composes data; clients request only needed fields.
 - Keeps DB internals out of public API contracts.
-
----
 
 ## 2026-01-14 — `addPost` return type
 
@@ -90,8 +82,6 @@ Reasoning:
 - Immediate UI updates without refetch
 - Access to server-generated fields (`id`, `createdAt`)
 
----
-
 ## 2026-02-13 — File cohesion and data model
 
 - Prefer cohesive files over premature splitting.
@@ -99,15 +89,11 @@ Reasoning:
 - `Like` remains interaction source of truth.
 - `Activity` remains denormalized feed read model.
 
----
-
 ## 2026-02-14 — Activity and contract decisions
 
 - Keep `username` in API contracts for readability.
 - Keep controlled type branching in `ActivityService` for current scope.
 - Keep explicit follow/unfollow mutations for clarity.
-
----
 
 ## 2026-02-21 — Activity feed vs post feed, and hard-delete cleanup
 
@@ -133,8 +119,6 @@ Implementation note:
 - If more hard-delete entities are added later (for example comments), prefer a typed purge helper (example: `purgeActivitiesByTarget`) and keep `deleteActivitiesForPost` as a thin wrapper.
 - Do not merge purge and logging into one “super” write method; it makes intent less clear and tests harder to reason about.
 
----
-
 ## 2026-02-25 — Auth hardening (email verification MVP)
 
 Decisions implemented:
@@ -153,8 +137,6 @@ Decisions implemented:
   - “Invalid, expired, or already-used verification token”
   - Reason: simple and consistent UX without leaking token state detail.
 
----
-
 ## 2026-02-25 — Verification delivery via SMTP
 
 Decision:
@@ -171,8 +153,6 @@ Why this helps now:
 
 - Keeps MVP velocity while allowing realistic end-to-end verification testing.
 - Supports testing many local users through MailHog/Mailpit without real inbox management.
-
----
 
 ## 2026-02-26 — Verification resend throttling notes
 
@@ -198,8 +178,6 @@ Scale path (later):
 - Move hot-path counters to Redis/token-bucket style limits.
 - Keep DB for audit/history and add analytics events for abuse monitoring.
 
----
-
 ## 2026-02-26 — Why email-link resend is in controller, app resend is in resolver
 
 Decision boundary:
@@ -212,8 +190,6 @@ Reasoning:
 - Controllers are the clean fit for external link-based flows (email verify, reset links, webhooks).
 - Resolvers are the clean fit for authenticated client operations already living in app GraphQL contracts.
 - This split keeps UX behavior consistent while preventing resolver contracts from carrying browser-link concerns.
-
----
 
 ## 2026-02-27 — Keep `emailVerified` in signup payload
 
@@ -231,8 +207,6 @@ Reasoning:
 - Keeps frontend auth flow generic and simpler (single payload contract).
 - Future-proofs edge cases where verification state at signup may differ from default assumptions.
 
----
-
 ## 2026-02-27 — Config getter helpers in auth service
 
 Question:
@@ -249,8 +223,6 @@ Reasoning:
 - Avoids repetitive parse/guard code at each call site.
 - Improves strict TypeScript narrowing for config values (`number | undefined` to validated `number`).
 
----
-
 ## 2026-02-27 — Email send outside DB transaction
 
 Question:
@@ -266,8 +238,6 @@ Reasoning:
 - Email delivery is external I/O and can be slow/unreliable.
 - Holding DB transactions during SMTP increases lock time and failure blast radius.
 - Current approach uses post-commit send with compensation handling for resend delivery failures.
-
----
 
 ## 2026-02-28 — Transient logout fix in mobile auth refresh
 
@@ -293,9 +263,7 @@ Outcome:
 
 - Invalid/expired tokens still log out correctly.
 - Temporary outages no longer cause forced logout.
-
-
-## Dev Diary – 2026-03-13
+## 2026-03-13 — Verification send failure UX tradeoff
 
 Reviewed email verification flow for new signups.
 
@@ -307,6 +275,5 @@ Decision: keep current fire-and-forget behavior for simplicity; logs capture fai
 
 Frontend can still show resend option, which resolves missed deliveries.
 
-
-## Dev Diary - 15.03.2026
+## 2026-03-15 — Email change cooldown leak fix
 Found that changeMyEmail was leaking password validity during cooldown — wrong password got a 401, correct password got a 429. Moved the throttle check before the password verify to fix it.

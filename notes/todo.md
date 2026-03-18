@@ -1,175 +1,55 @@
-# TODO Roadmap
+# TODO Roadmap (Active Only)
 
-## P0 — Security & Configuration (Ship Blockers)
+This file tracks only open work. Completed items are intentionally removed.
 
-- [X ] Hash passwords (bcrypt/argon2) instead of storing plain text.
-- [X ] Remove JWT secret logging from auth module startup.
-- [ X] Move hardcoded DB credentials to environment variables.
-- [ ] Add environment validation for required secrets/URLs.
-- [ ] Revisit token storage strategy for native mobile targets.
-- [ ] Disable `synchronize: true` outside local dev and move to migrations workflow.
+## P0 — Security & Configuration
+
+- Add stricter environment validation for required secrets and URLs.
+- Revisit mobile token storage strategy for native devices.
+- Complete migration-first DB workflow and disable schema sync outside local development.
 
 ## P1 — Auth & State Consistency
 
-- [ ] Make auth state single source of truth (replace simulated root auth flow).
-- [ ] Treat `me.emailVerified` as the single source of truth in mobile auth hydration.
-- [ ] Remove manual login/signup redirects and let root `AuthGate` own auth routing.
-- [ ] Simplify signup screen state shape (group form values + field errors).
-- [ ] Stop passing `currentUserId` around in client hooks.
-- [ ] Handle deleted logged-in user gracefully (auth/feed fallback).
-- [X ] Add logout and homepage actions on profile.
+- Make mobile auth state a single source of truth.
+- Keep `me.emailVerified` handling consistent across auth hydration and routing.
+- Remove redundant manual redirects and let route guards own auth navigation.
+- Handle deleted logged-in user flow gracefully.
 
-## P1 — Data Integrity & Backend Robustness
+## P1 — Backend Integrity & Robustness
 
-- [ ] Make post deletion transactional.
-- [ ] Add reconciliation jobs for derived activity entries (likes/follows).
-- [ ] Cover empty-database edge cases (including missing `auth` table).
-- [ ] Introduce custom error classes and map to GraphQL-safe responses.
-- [ ] Use `try/catch` only for meaningful error conversion.
-- [ ] Add input invariants in `ActivityService.logActivity` (`like` requires `targetPost`, `follow` requires `targetUser`).
-- [ ] Guard follows resolver follow-state mapping against raw/entities length mismatches.
-- [ ] Replace generic thrown `Error` in `ActivityResolver.feed` with framework exception type.
+- Add activity reconciliation strategy for derived events.
+- Cover empty-database and startup edge cases.
+- Introduce clearer domain error mapping for GraphQL responses.
+- Harden follow-state mapping for raw/entities length mismatch.
+- Add invariants in activity logging inputs (`like` requires target post, `follow` requires target user).
 
-## P2 — API/Service Cleanup
+## P2 — API & Service Cleanup
 
-- [x] Extract GraphQL query strings for readability.
-- [X ] Review resolver `async` usage consistency.
-- [ ] Revisit `getFollowersWithFollowStat` return shape.
-- [ ] Move profile post loading from `findByUsername` to `@ResolveField()`.
-- [ ] Decouple `UsersService.findByUsername()` from post ordering.
-- [ ] Remove redundant reads and unnecessary defensive checks.
-- [ ] Re-evaluate whether `likedByMe` should be client-derived.
-- [ ] Re-evaluate whether `active` is necessary in like/follow entities.
+- Revisit followers-with-follow-state return shape naming/contract.
+- Decouple user profile lookup from post ordering concerns.
+- Remove redundant reads and unneeded defensive checks where contracts are already strict.
+- Re-evaluate whether some computed fields should be client-derived.
 
-## P2 — Unit Testing Readiness
+## P2 — Test & CI
 
-- [x] Extract mobile GraphQL operations into shared constants (hooks/components no longer inline query strings).
-- [x] Add backend service unit tests (`auth`, `posts`, `follows`, `activity`, `users`) with mocked repositories + mocked dependencies.
-- [x] Add backend resolver unit tests (`auth`, `users`, `posts`, `follows`, `activity`) with service-only mocks.
-- [x] Add shared backend test helper for repository/dataSource/entity-manager mocks to reduce boilerplate.
-- [x] Add hook-level mobile tests for optimistic follow/like behavior (`useActivities`, `useProfile`) with mocked `graphqlFetch`.
-- [x] Add component-level mobile test for likes modal flow in `ActivityRow` with mocked `graphqlFetch`.
-- [x] Add auth-flow screen tests for `login`, `signUp`, and root `index` redirects.
-- [ ] Add CI step to run `backend npm test` + `mobile npm test`.
-- [x] Add backend tests covering module config metadata shape (`TypeORM` + `JwtModule.register`).
-- [x] Add backend tests capturing follows resolver raw/entities mismatch behavior.
-- [x] Add backend tests capturing current `logActivity` invalid-input behavior for missing `targetPost`/`targetUser`.
-
-Backend test status:
-
-- [x] Full backend test pass is currently green (`138 passed, 0 failed` on 2026-02-21).
-
-Frontend test status (mobile, 2026-02-22):
-
-- [x] Utility tests: `graphqlFetch`, `token`, `logout`, `currentUser`.
-- [x] Hook tests: `useActivities` (optimistic + rollback/error + guards).
-- [x] Hook tests: `useProfile` (load/fetch/toggleFollow optimistic + rollback/error + guards).
-- [x] Component tests: `ActivityRow` (likes modal, follow forwarding, close behavior, owner delete wiring, no-like-controls path).
-- [x] Screen/route tests: `login`, `signUp`, `index` redirects.
-- [ ] Remaining likely gaps: `ProfileLink` navigation timing, feed/profile screen-level integration tests, and CI automation for mobile test runs.
+- Add CI automation for backend and mobile test runs.
+- Add more screen-level integration tests for feed/profile flows.
+- Add navigation behavior tests for profile/link edge cases.
 
 ## P2 — Mobile UX/Behavior
 
-- [ ] Tighten `postItem` `isOwner` and `canFollow` checks.
-- [ ] Fix profile activity follow button accuracy/behavior.
-- [ ] Verify tab refresh behavior on refresh vs tab switch.
-- [ ] Add infinite scroll.
-- allow entering username or email for login
-- on login/signup enter button activates buttons
-- decide on web page tab titles
+- Tighten owner/follow button guard logic in feed/profile views.
+- Unify profile tab refresh behavior.
+- Smooth loading transitions on web and standardize loading indicators.
+- Improve form UX: inline validation while typing, enter-key submit behavior, and disabled save states when no changes exist.
+- Add verify-mail escape/back action.
 
-## P3 — Optional Architecture Refactor
+## P3 — Optional Architecture
 
-- [ ] Consider global DB access module (`@Global()`): https://docs.nestjs.com/modules
+- Evaluate shared/global DB module strategy (`@Global()`) only if module wiring complexity increases.
 
-## Query optimization note (`getLikedPostsByUsername`)
+## Open Design Questions
 
-Current pattern:
-
-```ts
-async getLikedPostsByUsername(username: string): Promise<Post[]> {
-  const user = await this.usersRepo.findOne({ where: { username } });
-  if (!user) throw new NotFoundException('User not found');
-
-  const likes = await this.likesRepo.find({
-    where: { userId: user.id, active: true },
-    relations: ['post', 'post.user'],
-    order: { createdAt: 'DESC' },
-  });
-
-  return likes.map(l => l.post);
-}
-```
-
-Potential alternative:
-
-```ts
-const likes = await this.likesRepo
-  .createQueryBuilder('like')
-  .innerJoin('like.user', 'user')
-  .innerJoinAndSelect('like.post', 'post')
-  .innerJoinAndSelect('post.user', 'postUser')
-  .where('user.username = :username', { username })
-  .andWhere('like.active = true')
-  .orderBy('like.createdAt', 'DESC')
-  .getMany();
-
-return likes.map(l => l.post);
-```
-
-
-------------
-
-get rid of unused fields on query calls made in client
-------------
-unify profile tab refresh behaviour -> either all refresh on change or none
-------------
-get rid of jitters on web side loadings with min fix loading time and unify loading icon usage
-------------
-me query should be in auth?
-------------
-mobile/settings.tsx: 
-
-type MyProfileData = {
-  me: {
-    id: number;
-    username: string;
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
-    coverUrl?: string;
-    email: string;
-  };
-};
-
-type UpdateProfileData = {
-  updateMyProfile: {
-    id: number;
-    username: string;
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
-    coverUrl?: string;
-    email: string;
-  };
-};
-
-Redundant?
-
-----------------
-show format errors as the user is typing without waiting for server answer
-----------------
-exit button for verifymail page
-----------------
-when not logged in but go to a profile page, redirect to login first thing before loading empty component etc
-----------------
-settings: grey out save changes if there were no changes
-----------------
-settings: remember changes between tabs?
-----------------
-verification email service: move transporter creation and config reads to constructor
-----------------
-prune gql returns: 
-#: signup doesnt need to return emailverified
-----------------
-get rid of email verified where possible in client
+- Should profile `me` query ownership stay in auth GraphQL surface?
+- Should signup response payload be reduced further (for example remove redundant fields)?
+- Should profile settings preserve unsaved edits across tab switches?
