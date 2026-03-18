@@ -1,13 +1,13 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { Transform } from 'class-transformer';
-import { IsString, Matches, MinLength } from 'class-validator';
+import { IsString, MinLength } from 'class-validator';
+import { NotBlank, Trim } from '../../validation/string.decorators';
 
 @ArgsType()
 export class UsernameArgs {
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsString()
     @MinLength(1)
-    @Matches(/\S/, { message: 'username must not be empty' })
+    @NotBlank('username must not be empty')
     username: string;
 }

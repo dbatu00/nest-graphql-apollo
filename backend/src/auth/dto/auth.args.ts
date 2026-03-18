@@ -1,17 +1,17 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { Transform } from 'class-transformer';
 import { IsEmail, IsString, MinLength } from 'class-validator';
+import { Trim } from '../../common/validation/string.decorators';
 
 @ArgsType()
 export class SignUpArgs {
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsString()
     @MinLength(1)
     username: string;
 
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsEmail()
     email: string;
 
@@ -24,7 +24,7 @@ export class SignUpArgs {
 @ArgsType()
 export class LoginArgs {
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsString()
     @MinLength(1)
     identifier: string;
@@ -56,7 +56,7 @@ export class ChangeMyEmailArgs {
     currentPassword: string;
 
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsEmail()
     newEmail: string;
 }
@@ -64,7 +64,7 @@ export class ChangeMyEmailArgs {
 @ArgsType()
 export class IsEmailUsedArgs {
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsEmail()
     email: string;
 }

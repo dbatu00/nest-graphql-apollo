@@ -1,6 +1,6 @@
 import { ArgsType, Field, Int } from '@nestjs/graphql';
-import { Transform } from 'class-transformer';
-import { IsInt, IsString, Matches, Min, MinLength } from 'class-validator';
+import { IsInt, IsString, Min, MinLength } from 'class-validator';
+import { NotBlank, Trim } from '../../common/validation/string.decorators';
 
 @ArgsType()
 export class PostByIdArgs {
@@ -21,9 +21,9 @@ export class PostIdArgs {
 @ArgsType()
 export class AddPostArgs {
     @Field(() => String)
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+    @Trim()
     @IsString()
     @MinLength(1)
-    @Matches(/\S/, { message: 'content must not be empty' })
+    @NotBlank('content must not be empty')
     content: string;
 }
