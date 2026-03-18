@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import { resendMyVerificationLink } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { EmailSendResult } from "@/types/Auth";
+import { AppLogo } from "@/components/common/AppLogo";
+import { commonStyles } from "@/styles/common";
 
 const MIN_ACTION_MS = 900;
 
@@ -93,8 +95,9 @@ export default function VerifyMail() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#f3f4f6", paddingHorizontal: 22, justifyContent: "center" }}>
+    <View style={[commonStyles.container, commonStyles.pageGutter, { backgroundColor: "#f3f4f6", justifyContent: "center" }]}>
       <View style={{ alignSelf: "center", width: "100%", maxWidth: 520 }}>
+        <AppLogo subtitle="One more step" />
         <Text style={{ fontSize: 42, fontWeight: "800", color: "#0f172a", marginBottom: 10 }}>Verify your email</Text>
 
         <Text style={{ fontSize: 17, color: "#111827", marginBottom: 28, lineHeight: 24 }}>

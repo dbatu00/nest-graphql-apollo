@@ -409,435 +409,439 @@ export default function ProfileSettingsScreen() {
 
       <FeedHeader title="BookBook" />
 
-      {/* Tabs */}
-      <View style={{ flexDirection: "row", marginTop: 8, marginBottom: 8, paddingHorizontal: 16 }}>
-        {TABS.map(tab => (
-          <TouchableOpacity
-            key={tab.key}
-            onPress={() => setActiveTab(tab.key as "about" | "account")}
-            style={{
-              flex: 1,
-              paddingVertical: 10,
-              borderBottomWidth: 2,
-              borderBottomColor: activeTab === tab.key ? "#2563eb" : "#e5e7eb",
-              alignItems: "center",
-            }}
-          >
-            <Text style={{
-              color: activeTab === tab.key ? "#2563eb" : "#6b7280",
-              fontWeight: activeTab === tab.key ? "700" : "500",
-              fontSize: 15,
-            }}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <View style={[styles.pageGutter, { flex: 1 }]}>
 
-      {activeTab === "about" && (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 }}>
-          <View
-            style={{
-              height: coverHeight,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: "#bfdbfe",
-              backgroundColor: "#eff6ff",
-              marginBottom: 16,
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
+        {/* Tabs */}
+        <View style={{ flexDirection: "row", marginTop: 8, marginBottom: 8, paddingHorizontal: 0 }}>
+          {TABS.map(tab => (
             <TouchableOpacity
-              activeOpacity={1}
-              style={{ flex: 1 }}
-              disabled={true}
-            >
-              <Image
-                source={{ uri: selectedCoverUri }}
-                style={{ width: "100%", height: "100%" }}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.1)", "transparent"]}
-                locations={[0, 0.2, 0.4, 0.55, 0.65, 0.8]}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: "100%",
-                }}
-                start={{ x: 0.5, y: 1 }}
-                end={{ x: 0.5, y: 0 }}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              activeOpacity={1}
+              key={tab.key}
+              onPress={() => setActiveTab(tab.key as "about" | "account")}
               style={{
-                position: "absolute",
-                right: 14,
-                top: 14,
-                backgroundColor: "rgba(0,0,0,0.55)",
-                borderRadius: 16,
-                padding: 6,
+                flex: 1,
+                paddingVertical: 10,
+                borderBottomWidth: 2,
+                borderBottomColor: activeTab === tab.key ? "#2563eb" : "#e5e7eb",
                 alignItems: "center",
-                justifyContent: "center",
               }}
-              onPress={() => setPickerType("cover")}
             >
-              <Ionicons name="pencil" size={18} color="#fff" />
+              <Text style={{
+                color: activeTab === tab.key ? "#2563eb" : "#6b7280",
+                fontWeight: activeTab === tab.key ? "700" : "500",
+                fontSize: 15,
+              }}>{tab.label}</Text>
             </TouchableOpacity>
+          ))}
+        </View>
 
-            <TouchableOpacity
-              activeOpacity={1}
+        {activeTab === "about" && (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 12, paddingBottom: 24 }}>
+            <View
               style={{
-                position: "absolute",
-                left: 14,
-                bottom: 12,
-                width: 84,
-                height: 84,
-                borderRadius: 42,
-                borderWidth: 3,
-                borderColor: "#fff",
-                backgroundColor: "#dbeafe",
-                alignItems: "center",
-                justifyContent: "center",
+                height: coverHeight,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: "#bfdbfe",
+                backgroundColor: "#eff6ff",
+                marginBottom: 16,
+                position: "relative",
                 overflow: "hidden",
-                zIndex: 2,
-                elevation: 6,
               }}
-              disabled={true}
             >
-              <Image
-                source={{ uri: selectedAvatarUri }}
-                style={{ width: "100%", height: "100%" }}
-                resizeMode="cover"
-              />
-              <LinearGradient
-                colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.1)", "transparent"]}
-                locations={[0, 0.2, 0.4, 0.55, 0.65, 0.8]}
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: "100%",
-                  borderBottomLeftRadius: 42,
-                  borderBottomRightRadius: 42,
-                }}
-                start={{ x: 0.5, y: 1 }}
-                end={{ x: 0.5, y: 0 }}
-              />
               <TouchableOpacity
-                onPress={() => setPickerType("avatar")}
+                activeOpacity={1}
+                style={{ flex: 1 }}
+                disabled={true}
+              >
+                <Image
+                  source={{ uri: selectedCoverUri }}
+                  style={{ width: "100%", height: "100%" }}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.1)", "transparent"]}
+                  locations={[0, 0.2, 0.4, 0.55, 0.65, 0.8]}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: "100%",
+                  }}
+                  start={{ x: 0.5, y: 1 }}
+                  end={{ x: 0.5, y: 0 }}
+                />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={1}
                 style={{
                   position: "absolute",
-                  right: 8,
-                  bottom: 8,
+                  right: 14,
+                  top: 14,
                   backgroundColor: "rgba(0,0,0,0.55)",
-                  borderRadius: 14,
-                  padding: 5,
+                  borderRadius: 16,
+                  padding: 6,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
+                onPress={() => setPickerType("cover")}
               >
-                <Ionicons name="pencil" size={16} color="#fff" />
+                <Ionicons name="pencil" size={18} color="#fff" />
               </TouchableOpacity>
-            </TouchableOpacity>
-          </View>
 
-          <View
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              padding: 16,
-              ...Platform.select({
-                ios: {
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 3,
-                },
-                android: { elevation: 1 },
-              }),
-            }}
-          >
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 8 }}>Display name</Text>
-            <TextInput
-              value={displayName}
-              onChangeText={setDisplayName}
-              placeholder="Display name"
+              <TouchableOpacity
+                activeOpacity={1}
+                style={{
+                  position: "absolute",
+                  left: 14,
+                  bottom: 12,
+                  width: 84,
+                  height: 84,
+                  borderRadius: 42,
+                  borderWidth: 3,
+                  borderColor: "#fff",
+                  backgroundColor: "#dbeafe",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  zIndex: 2,
+                  elevation: 6,
+                }}
+                disabled={true}
+              >
+                <Image
+                  source={{ uri: selectedAvatarUri }}
+                  style={{ width: "100%", height: "100%" }}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.1)", "transparent"]}
+                  locations={[0, 0.2, 0.4, 0.55, 0.65, 0.8]}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: "100%",
+                    borderBottomLeftRadius: 42,
+                    borderBottomRightRadius: 42,
+                  }}
+                  start={{ x: 0.5, y: 1 }}
+                  end={{ x: 0.5, y: 0 }}
+                />
+                <TouchableOpacity
+                  onPress={() => setPickerType("avatar")}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    bottom: 8,
+                    backgroundColor: "rgba(0,0,0,0.55)",
+                    borderRadius: 14,
+                    padding: 5,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons name="pencil" size={16} color="#fff" />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+
+            <View
               style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
                 backgroundColor: "#fff",
-                marginBottom: 14,
-              }}
-              maxLength={50}
-            />
-
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 8 }}>Bio</Text>
-            <TextInput
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Tell people a bit about yourself"
-              placeholderTextColor="#9ca3af"
-              multiline
-              textAlignVertical="top"
-              style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                minHeight: 120,
-                backgroundColor: "#fff",
-              }}
-              maxLength={160}
-            />
-
-            {!!error && (
-              <Text style={{ color: "#dc2626", marginTop: 12 }}>{error}</Text>
-            )}
-
-            {!!success && (
-              <Text style={{ color: success === "Profile updated" ? "#16a34a" : "#fbbf24", marginTop: 12 }}>{success}</Text>
-            )}
-
-            <TouchableOpacity
-              onPress={handleSave}
-              disabled={saving}
-              style={{
-                marginTop: 16,
-                backgroundColor: "#2563eb",
-                borderRadius: 10,
-                alignItems: "center",
-                justifyContent: "center",
-                paddingVertical: 12,
-                opacity: saving ? 0.7 : 1,
+                borderRadius: 12,
+                padding: 16,
+                ...Platform.select({
+                  ios: {
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 3,
+                  },
+                  android: { elevation: 1 },
+                }),
               }}
             >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Save changes</Text>
+              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 8 }}>Display name</Text>
+              <TextInput
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder="Display name"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#d1d5db",
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  backgroundColor: "#fff",
+                  marginBottom: 14,
+                }}
+                maxLength={50}
+              />
+
+              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 8 }}>Bio</Text>
+              <TextInput
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Tell people a bit about yourself"
+                placeholderTextColor="#9ca3af"
+                multiline
+                textAlignVertical="top"
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#d1d5db",
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  minHeight: 120,
+                  backgroundColor: "#fff",
+                }}
+                maxLength={160}
+              />
+
+              {!!error && (
+                <Text style={{ color: "#dc2626", marginTop: 12 }}>{error}</Text>
               )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      )}
 
-      {activeTab === "account" && (
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 20, paddingBottom: 24 }}>
-          <View style={{
-            backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 18,
-            ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 }, android: { elevation: 1 } })
-          }}>
-
-            {/* Username (not editable) */}
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Username</Text>
-            <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 2 }}>{user?.username || "-"}</Text>
-            <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 18 }}>
-              Your username is not changeable.
-            </Text>
-
-            {/* ── Email section ── */}
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Current Email</Text>
-            <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 18 }}>{currentEmail || "-"}</Text>
-
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Email</Text>
-            <TextInput
-              value={newEmail}
-              onChangeText={setNewEmail}
-              placeholder="Enter new email"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                backgroundColor: "#fff",
-                color: newEmail ? "#1e293b" : "#9ca3af",
-                marginBottom: 8,
-              }}
-              placeholderTextColor="#9ca3af"
-            />
-            <TextInput
-              value={confirmNewEmail}
-              onChangeText={setConfirmNewEmail}
-              placeholder="Confirm new email"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={{
-                borderWidth: 1,
-                borderColor: "#d1d5db",
-                borderRadius: 10,
-                paddingHorizontal: 12,
-                paddingVertical: 10,
-                backgroundColor: "#fff",
-                color: confirmNewEmail ? "#1e293b" : "#9ca3af",
-                marginBottom: 8,
-              }}
-              placeholderTextColor="#9ca3af"
-            />
-            <View style={{ position: "relative", marginBottom: 8 }}>
-              <TextInput
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="Current password"
-                secureTextEntry={!showEmailCurrentPassword}
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#d1d5db",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  paddingRight: 44,
-                  backgroundColor: "#fff",
-                  color: currentPassword ? "#1e293b" : "#9ca3af",
-                }}
-                placeholderTextColor="#9ca3af"
-              />
-              <TouchableOpacity
-                onPress={() => setShowEmailCurrentPassword(prev => !prev)}
-                style={{ position: "absolute", right: 12, top: 10 }}
-              >
-                <Ionicons name={showEmailCurrentPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-
-            {!!emailError && (
-              <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{emailError}</Text>
-            )}
-
-            <TouchableOpacity
-              onPress={handleChangeEmail}
-              disabled={saving}
-              style={{
-                backgroundColor: "#2563eb",
-                borderRadius: 10,
-                alignItems: "center",
-                justifyContent: "center",
-                paddingVertical: 12,
-                opacity: saving ? 0.7 : 1,
-                marginBottom: 24,
-              }}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Email</Text>
+              {!!success && (
+                <Text style={{ color: success === "Profile updated" ? "#16a34a" : "#fbbf24", marginTop: 12 }}>{success}</Text>
               )}
-            </TouchableOpacity>
 
-            {/* ── Password section ── */}
-            <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Password</Text>
-            <View style={{ position: "relative", marginBottom: 8 }}>
+              <TouchableOpacity
+                onPress={handleSave}
+                disabled={saving}
+                style={{
+                  marginTop: 16,
+                  backgroundColor: "#2563eb",
+                  borderRadius: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 12,
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Save changes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+
+        {activeTab === "account" && (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 20, paddingBottom: 24 }}>
+            <View style={{
+              backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 18,
+              ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 }, android: { elevation: 1 } })
+            }}>
+
+              {/* Username (not editable) */}
+              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Username</Text>
+              <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 2 }}>{user?.username || "-"}</Text>
+              <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 18 }}>
+                Your username is not changeable.
+              </Text>
+
+              {/* ── Email section ── */}
+              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Current Email</Text>
+              <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 18 }}>{currentEmail || "-"}</Text>
+
+              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Email</Text>
               <TextInput
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="Enter new password"
-                secureTextEntry={!showNewPassword}
+                value={newEmail}
+                onChangeText={setNewEmail}
+                placeholder="Enter new email"
+                autoCapitalize="none"
+                keyboardType="email-address"
                 style={{
                   borderWidth: 1,
                   borderColor: "#d1d5db",
                   borderRadius: 10,
                   paddingHorizontal: 12,
                   paddingVertical: 10,
-                  paddingRight: 44,
                   backgroundColor: "#fff",
-                  color: newPassword ? "#1e293b" : "#9ca3af",
+                  color: newEmail ? "#1e293b" : "#9ca3af",
+                  marginBottom: 8,
                 }}
                 placeholderTextColor="#9ca3af"
               />
-              <TouchableOpacity
-                onPress={() => setShowNewPassword(prev => !prev)}
-                style={{ position: "absolute", right: 12, top: 10 }}
-              >
-                <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-            <View style={{ position: "relative", marginBottom: 8 }}>
               <TextInput
-                value={confirmNewPassword}
-                onChangeText={setConfirmNewPassword}
-                placeholder="Confirm new password"
-                secureTextEntry={!showConfirmNewPassword}
+                value={confirmNewEmail}
+                onChangeText={setConfirmNewEmail}
+                placeholder="Confirm new email"
+                autoCapitalize="none"
+                keyboardType="email-address"
                 style={{
                   borderWidth: 1,
                   borderColor: "#d1d5db",
                   borderRadius: 10,
                   paddingHorizontal: 12,
                   paddingVertical: 10,
-                  paddingRight: 44,
                   backgroundColor: "#fff",
-                  color: confirmNewPassword ? "#1e293b" : "#9ca3af",
+                  color: confirmNewEmail ? "#1e293b" : "#9ca3af",
+                  marginBottom: 8,
                 }}
                 placeholderTextColor="#9ca3af"
               />
-              <TouchableOpacity
-                onPress={() => setShowConfirmNewPassword(prev => !prev)}
-                style={{ position: "absolute", right: 12, top: 10 }}
-              >
-                <Ionicons name={showConfirmNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
-            <View style={{ position: "relative", marginBottom: 8 }}>
-              <TextInput
-                value={currentPasswordForPassword}
-                onChangeText={setCurrentPasswordForPassword}
-                placeholder="Current password"
-                secureTextEntry={!showCurrentPasswordForPassword}
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#d1d5db",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  paddingRight: 44,
-                  backgroundColor: "#fff",
-                  color: currentPasswordForPassword ? "#1e293b" : "#9ca3af",
-                }}
-                placeholderTextColor="#9ca3af"
-              />
-              <TouchableOpacity
-                onPress={() => setShowCurrentPasswordForPassword(prev => !prev)}
-                style={{ position: "absolute", right: 12, top: 10 }}
-              >
-                <Ionicons name={showCurrentPasswordForPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
-              </TouchableOpacity>
-            </View>
+              <View style={{ position: "relative", marginBottom: 8 }}>
+                <TextInput
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  placeholder="Current password"
+                  secureTextEntry={!showEmailCurrentPassword}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#d1d5db",
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    paddingRight: 44,
+                    backgroundColor: "#fff",
+                    color: currentPassword ? "#1e293b" : "#9ca3af",
+                  }}
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowEmailCurrentPassword(prev => !prev)}
+                  style={{ position: "absolute", right: 12, top: 10 }}
+                >
+                  <Ionicons name={showEmailCurrentPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
 
-            {!!passwordError && (
-              <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{passwordError}</Text>
-            )}
-
-            <TouchableOpacity
-              onPress={handleChangePassword}
-              disabled={saving}
-              style={{
-                backgroundColor: "#2563eb",
-                borderRadius: 10,
-                alignItems: "center",
-                justifyContent: "center",
-                paddingVertical: 12,
-                opacity: saving ? 0.7 : 1,
-              }}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Password</Text>
+              {!!emailError && (
+                <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{emailError}</Text>
               )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      )}
+
+              <TouchableOpacity
+                onPress={handleChangeEmail}
+                disabled={saving}
+                style={{
+                  backgroundColor: "#2563eb",
+                  borderRadius: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 12,
+                  opacity: saving ? 0.7 : 1,
+                  marginBottom: 24,
+                }}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Email</Text>
+                )}
+              </TouchableOpacity>
+
+              {/* ── Password section ── */}
+              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Password</Text>
+              <View style={{ position: "relative", marginBottom: 8 }}>
+                <TextInput
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="Enter new password"
+                  secureTextEntry={!showNewPassword}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#d1d5db",
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    paddingRight: 44,
+                    backgroundColor: "#fff",
+                    color: newPassword ? "#1e293b" : "#9ca3af",
+                  }}
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPassword(prev => !prev)}
+                  style={{ position: "absolute", right: 12, top: 10 }}
+                >
+                  <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ position: "relative", marginBottom: 8 }}>
+                <TextInput
+                  value={confirmNewPassword}
+                  onChangeText={setConfirmNewPassword}
+                  placeholder="Confirm new password"
+                  secureTextEntry={!showConfirmNewPassword}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#d1d5db",
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    paddingRight: 44,
+                    backgroundColor: "#fff",
+                    color: confirmNewPassword ? "#1e293b" : "#9ca3af",
+                  }}
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmNewPassword(prev => !prev)}
+                  style={{ position: "absolute", right: 12, top: 10 }}
+                >
+                  <Ionicons name={showConfirmNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+              <View style={{ position: "relative", marginBottom: 8 }}>
+                <TextInput
+                  value={currentPasswordForPassword}
+                  onChangeText={setCurrentPasswordForPassword}
+                  placeholder="Current password"
+                  secureTextEntry={!showCurrentPasswordForPassword}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#d1d5db",
+                    borderRadius: 10,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    paddingRight: 44,
+                    backgroundColor: "#fff",
+                    color: currentPasswordForPassword ? "#1e293b" : "#9ca3af",
+                  }}
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowCurrentPasswordForPassword(prev => !prev)}
+                  style={{ position: "absolute", right: 12, top: 10 }}
+                >
+                  <Ionicons name={showCurrentPasswordForPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                </TouchableOpacity>
+              </View>
+
+              {!!passwordError && (
+                <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{passwordError}</Text>
+              )}
+
+              <TouchableOpacity
+                onPress={handleChangePassword}
+                disabled={saving}
+                style={{
+                  backgroundColor: "#2563eb",
+                  borderRadius: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  paddingVertical: 12,
+                  opacity: saving ? 0.7 : 1,
+                }}
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
+
+      </View>
 
       <Modal
         visible={pickerType !== null}

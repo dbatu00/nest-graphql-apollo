@@ -1,8 +1,14 @@
 // mobile/styles/common.ts
 import { StyleSheet, Platform } from 'react-native';
 
+export const PAGE_HORIZONTAL_PADDING = 240;
+
 export const commonStyles = StyleSheet.create({
   container: { flex: 1, padding: 0 },
+
+  pageGutter: {
+    paddingHorizontal: PAGE_HORIZONTAL_PADDING,
+  },
 
   title: {
     fontSize: 24,
@@ -54,14 +60,14 @@ export const commonStyles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
-   button: {
-  flex: 1,
-  maxWidth: 180,
-  paddingVertical: 14,
-  borderRadius: 12,
-  backgroundColor: '#2563eb',
-  alignItems: 'center',
-},
+  button: {
+    flex: 1,
+    maxWidth: 180,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#2563eb',
+    alignItems: 'center',
+  },
   disabled: {
     backgroundColor: '#9ca3af',
   },
@@ -70,17 +76,17 @@ export const commonStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-    center: {
+  center: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   buttonRow: {
-  flexDirection: 'row',
-  gap: 16,
-  marginTop: 20,
-  justifyContent: 'center',
-  alignSelf: 'center',
-  maxWidth: 420,
-  width: '100%',
-},
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 20,
+    justifyContent: 'center',
+    alignSelf: 'center',
+    maxWidth: 420,
+    width: '100%',
+  },
 });

@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { commonStyles } from "../../styles/common";
 import { login } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
+import { AppLogo } from "@/components/common/AppLogo";
 
 export default function Login() {
   const { setSession } = useAuth();
@@ -50,10 +51,11 @@ export default function Login() {
   };
 
   return (
-    <View style={[commonStyles.container, commonStyles.center]}>
+    <View style={[commonStyles.container, commonStyles.center, commonStyles.pageGutter]}>
+      <AppLogo subtitle="Welcome back" />
       <Text style={commonStyles.title}>Login</Text>
 
-      <View style={{ width: 260 }}>
+      <View style={{ width: "100%", maxWidth: 360 }}>
         <TextInput
           placeholder="Username or Email"
           placeholderTextColor="#d1d5db"

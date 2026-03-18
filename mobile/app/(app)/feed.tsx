@@ -25,7 +25,7 @@ export default function Feed() {
   const [showLoadingIndicator, setShowLoadingIndicator] = useState(feed.loading);
   const loadingStartedAtRef = useRef<number | null>(feed.loading ? Date.now() : null);
   const hideLoaderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   // Composer shrinks from 200px (3 lines) to 30px (1 line) as you scroll
   const composerHeight = scrollY.interpolate({
     inputRange: [0, 100],
@@ -112,70 +112,72 @@ export default function Feed() {
   return (
     <View style={styles.container}>
       <FeedHeader title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />
-      
-      <Animated.View
-        style={{
-          minHeight: composerHeight,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          backgroundColor: "#fff",
-          marginHorizontal: 20,
-          marginVertical: 20,
-          borderRadius: 12,
-          overflow: 'hidden',
-          ...Platform.select({
-            ios: {
-              shadowColor: "#3b82f6",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12,
-              shadowRadius: 4,
-            },
-            android: { elevation: 2 },
-          }),
-        }}
-      >
+      <View style={[styles.pageGutter, { flex: 1 }]}>
         <Animated.View
           style={{
-            minHeight: textAreaHeight,
+            minHeight: composerHeight,
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            backgroundColor: "#fff",
+            marginHorizontal: 0,
+            marginVertical: 20,
+            borderRadius: 12,
+            overflow: 'hidden',
+            ...Platform.select({
+              ios: {
+                shadowColor: "#3b82f6",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.12,
+                shadowRadius: 4,
+              },
+              android: { elevation: 2 },
+            }),
           }}
         >
-          <Composer
-            value={content}
-            onChange={setContent}
-            onPublish={handlePublish}
-          />
-        </Animated.View>
-      </Animated.View>
-
-      {showLoadingIndicator && (
-        <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 8 }}>
-          <Animated.View style={{ transform: [{ rotate: loaderRotate }] }}>
-            <Ionicons name="refresh" size={18} color="#2563eb" />
-          </Animated.View>
-        </View>
-      )}
-      {feed.error && <Text>{feed.error}</Text>}
-
-      <Animated.ScrollView
-        scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-      >
-        {feed.activities
-          .filter(a => a.type !== "follow" || a.active)
-          .map(activity => (
-            <ActivityRow
-              key={activity.id}
-              activity={activity}
-              currentUserId={feed.currentUserId ?? undefined}
-              onToggleFollow={feed.toggleFollowOptimistic}
-              onToggleLike={feed.toggleLikeOptimistic}
-              onDeletePost={feed.deletePost}
+          <Animated.View
+            style={{
+              minHeight: textAreaHeight,
+            }}
+          >
+            <Composer
+              value={content}
+              onChange={setContent}
+              onPublish={handlePublish}
             />
-          ))}
-      </Animated.ScrollView>
+          </Animated.View>
+        </Animated.View>
+
+        {showLoadingIndicator && (
+          <View style={{ alignItems: "center", justifyContent: "center", paddingVertical: 8 }}>
+            <Animated.View style={{ transform: [{ rotate: loaderRotate }] }}>
+              <Ionicons name="refresh" size={18} color="#2563eb" />
+            </Animated.View>
+          </View>
+        )}
+        {feed.error && <Text>{feed.error}</Text>}
+
+        <Animated.ScrollView
+          style={{ flex: 1 }}
+          scrollEventThrottle={16}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false }
+          )}
+        >
+          {feed.activities
+            .filter(a => a.type !== "follow" || a.active)
+            .map(activity => (
+              <ActivityRow
+                key={activity.id}
+                activity={activity}
+                currentUserId={feed.currentUserId ?? undefined}
+                onToggleFollow={feed.toggleFollowOptimistic}
+                onToggleLike={feed.toggleLikeOptimistic}
+                onDeletePost={feed.deletePost}
+              />
+            ))}
+        </Animated.ScrollView>
+      </View>
     </View>
   );
 }

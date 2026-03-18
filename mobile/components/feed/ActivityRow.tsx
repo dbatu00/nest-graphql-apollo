@@ -317,7 +317,7 @@ export const ActivityRow = ({
 const styles = {
   container: {
     backgroundColor: "#fff",
-    marginHorizontal: 20,
+    marginHorizontal: 0,
     marginVertical: 6,
     paddingVertical: 6,
     paddingLeft: 10,
