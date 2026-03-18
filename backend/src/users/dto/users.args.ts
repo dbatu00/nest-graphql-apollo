@@ -1,13 +1,5 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { IsOptional, IsString, MinLength, MaxLength, IsUrl } from 'class-validator';
-
-@ArgsType()
-export class UsernameArgs {
-    @Field(() => String)
-    @IsString()
-    @MinLength(1)
-    username: string;
-}
+import { IsOptional, IsString, MaxLength, IsUrl } from 'class-validator';
 
 @ArgsType()
 export class UpdateMyProfileArgs {

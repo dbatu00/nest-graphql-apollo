@@ -6,7 +6,7 @@ import { GqlAuthGuard } from "../auth/security/gql-auth.guard";
 import { CurrentUser } from "../auth/security/current-user.decorator";
 import { User } from "../users/user.entity";
 import { FollowerView } from "./dto/follower-view.type";
-import { UsernameArgs } from "./dto/follows.args";
+import { UsernameArgs } from "../common/graphql/args/username.args";
 
 @Resolver()
 export class FollowsResolver {

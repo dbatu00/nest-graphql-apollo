@@ -2,14 +2,6 @@ import { ArgsType, Field, Int } from '@nestjs/graphql';
 import { IsInt, IsString, Min, MinLength } from 'class-validator';
 
 @ArgsType()
-export class UsernameArgs {
-    @Field(() => String)
-    @IsString()
-    @MinLength(1)
-    username: string;
-}
-
-@ArgsType()
 export class PostByIdArgs {
     @Field(() => Int)
     @IsInt()

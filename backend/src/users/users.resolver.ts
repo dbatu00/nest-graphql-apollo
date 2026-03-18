@@ -5,7 +5,8 @@ import { User } from './user.entity';
 import { CurrentUser } from 'src/auth/security/current-user.decorator';
 import { UseGuards } from '@nestjs/common';
 import { GqlAuthGuard } from 'src/auth/security/gql-auth.guard';
-import { UpdateMyProfileArgs, UsernameArgs } from './dto/users.args';
+import { UpdateMyProfileArgs } from './dto/users.args';
+import { UsernameArgs } from '../common/graphql/args/username.args';
 
 @Resolver(() => User)
 export class UsersResolver {

@@ -15,7 +15,8 @@ import { Post } from './post.entity';
 import { GqlAuthGuard } from '../auth/security/gql-auth.guard';
 import { CurrentUser } from '../auth/security/current-user.decorator';
 import { User } from '../users/user.entity';
-import { AddPostArgs, PostByIdArgs, PostIdArgs, UsernameArgs } from './dto/posts.args';
+import { AddPostArgs, PostByIdArgs, PostIdArgs } from './dto/posts.args';
+import { UsernameArgs } from '../common/graphql/args/username.args';
 
 type ResolverContext = {
     req?: {
