@@ -45,6 +45,43 @@ function parseGraphQLResponse<T>(payload: unknown): GraphQLResponse<T> {
   };
 }
 
+function normalizeErrorCode(code: unknown): string {
+  if (typeof code !== "string") {
+    return "";
+  }
+
+  return code.trim().toUpperCase();
+}
+
+function includesAuthMessage(message: unknown): boolean {
+  if (typeof message !== "string") {
+    return false;
+  }
+
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("unauthorized") ||
+    normalized.includes("forbidden") ||
+    normalized.includes("invalid token") ||
+    normalized.includes("jwt")
+  );
+}
+
+export function isAuthGraphQLError(error: unknown): boolean {
+  if (error instanceof GraphQLRequestError) {
+    if (error.status === 401 || error.status === 403) {
+      return true;
+    }
+
+    return error.errors.some((item) => {
+      const code = normalizeErrorCode(item.extensions?.code);
+      return code === "UNAUTHENTICATED" || code === "FORBIDDEN" || includesAuthMessage(item.message);
+    });
+  }
+
+  return error instanceof Error && includesAuthMessage(error.message);
+}
+
 export async function graphqlFetch<T>(
   query: string,
   variables: Record<string, unknown> = {}

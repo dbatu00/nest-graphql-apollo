@@ -1,16 +1,5 @@
-import { graphqlFetch } from "@/utils/graphqlFetch";
+import { graphqlFetch, isAuthGraphQLError } from "@/utils/graphqlFetch";
 import { AUTH_ME_QUERY } from "@/graphql/operations";
-
-function isAuthFailure(err: unknown): boolean {
-  const message = err instanceof Error ? err.message.toLowerCase() : "";
-
-  return (
-    message.includes("unauthorized") ||
-    message.includes("forbidden") ||
-    message.includes("invalid token") ||
-    message.includes("jwt")
-  );
-}
 
 export async function getCurrentUser() {
   try {
@@ -25,7 +14,7 @@ export async function getCurrentUser() {
 
     return data.me;
   } catch (err: unknown) {
-    if (isAuthFailure(err)) {
+    if (isAuthGraphQLError(err)) {
       console.warn("[currentUser] auth failure while fetching current user", err);
       return null;
     }

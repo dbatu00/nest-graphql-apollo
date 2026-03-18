@@ -16,6 +16,14 @@ import { GqlAuthGuard } from '../auth/security/gql-auth.guard';
 import { CurrentUser } from '../auth/security/current-user.decorator';
 import { User } from '../users/user.entity';
 
+type ResolverContext = {
+    req?: {
+        user?: {
+            id?: number;
+        };
+    };
+};
+
 @Resolver(() => Post)
 export class PostsResolver {
     constructor(private readonly postsService: PostsService) { }
@@ -66,7 +74,7 @@ export class PostsResolver {
     }
 
     @ResolveField(() => Boolean)
-    async likedByMe(@Parent() post: Post, @Context() ctx: any) {
+    async likedByMe(@Parent() post: Post, @Context() ctx: ResolverContext) {
         // This field can be resolved in contexts where no authenticated user is present.
         const userId = ctx?.req?.user?.id;
         if (!userId) return false;
