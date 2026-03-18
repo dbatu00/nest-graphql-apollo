@@ -1,6 +1,7 @@
 // Users business logic for profile and follow counters.
 import {
   Injectable,
+  NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, } from "typeorm";
@@ -69,7 +70,7 @@ export class UsersService {
     const existingUser = await this.findById(userId);
 
     if (!existingUser) {
-      throw new Error("User not found");
+      throw new NotFoundException("User not found");
     }
 
     const updatePayload: {
@@ -104,7 +105,7 @@ export class UsersService {
     const updatedUser = await this.findById(userId);
 
     if (!updatedUser) {
-      throw new Error("User not found");
+      throw new NotFoundException("User not found");
     }
 
     return updatedUser;

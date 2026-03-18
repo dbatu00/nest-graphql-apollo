@@ -71,7 +71,7 @@ export class PostsService {
         try {
             const post = await this.postsRepo.manager.transaction(async manager => {
                 const user = await manager.findOne(User, { where: { id: userId } });
-                if (!user) throw new Error('User not found');
+                if (!user) throw new NotFoundException('User not found');
 
                 const post = await manager.save(Post, { content, user });
 
@@ -161,7 +161,8 @@ export class PostsService {
                 const user = await manager.findOne(User, { where: { id: userId } });
                 const post = await manager.findOne(Post, { where: { id: postId } });
 
-                if (!user || !post) throw new Error('User or post not found');
+                if (!user) throw new NotFoundException('User not found');
+                if (!post) throw new NotFoundException('Post not found');
 
                 let like = await manager.findOne(Like, {
                     where: { userId, postId },
@@ -208,7 +209,8 @@ export class PostsService {
                 const user = await manager.findOne(User, { where: { id: userId } });
                 const post = await manager.findOne(Post, { where: { id: postId } });
 
-                if (!user || !post) throw new Error('User or post not found');
+                if (!user) throw new NotFoundException('User not found');
+                if (!post) throw new NotFoundException('Post not found');
 
                 const like = await manager.findOne(Like, {
                     where: { userId, postId },
