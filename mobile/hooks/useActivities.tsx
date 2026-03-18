@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/utils/currentUser";
 import { Activity } from "@/types/Activity";
 import {
   addPost,
-  deletePost,
+  deletePost as deletePostMutation,
   fetchFeed,
   followUser,
   likePost,
@@ -161,7 +161,7 @@ export function useActivities(params: Params = {}) {
       );
 
       try {
-        await deletePost(postId);
+        await deletePostMutation(postId);
       } catch (err: unknown) {
         console.error("[useActivities] delete post failed", err);
         refresh();

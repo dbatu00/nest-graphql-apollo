@@ -257,6 +257,11 @@ export default function ProfileSettingsScreen() {
       return;
     }
 
+    if (password.length < 8) {
+      setEmailError("Current password must be at least 8 characters.");
+      return;
+    }
+
     if (!emailRegex.test(email)) {
       setEmailError("Please enter a valid email address.");
       return;
