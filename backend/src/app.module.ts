@@ -18,7 +18,7 @@ import { Follow } from './follows/follow.entity';
 import { ActivityResolver } from './activity/activity.resolver';
 import { ActivityModule } from './activity/activity.module';
 import { Activity } from './activity/activity.entity';
-import { Like } from './posts/like.entity';
+import { Like } from './likes/like.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { validateEnvironment } from './config/environment';
 import { GqlThrottlerGuard } from './auth/security/gql-auth.guard';
