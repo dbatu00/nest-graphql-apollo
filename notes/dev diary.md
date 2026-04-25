@@ -277,3 +277,27 @@ Frontend can still show resend option, which resolves missed deliveries.
 
 ## 2026-03-15 — Email change cooldown leak fix
 Found that changeMyEmail was leaking password validity during cooldown — wrong password got a 401, correct password got a 429. Moved the throttle check before the password verify to fix it.
+
+## 2026-04-26 — Polymorphic likes for comments feature
+
+**Topic:** How to design likes when multiple entity types need to be likeable (posts, comments, future story inline comments, etc.)
+
+### Options considered
+
+- **Table-per-type:** separate `PostLike`, `CommentLike` entities. Strong FK integrity, easy to reason about individually. But every new likeable type requires a new entity, repo, migration, and injection. Would also require a `UNION` query for "everything a user liked".
+- **Polymorphic (single table):** one `Like` entity with `targetType` (enum) and `targetId` (number). Generic service works for all targets forever. No new tables when adding new likeable types. Matches the existing `Activity` entity pattern already in the codebase.
+- **Nullable multi-FK:** rejected early — awkward schema with always-empty columns.
+
+### Decision
+
+Polymorphic. Reasons:
+
+- Future scope includes posts, comments, story inline comments — N targets makes table-per-type accumulate boilerplate.
+- Activity entity already uses this pattern (`targetPostId`, `targetUserId` nullable FKs moving toward same idea). Keeping likes consistent with it reduces cognitive overhead.
+- The only trade-off is no DB-level FK cascade delete. Acceptable — delete logic is already handled in transactions (same pattern as `deleteActivitiesForPost`).
+
+### Architecture
+
+- `LikesService` is pure data: `like`, `unlike`, `getLikeMeta`, `getUsersWhoLiked`, `getActiveLikesByUser`. No side effects, no domain knowledge.
+- Domain services (`PostsService`, future `CommentsService`) orchestrate: call `LikesService` for the DB write, then call `ActivityService` to log it. This keeps `LikesService` generic and prevents it from taking on cross-cutting concerns.
+- `LIKE_TYPE` constant (`post`, `comment`, ...) mirrors `ACTIVITY_TYPE` convention.
