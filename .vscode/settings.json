@@ -1,0 +1,40 @@
+{
+	"typescript.tsserver.experimental.enableProjectDiagnostics": false,
+	"problems.exclude": {
+		"**/node_modules/**": true,
+		"**/__tests__/**": true,
+		"**/*.spec.ts": true,
+		"**/*.spec.tsx": true,
+		"**/*.test.ts": true,
+		"**/*.test.tsx": true
+	},
+	"search.exclude": {
+		"**/node_modules": true,
+		"**/__tests__/**": true,
+		"**/*.spec.ts": true,
+		"**/*.spec.tsx": true,
+		"**/*.test.ts": true,
+		"**/*.test.tsx": true
+	},
+	"files.exclude": {
+		"**/__tests__": true,
+		"**/*.spec.ts": true,
+		"**/*.spec.tsx": true,
+		"**/*.test.ts": true,
+		"**/*.test.tsx": true
+	},
+	"jest.virtualFolders": [
+		{
+			"name": "backend",
+			"rootPath": "backend",
+			"jestCommandLine": "npm test --"
+		},
+		{
+			"name": "mobile",
+			"rootPath": "mobile",
+			"jestCommandLine": "npm test --"
+		}
+	],
+	"jest.runMode": "on-demand",
+	"testing.automaticallyOpenTestResults": "neverOpen"
+}
