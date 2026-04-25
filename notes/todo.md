@@ -53,3 +53,4 @@ This file tracks only open work. Completed items are intentionally removed.
 - Should profile `me` query ownership stay in auth GraphQL surface?
 - Should signup response payload be reduced further (for example remove redundant fields)?
 - Should profile settings preserve unsaved edits across tab switches?
+- For comment activity cards, should feed show both post context and highlighted comment (including reply context + "view thread" affordance)?
