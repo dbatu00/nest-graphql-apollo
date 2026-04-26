@@ -259,6 +259,25 @@ Implementation notes:
 - `mobile/utils/currentUser.tsx` now rethrows transient failures.
 - `mobile/hooks/useAuth.tsx` now catches transient failures and preserves session via a `useRef` snapshot (`userRef.current`).
 
+## 2026-04-26 — Optimistic comment delete race note
+
+Scenario:
+
+- User deletes a comment optimistically in feed state.
+- Around the same moment, the parent post may be deleted elsewhere.
+
+Behavior and decision:
+
+- Local optimistic update removes the comment from matching post rows immediately.
+- If backend delete returns "Comment not found" because post/comment was already removed, treat it as an expected race outcome.
+- Keep `refresh()` fallback on mutation failure to reconcile with server truth.
+
+Why:
+
+- Preserves fast UI response.
+- Maintains eventual consistency without client crashes.
+- Makes concurrent delete paths predictable.
+
 Outcome:
 
 - Invalid/expired tokens still log out correctly.
