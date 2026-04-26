@@ -3,12 +3,16 @@ import { getCurrentUser } from "@/utils/currentUser";
 import { Activity } from "@/types/Activity";
 import {
   addPost,
+  deleteComment as deleteCommentMutation,
   deletePost as deletePostMutation,
   fetchFeed,
   followUser,
+  likeComment,
   likePost,
   unfollowUser,
+  unlikeComment,
   unlikePost,
+  addComment,
 } from "@/graphql/client";
 
 type Params = {
@@ -170,6 +174,78 @@ export function useActivities(params: Params = {}) {
     [refresh]
   );
 
+  /* ---------------- DELETE COMMENT ---------------- */
+
+  const deleteCommentFromPost = useCallback(
+    async (commentId: number, postId: number) => {
+      setActivities(prev =>
+        prev.map(a => {
+          if (a.targetPost?.id !== postId) return a;
+
+          return {
+            ...a,
+            targetPost: {
+              ...a.targetPost,
+              comments: (a.targetPost.comments ?? []).filter(
+                comment => comment.id !== commentId
+              ),
+            },
+          };
+        })
+      );
+
+      try {
+        await deleteCommentMutation(commentId);
+      } catch (err: unknown) {
+        console.error("[useActivities] delete comment failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
+  /* ---------------- COMMENT LIKE ---------------- */
+
+  const toggleCommentLikeOptimistic = useCallback(
+    async (commentId: number, postId: number, currentlyLiked: boolean) => {
+      setActivities(prev =>
+        prev.map(a => {
+          if (a.targetPost?.id !== postId) return a;
+
+          return {
+            ...a,
+            targetPost: {
+              ...a.targetPost,
+              comments: (a.targetPost.comments ?? []).map(comment => {
+                if (comment.id !== commentId) return comment;
+
+                return {
+                  ...comment,
+                  likedByMe: !currentlyLiked,
+                  likesCount:
+                    (comment.likesCount ?? 0) +
+                    (currentlyLiked ? -1 : 1),
+                };
+              }),
+            },
+          };
+        })
+      );
+
+      try {
+        if (currentlyLiked) {
+          await unlikeComment(commentId);
+        } else {
+          await likeComment(commentId);
+        }
+      } catch (err: unknown) {
+        console.error("[useActivities] comment like toggle failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
   /* ---------------- PUBLISH ---------------- */
 
   const publish = useCallback(
@@ -188,6 +264,40 @@ export function useActivities(params: Params = {}) {
     [refresh]
   );
 
+  /* ---------------- ADD COMMENT ---------------- */
+
+  const addCommentToPost = useCallback(
+    async (postId: number, content: string) => {
+      if (!content.trim()) return;
+
+      try {
+        const result = await addComment(postId, content);
+
+        // Optimistically add comment to the post in the feed
+        setActivities(prev =>
+          prev.map(a => {
+            if (a.targetPost?.id !== postId) return a;
+
+            return {
+              ...a,
+              targetPost: {
+                ...a.targetPost,
+                comments: [
+                  ...(a.targetPost.comments ?? []),
+                  result,
+                ],
+              },
+            };
+          })
+        );
+      } catch (err: unknown) {
+        console.error("[useActivities] add comment failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
   return {
     activities,
     loading,
@@ -196,7 +306,10 @@ export function useActivities(params: Params = {}) {
     currentUserId,
     toggleFollowOptimistic,
     toggleLikeOptimistic,
+    toggleCommentLikeOptimistic,
     deletePost,
+    deleteCommentFromPost,
     publish,
+    addCommentToPost,
   };
 }

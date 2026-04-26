@@ -1,18 +1,21 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, ScrollView, Platform, Image } from "react-native";
+import { View, Text, TouchableOpacity, Modal, ScrollView, Platform, Image, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
 import { feedStyles } from "@/styles/feed";
-import { fetchLikedUsers } from "@/graphql/client";
+import { fetchCommentLikedUsers, fetchLikedUsers } from "@/graphql/client";
 
 type Props = {
   activity: Activity;
   currentUserId?: number;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
+  onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
   onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onToggleCommentLike?: (commentId: number, postId: number, currentlyLiked: boolean) => Promise<void>;
+  onAddComment?: (postId: number, content: string) => Promise<void>;
 };
 
 type LikedUser = {
@@ -28,7 +31,10 @@ export const ActivityRow = ({
   currentUserId,
   onToggleFollow,
   onDeletePost,
+  onDeleteComment,
   onToggleLike,
+  onToggleCommentLike,
+  onAddComment,
 }: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
   const router = useRouter();
@@ -41,6 +47,10 @@ export const ActivityRow = ({
   const [likedModalVisible, setLikedModalVisible] = useState(false);
   const [likedLoading, setLikedLoading] = useState(false);
 
+  /* ---------- COMMENT INPUT STATE ---------- */
+  const [commentText, setCommentText] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
+
   const handleOpenLikesModal = async (postId: number) => {
     try {
       setLikedLoading(true);
@@ -50,6 +60,21 @@ export const ActivityRow = ({
       setLikedUsers(users);
     } catch (err: unknown) {
       console.error("[ActivityRow] failed to load liked users", err);
+      setLikedUsers([]);
+    } finally {
+      setLikedLoading(false);
+    }
+  };
+
+  const handleOpenCommentLikesModal = async (commentId: number) => {
+    try {
+      setLikedLoading(true);
+      setLikedModalVisible(true);
+
+      const users = await fetchCommentLikedUsers(commentId);
+      setLikedUsers(users);
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to load comment liked users", err);
       setLikedUsers([]);
     } finally {
       setLikedLoading(false);
@@ -73,12 +98,61 @@ export const ActivityRow = ({
     }
   };
 
+  const handleAddComment = async () => {
+    if (!commentText.trim() || !targetPost || !onAddComment) return;
+
+    try {
+      setCommentLoading(true);
+      await onAddComment(targetPost.id, commentText.trim());
+      setCommentText("");
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to add comment", err);
+    } finally {
+      setCommentLoading(false);
+    }
+  };
+
 
 
   /* ---------- HEADER ---------- */
 
   const renderHeader = () => {
+
     if (type === "post") return null;
+
+    if (type === "comment") {
+      const actorLabel = actor.displayName?.trim() || actor.username;
+      const postOwnerLabel = targetPost?.user?.displayName?.trim() || targetPost?.user?.username;
+      const actorAvatarUri = actor.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(actorLabel)}&background=e5e7eb&color=374151&size=64`;
+      const postOwnerAvatarUri = targetPost?.user?.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(postOwnerLabel ?? "")}&background=e5e7eb&color=374151&size=64`;
+      return (
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1, paddingRight: 8 }}>
+            <Image
+              source={{ uri: actorAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginRight: 6 }}
+            />
+            <ProfileLink username={actor.username}>
+              <Text style={styles.headerNameText}>{actorLabel}</Text>
+            </ProfileLink>
+            <Text style={styles.headerText}> commented on </Text>
+            <ProfileLink username={targetPost?.user?.username ?? ""}>
+              <Text style={styles.headerNameText}>{postOwnerLabel ?? ""}</Text>
+            </ProfileLink>
+            <Text style={styles.headerText}>'s post</Text>
+            <Image
+              source={{ uri: postOwnerAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginLeft: 6 }}
+            />
+          </View>
+          <Text style={styles.timestamp}>
+            {new Date(createdAt).toLocaleString()}
+          </Text>
+        </View>
+      );
+    }
 
 
     if (type === "like") {
@@ -189,6 +263,132 @@ export const ActivityRow = ({
           }}
         >
           <Text style={feedStyles.content}>{targetPost.content}</Text>
+
+          {(targetPost.comments?.length ?? 0) > 0 && (
+            <View style={{ marginTop: 10, gap: 6 }}>
+              {targetPost.comments?.map((comment) => {
+                const commentAuthor = comment.user.displayName?.trim() || comment.user.username;
+                const canDeleteComment =
+                  !!onDeleteComment &&
+                  currentUserId != null &&
+                  Number(currentUserId) === Number(comment.user.id);
+
+                return (
+                  <View
+                    key={comment.id}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: 8,
+                      paddingHorizontal: 8,
+                      paddingVertical: 6,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "600",
+                          color: "#374151",
+                          flex: 1,
+                          marginRight: 8,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {commentAuthor}
+                      </Text>
+
+                      {canDeleteComment && targetPost && (
+                        <TouchableOpacity
+                          onPress={() => onDeleteComment(comment.id, targetPost.id)}
+                        >
+                          <Text style={{ fontSize: 11, color: "#dc2626", fontWeight: "600" }}>
+                            Delete
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 13, color: "#1f2937", marginTop: 2 }}>
+                      {comment.content}
+                    </Text>
+
+                    {targetPost && onToggleCommentLike && (
+                      <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", alignSelf: "flex-end" }}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            onToggleCommentLike(
+                              comment.id,
+                              targetPost.id,
+                              comment.likedByMe ?? false
+                            )
+                          }
+                        >
+                          <Text style={{ color: comment.likedByMe ? "red" : "gray", fontSize: 12 }}>
+                            ♥
+                          </Text>
+                        </TouchableOpacity>
+
+                        {(comment.likesCount ?? 0) > 0 && (
+                          <TouchableOpacity
+                            onPress={() => handleOpenCommentLikesModal(comment.id)}
+                          >
+                            <Text style={{ marginLeft: 6, fontSize: 12, color: "#6b7280" }}>
+                              {comment.likesCount}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {onAddComment && (
+            <View style={{ marginTop: 10, flexDirection: "row", gap: 6 }}>
+              <TextInput
+                placeholder="Add a comment..."
+                placeholderTextColor="#9ca3af"
+                value={commentText}
+                onChangeText={setCommentText}
+                editable={!commentLoading}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 6,
+                  fontSize: 13,
+                  color: "#1f2937",
+                  borderWidth: 1,
+                  borderColor: "#e5e7eb",
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleAddComment}
+                disabled={!commentText.trim() || commentLoading}
+                style={{
+                  backgroundColor: commentText.trim() && !commentLoading ? "#3b82f6" : "#d1d5db",
+                  borderRadius: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  justifyContent: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#fff",
+                    fontWeight: "600",
+                    fontSize: 12,
+                  }}
+                >
+                  {commentLoading ? "..." : "Post"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <Text style={{ fontSize: 12, color: "#d1d5db", marginTop: 4, alignSelf: "flex-end" }}>
             {new Date(targetPost.createdAt).toLocaleString()}

@@ -1,4 +1,4 @@
-export type ActivityType = "post" | "like" | "share" | "follow";
+export type ActivityType = "post" | "like" | "share" | "follow" | "comment";
 
 import { Post } from "@/types/Post";
 

@@ -2,8 +2,8 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PostsService } from '../posts.service';
 import { Post } from '../post.entity';
 import { User } from '../../users/user.entity';
-import { Like } from '../like.entity';
 import { createEntityManagerMock } from '../../test-utils/typeorm.mocks';
+import { LIKE_TYPE } from '../../likes/likes.constants';
 
 describe('PostsService', () => {
     let service: PostsService;
@@ -21,15 +21,17 @@ describe('PostsService', () => {
         findOne: jest.fn(),
     };
 
-    const likesRepo = {
-        find: jest.fn(),
-        findOne: jest.fn(),
-        count: jest.fn(),
-    };
-
     const activityService = {
         logActivity: jest.fn(),
         deleteActivitiesForPost: jest.fn(),
+    };
+
+    const likesService = {
+        getActiveLikesByUser: jest.fn(),
+        getLikeMeta: jest.fn(),
+        getUsersWhoLiked: jest.fn(),
+        like: jest.fn(),
+        unlike: jest.fn(),
     };
 
     beforeEach(() => {
@@ -37,8 +39,8 @@ describe('PostsService', () => {
         service = new PostsService(
             postsRepo as any,
             usersRepo as any,
-            likesRepo as any,
             activityService as any,
+            likesService as any,
         );
     });
 
@@ -83,20 +85,21 @@ describe('PostsService', () => {
 
         it('returns mapped liked posts for existing user', async () => {
             usersRepo.findOne.mockResolvedValue({ id: 10, username: 'deniz' } as User);
-            likesRepo.find.mockResolvedValue([
-                { post: { id: 100 } },
-                { post: { id: 101 } },
+            likesService.getActiveLikesByUser.mockResolvedValue([
+                { targetId: 100 },
+                { targetId: 101 },
+            ]);
+            postsRepo.find.mockResolvedValue([
+                { id: 100 },
+                { id: 101 },
             ]);
 
             await expect(service.getLikedPostsByUsername('deniz')).resolves.toEqual([
                 { id: 100 },
                 { id: 101 },
             ]);
-            expect(likesRepo.find).toHaveBeenCalledWith({
-                where: { userId: 10, active: true },
-                relations: ['post', 'post.user'],
-                order: { createdAt: 'DESC' },
-            });
+            expect(likesService.getActiveLikesByUser).toHaveBeenCalledWith(10, LIKE_TYPE.POST);
+            expect(postsRepo.find).toHaveBeenCalled();
         });
     });
 
@@ -155,47 +158,45 @@ describe('PostsService', () => {
     });
 
     describe('getLikeMeta', () => {
-        it('returns likes count and likedByMe=true when active like exists', async () => {
-            likesRepo.count.mockResolvedValue(7);
-            likesRepo.findOne.mockResolvedValue({ id: 1 } as Like);
+        it('delegates to likesService with post target type', async () => {
+            likesService.getLikeMeta.mockResolvedValue({
+                likesCount: 7,
+                likedByMe: true,
+            });
 
             await expect(service.getLikeMeta(5, 3)).resolves.toEqual({
                 likesCount: 7,
                 likedByMe: true,
             });
-            expect(likesRepo.count).toHaveBeenCalledWith({ where: { postId: 5, active: true } });
-            expect(likesRepo.findOne).toHaveBeenCalledWith({
-                where: { postId: 5, userId: 3, active: true },
-                select: { id: true },
-            });
+            expect(likesService.getLikeMeta).toHaveBeenCalledWith(LIKE_TYPE.POST, 5, 3);
         });
 
-        it('returns likedByMe=false when userId is omitted', async () => {
-            likesRepo.count.mockResolvedValue(2);
+        it('passes undefined userId through when omitted', async () => {
+            likesService.getLikeMeta.mockResolvedValue({
+                likesCount: 2,
+                likedByMe: false,
+            });
 
             await expect(service.getLikeMeta(5)).resolves.toEqual({
                 likesCount: 2,
                 likedByMe: false,
             });
-            expect(likesRepo.findOne).not.toHaveBeenCalled();
+            expect(likesService.getLikeMeta).toHaveBeenCalledWith(LIKE_TYPE.POST, 5, undefined);
         });
     });
 
     describe('getUsersWhoLiked', () => {
-        it('returns users extracted from likes', async () => {
-            likesRepo.find.mockResolvedValue([
-                { user: { id: 1, username: 'u1' } },
-                { user: { id: 2, username: 'u2' } },
+        it('delegates to likesService with post target type', async () => {
+            likesService.getUsersWhoLiked.mockResolvedValue([
+                { id: 1, username: 'u1' },
+                { id: 2, username: 'u2' },
             ]);
 
             await expect(service.getUsersWhoLiked(7)).resolves.toEqual([
                 { id: 1, username: 'u1' },
                 { id: 2, username: 'u2' },
             ]);
-            expect(likesRepo.find).toHaveBeenCalledWith({
-                where: { postId: 7, active: true },
-                relations: ['user'],
-            });
+            expect(likesService.getUsersWhoLiked).toHaveBeenCalledWith(LIKE_TYPE.POST, 7);
         });
     });
 
@@ -208,20 +209,21 @@ describe('PostsService', () => {
 
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
-            await expect(service.likePost(1, 2)).rejects.toThrow('User or post not found');
+            await expect(service.likePost(1, 2)).rejects.toThrow('User not found');
         });
 
         it('returns true idempotently when like is already active', async () => {
             const manager = createEntityManagerMock();
             manager.findOne
                 .mockResolvedValueOnce({ id: 1 } as User)
-                .mockResolvedValueOnce({ id: 2 } as Post)
-                .mockResolvedValueOnce({ id: 3, active: true } as Like);
+                .mockResolvedValueOnce({ id: 2 } as Post);
+            likesService.like.mockResolvedValue({ changed: false });
 
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
             await expect(service.likePost(1, 2)).resolves.toBe(true);
             expect(manager.save).not.toHaveBeenCalled();
+            expect(likesService.like).toHaveBeenCalledWith(1, LIKE_TYPE.POST, 2, manager);
             expect(activityService.logActivity).not.toHaveBeenCalled();
         });
 
@@ -229,18 +231,15 @@ describe('PostsService', () => {
             const manager = createEntityManagerMock();
             const user = { id: 1, username: 'deniz' } as User;
             const post = { id: 2 } as Post;
-            const like = { id: 3, active: false } as Like;
 
             manager.findOne
                 .mockResolvedValueOnce(user)
-                .mockResolvedValueOnce(post)
-                .mockResolvedValueOnce(like);
-            manager.save.mockResolvedValue(like);
+                .mockResolvedValueOnce(post);
+            likesService.like.mockResolvedValue({ changed: true });
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
             await expect(service.likePost(1, 2)).resolves.toBe(true);
-            expect(like.active).toBe(true);
-            expect(manager.save).toHaveBeenCalledWith(like);
+            expect(likesService.like).toHaveBeenCalledWith(1, LIKE_TYPE.POST, 2, manager);
             expect(activityService.logActivity).toHaveBeenCalledWith(
                 {
                     type: 'like',
@@ -259,19 +258,12 @@ describe('PostsService', () => {
 
             manager.findOne
                 .mockResolvedValueOnce(user)
-                .mockResolvedValueOnce(post)
-                .mockResolvedValueOnce(null);
-            manager.save.mockResolvedValue({ id: 20, active: true } as Like);
+                .mockResolvedValueOnce(post);
+            likesService.like.mockResolvedValue({ changed: true });
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
             await expect(service.likePost(1, 2)).resolves.toBe(true);
-            expect(manager.save).toHaveBeenCalledWith(Like, {
-                user,
-                userId: 1,
-                post,
-                postId: 2,
-                active: true,
-            });
+            expect(likesService.like).toHaveBeenCalledWith(1, LIKE_TYPE.POST, 2, manager);
             expect(activityService.logActivity).toHaveBeenCalled();
         });
     });
@@ -284,19 +276,20 @@ describe('PostsService', () => {
                 .mockResolvedValueOnce(null);
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
-            await expect(service.unlikePost(1, 2)).rejects.toThrow('User or post not found');
+            await expect(service.unlikePost(1, 2)).rejects.toThrow('Post not found');
         });
 
         it('returns true idempotently when like does not exist', async () => {
             const manager = createEntityManagerMock();
             manager.findOne
                 .mockResolvedValueOnce({ id: 1 } as User)
-                .mockResolvedValueOnce({ id: 2 } as Post)
-                .mockResolvedValueOnce(null);
+                .mockResolvedValueOnce({ id: 2 } as Post);
+            likesService.unlike.mockResolvedValue({ changed: false });
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
             await expect(service.unlikePost(1, 2)).resolves.toBe(true);
             expect(manager.save).not.toHaveBeenCalled();
+            expect(likesService.unlike).toHaveBeenCalledWith(1, LIKE_TYPE.POST, 2, manager);
             expect(activityService.logActivity).not.toHaveBeenCalled();
         });
 
@@ -304,12 +297,13 @@ describe('PostsService', () => {
             const manager = createEntityManagerMock();
             manager.findOne
                 .mockResolvedValueOnce({ id: 1 } as User)
-                .mockResolvedValueOnce({ id: 2 } as Post)
-                .mockResolvedValueOnce({ id: 3, active: false } as Like);
+                .mockResolvedValueOnce({ id: 2 } as Post);
+            likesService.unlike.mockResolvedValue({ changed: false });
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
             await expect(service.unlikePost(1, 2)).resolves.toBe(true);
             expect(manager.save).not.toHaveBeenCalled();
+            expect(likesService.unlike).toHaveBeenCalledWith(1, LIKE_TYPE.POST, 2, manager);
             expect(activityService.logActivity).not.toHaveBeenCalled();
         });
 
@@ -317,18 +311,15 @@ describe('PostsService', () => {
             const manager = createEntityManagerMock();
             const user = { id: 1, username: 'deniz' } as User;
             const post = { id: 2 } as Post;
-            const like = { id: 3, active: true } as Like;
 
             manager.findOne
                 .mockResolvedValueOnce(user)
-                .mockResolvedValueOnce(post)
-                .mockResolvedValueOnce(like);
-            manager.save.mockResolvedValue(like);
+                .mockResolvedValueOnce(post);
+            likesService.unlike.mockResolvedValue({ changed: true });
             postsRepo.manager.transaction.mockImplementation(async (cb: any) => cb(manager));
 
             await expect(service.unlikePost(1, 2)).resolves.toBe(true);
-            expect(like.active).toBe(false);
-            expect(manager.save).toHaveBeenCalledWith(like);
+            expect(likesService.unlike).toHaveBeenCalledWith(1, LIKE_TYPE.POST, 2, manager);
             expect(activityService.logActivity).toHaveBeenCalledWith(
                 {
                     type: 'like',

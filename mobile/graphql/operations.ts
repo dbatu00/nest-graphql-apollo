@@ -28,6 +28,19 @@ export const FEED_QUERY = `
         createdAt
         likesCount
         likedByMe
+        comments {
+          id
+          content
+          createdAt
+          likesCount
+          likedByMe
+          user {
+            id
+            username
+            displayName
+            avatarUrl
+          }
+        }
         user {
           id
           username
@@ -224,6 +237,40 @@ export const ADD_POST_MUTATION = `
   }
 `;
 
+export const ADD_COMMENT_MUTATION = `
+  mutation AddComment($postId: Int!, $content: String!) {
+    addComment(postId: $postId, content: $content) {
+      id
+      content
+      createdAt
+      user {
+        id
+        username
+        displayName
+        avatarUrl
+      }
+    }
+  }
+`;
+
+export const DELETE_COMMENT_MUTATION = `
+  mutation DeleteComment($commentId: Int!) {
+    deleteComment(commentId: $commentId)
+  }
+`;
+
+export const LIKE_COMMENT_MUTATION = `
+  mutation LikeComment($commentId: Int!) {
+    likeComment(commentId: $commentId)
+  }
+`;
+
+export const UNLIKE_COMMENT_MUTATION = `
+  mutation UnlikeComment($commentId: Int!) {
+    unlikeComment(commentId: $commentId)
+  }
+`;
+
 export const UPDATE_MY_PROFILE_MUTATION = `
   mutation UpdateMyProfile($displayName: String, $bio: String, $avatarUrl: String, $coverUrl: String) {
     updateMyProfile(displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl) {
@@ -240,6 +287,20 @@ export const UPDATE_MY_PROFILE_MUTATION = `
 export const GET_LIKED_USERS_QUERY = `
   query GetLikedUsers($postId: Int!) {
     post(id: $postId) {
+      likedUsers {
+        id
+        username
+        displayName
+        avatarUrl
+        followedByMe
+      }
+    }
+  }
+`;
+
+export const GET_COMMENT_LIKED_USERS_QUERY = `
+  query GetCommentLikedUsers($commentId: Int!) {
+    comment(id: $commentId) {
       likedUsers {
         id
         username

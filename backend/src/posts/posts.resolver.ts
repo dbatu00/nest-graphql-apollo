@@ -17,6 +17,8 @@ import { CurrentUser } from '../auth/security/current-user.decorator';
 import { User } from '../users/user.entity';
 import { AddPostArgs, PostByIdArgs, PostIdArgs } from './dto/posts.args';
 import { UsernameArgs } from '../common/graphql/args/username.args';
+import { CommentsService } from 'src/comments/comments.service';
+import { Comment } from 'src/comments/comment.entity';
 
 type ResolverContext = {
     req?: {
@@ -28,7 +30,10 @@ type ResolverContext = {
 
 @Resolver(() => Post)
 export class PostsResolver {
-    constructor(private readonly postsService: PostsService) { }
+    constructor(
+        private readonly postsService: PostsService,
+        private readonly commentsService: CommentsService,
+    ) { }
 
     @Query(() => [Post])
     posts() {
@@ -88,6 +93,11 @@ export class PostsResolver {
     @ResolveField(() => [User])
     async likedUsers(@Parent() post: Post) {
         return this.postsService.getUsersWhoLiked(post.id);
+    }
+
+    @ResolveField(() => [Comment])
+    async comments(@Parent() post: Post) {
+        return this.commentsService.getCommentsByPost(post.id);
     }
 
     // ------------------------

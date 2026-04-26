@@ -2,6 +2,7 @@
 import { ObjectType, Field, Int } from "@nestjs/graphql";
 import { User } from "../users/user.entity";
 import { Post } from "../posts/post.entity";
+import { Comment } from "../comments/comment.entity";
 
 @ObjectType("Activity")
 export class ActivityGQL {
@@ -9,7 +10,8 @@ export class ActivityGQL {
     id: number;
 
     @Field(() => String)
-    type: "post" | "follow" | "like" | "share";
+    type: "post" | "follow" | "like" | "share" | "comment";
+
 
     @Field(() => User)
     actor: User;
@@ -17,8 +19,12 @@ export class ActivityGQL {
     @Field(() => User, { nullable: true })
     targetUser?: User;
 
+
     @Field(() => Post, { nullable: true })
     targetPost?: Post;
+
+    @Field(() => Comment, { nullable: true })
+    targetComment?: Comment;
 
     @Field()
     active: boolean;

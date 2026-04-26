@@ -173,7 +173,10 @@ export default function Feed() {
                 currentUserId={feed.currentUserId ?? undefined}
                 onToggleFollow={feed.toggleFollowOptimistic}
                 onToggleLike={feed.toggleLikeOptimistic}
+                onToggleCommentLike={feed.toggleCommentLikeOptimistic}
                 onDeletePost={feed.deletePost}
+                onDeleteComment={feed.deleteCommentFromPost}
+                onAddComment={feed.addCommentToPost}
               />
             ))}
         </Animated.ScrollView>

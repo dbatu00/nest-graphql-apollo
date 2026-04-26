@@ -6,13 +6,16 @@ import { PostsResolver } from './posts.resolver';
 import { Post } from './post.entity';
 import { User } from 'src/users/user.entity';
 import { ActivityModule } from 'src/activity/activity.module';
-import { Like } from './like.entity';
+import { LikesModule } from 'src/likes/likes.module';
+import { CommentsModule } from 'src/comments/comments.module';
 
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, User, Like]),
+    TypeOrmModule.forFeature([Post, User]),
     ActivityModule,
+    LikesModule,
+    CommentsModule,
   ],
   providers: [PostsService, PostsResolver],
 })

@@ -1,8 +1,10 @@
 import {
     ADD_POST_MUTATION,
+    ADD_COMMENT_MUTATION,
     AUTH_ME_QUERY,
     CHANGE_MY_EMAIL_MUTATION,
     CHANGE_MY_PASSWORD_MUTATION,
+    DELETE_COMMENT_MUTATION,
     DELETE_POST_MUTATION,
     FEED_QUERY,
     FOLLOWERS_QUERY,
@@ -10,6 +12,7 @@ import {
     FOLLOWING_QUERY,
     FOLLOWING_WITH_FOLLOW_STATE_QUERY,
     FOLLOW_USER_MUTATION,
+    GET_COMMENT_LIKED_USERS_QUERY,
     GET_LIKED_USERS_QUERY,
     IS_EMAIL_USED_QUERY,
     LIKED_POSTS_QUERY,
@@ -20,7 +23,9 @@ import {
     UNFOLLOW_USER_MUTATION,
     UNLIKE_POST_MUTATION,
     LIKE_POST_MUTATION,
+    LIKE_COMMENT_MUTATION,
     UPDATE_MY_PROFILE_MUTATION,
+    UNLIKE_COMMENT_MUTATION,
     USER_PROFILE_QUERY,
 } from "@/graphql/operations";
 import { EmailSendResult } from "@/types/Auth";
@@ -185,14 +190,58 @@ export async function unlikePost(postId: number): Promise<boolean> {
     return data.unlikePost;
 }
 
+export async function likeComment(commentId: number): Promise<boolean> {
+    const data = await graphqlFetch<{ likeComment: boolean }>(LIKE_COMMENT_MUTATION, { commentId });
+    return data.likeComment;
+}
+
+export async function unlikeComment(commentId: number): Promise<boolean> {
+    const data = await graphqlFetch<{ unlikeComment: boolean }>(UNLIKE_COMMENT_MUTATION, { commentId });
+    return data.unlikeComment;
+}
+
 export async function deletePost(postId: number): Promise<boolean> {
     const data = await graphqlFetch<{ deletePost: boolean }>(DELETE_POST_MUTATION, { postId });
     return data.deletePost;
 }
 
+export async function deleteComment(commentId: number): Promise<boolean> {
+    const data = await graphqlFetch<{ deleteComment: boolean }>(DELETE_COMMENT_MUTATION, { commentId });
+    return data.deleteComment;
+}
+
 export async function addPost(content: string): Promise<number> {
     const data = await graphqlFetch<{ addPost: { id: number } }>(ADD_POST_MUTATION, { content });
     return data.addPost.id;
+}
+
+export async function addComment(postId: number, content: string): Promise<{
+    id: number;
+    content: string;
+    createdAt: string;
+    user: {
+        id: number;
+        username: string;
+        displayName?: string;
+        avatarUrl?: string;
+    };
+}> {
+    const data = await graphqlFetch<{
+        addComment: {
+            id: number;
+            content: string;
+            createdAt: string;
+            user: {
+                id: number;
+                username: string;
+                displayName?: string;
+                avatarUrl?: string;
+            };
+        };
+    }>(ADD_COMMENT_MUTATION, { postId, content });
+    return {
+        ...data.addComment,
+    };
 }
 
 export async function fetchLikedUsers(postId: number): Promise<FollowUser[]> {
@@ -201,6 +250,14 @@ export async function fetchLikedUsers(postId: number): Promise<FollowUser[]> {
     }>(GET_LIKED_USERS_QUERY, { postId });
 
     return data.post?.likedUsers ?? [];
+}
+
+export async function fetchCommentLikedUsers(commentId: number): Promise<FollowUser[]> {
+    const data = await graphqlFetch<{
+        comment: { likedUsers: FollowUser[] };
+    }>(GET_COMMENT_LIKED_USERS_QUERY, { commentId });
+
+    return data.comment?.likedUsers ?? [];
 }
 
 export async function fetchUserProfile(username: string): Promise<ProfileData | null> {

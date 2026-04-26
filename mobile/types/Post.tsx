@@ -1,3 +1,5 @@
+import { Comment } from "@/types/Comment";
+
 export type Post = {
   id: number;
   content: string;
@@ -11,4 +13,5 @@ export type Post = {
   };
   likedByMe?: boolean; // ✅ optional for activity feed
   likesCount?: number; // ✅ optional for activity feed
+  comments?: Comment[];
 };

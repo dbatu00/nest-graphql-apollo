@@ -11,6 +11,7 @@ type Post {
   likesCount: Int!
   likedByMe: Boolean!
   likedUsers: [User!]!
+  comments: [Comment!]!
 }
 
 """
@@ -35,12 +36,25 @@ type User {
   followingCount: Int!
 }
 
+type Comment {
+  id: Int!
+  content: String!
+  user: User!
+  post: Post!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  likesCount: Int!
+  likedByMe: Boolean!
+  likedUsers: [User!]!
+}
+
 type Activity {
   id: Int!
   type: String!
   actor: User!
   targetUser: User
   targetPost: Post
+  targetComment: Comment
   active: Boolean!
   createdAt: DateTime!
 }
@@ -62,6 +76,7 @@ type Query {
   posts: [Post!]!
   likedPosts(username: String!): [Post!]!
   post(id: Int!): Post!
+  comment(id: Int!): Comment!
   me: User!
   isEmailUsed(email: String!): Boolean!
   followers(username: String!): [User!]!
@@ -76,6 +91,10 @@ type Mutation {
   deletePost(postId: Int!): Boolean!
   likePost(postId: Int!): Boolean!
   unlikePost(postId: Int!): Boolean!
+  addComment(postId: Int!, content: String!): Comment!
+  deleteComment(commentId: Int!): Boolean!
+  likeComment(commentId: Int!): Boolean!
+  unlikeComment(commentId: Int!): Boolean!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(identifier: String!, password: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!

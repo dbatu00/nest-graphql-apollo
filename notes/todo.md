@@ -22,6 +22,7 @@ This file tracks only open work. Completed items are intentionally removed.
 - Introduce clearer domain error mapping for GraphQL responses.
 - Harden follow-state mapping for raw/entities length mismatch.
 - Add invariants in activity logging inputs (`like` requires target post, `follow` requires target user).
+- [Ponder] Link comment likes to activity events (for richer timeline, notifications, or analytics?)
 
 ## P2 — API & Service Cleanup
 
@@ -53,3 +54,4 @@ This file tracks only open work. Completed items are intentionally removed.
 - Should profile `me` query ownership stay in auth GraphQL surface?
 - Should signup response payload be reduced further (for example remove redundant fields)?
 - Should profile settings preserve unsaved edits across tab switches?
+- For comment activity cards, should feed show both post context and highlighted comment (including reply context + "view thread" affordance)?
