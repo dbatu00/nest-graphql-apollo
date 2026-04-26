@@ -22,6 +22,7 @@ This file tracks only open work. Completed items are intentionally removed.
 - Introduce clearer domain error mapping for GraphQL responses.
 - Harden follow-state mapping for raw/entities length mismatch.
 - Add invariants in activity logging inputs (`like` requires target post, `follow` requires target user).
+- [Ponder] Link comment likes to activity events (for richer timeline, notifications, or analytics?)
 
 ## P2 — API & Service Cleanup
 
