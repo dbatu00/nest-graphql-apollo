@@ -7,6 +7,7 @@ import { Activity } from "./activity.entity";
 import { ActivityType } from "./activity.constants";
 import { User } from "src/users/user.entity";
 import { Post } from "src/posts/post.entity";
+import { Comment } from "../comments/comment.entity";
 
 
 @Injectable()
@@ -29,6 +30,7 @@ export class ActivityService {
             actor: User;
             targetPost?: Post;
             targetUser?: User;
+            targetComment?: Comment;
             active?: boolean;
         },
         manager?: EntityManager,
@@ -77,6 +79,8 @@ export class ActivityService {
                 targetPostId: input.targetPost?.id,
                 targetUser: input.targetUser,
                 targetUserId: input.targetUser?.id,
+                targetComment: input.targetComment,
+                targetCommentId: input.targetComment?.id,
                 active,
             });
         } catch (error) {

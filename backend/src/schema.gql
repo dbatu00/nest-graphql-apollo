@@ -54,6 +54,7 @@ type Activity {
   actor: User!
   targetUser: User
   targetPost: Post
+  targetComment: Comment
   active: Boolean!
   createdAt: DateTime!
 }

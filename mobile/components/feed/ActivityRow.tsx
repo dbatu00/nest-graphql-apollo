@@ -117,7 +117,42 @@ export const ActivityRow = ({
   /* ---------- HEADER ---------- */
 
   const renderHeader = () => {
+
     if (type === "post") return null;
+
+    if (type === "comment") {
+      const actorLabel = actor.displayName?.trim() || actor.username;
+      const postOwnerLabel = targetPost?.user?.displayName?.trim() || targetPost?.user?.username;
+      const actorAvatarUri = actor.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(actorLabel)}&background=e5e7eb&color=374151&size=64`;
+      const postOwnerAvatarUri = targetPost?.user?.avatarUrl?.trim()
+        || `https://ui-avatars.com/api/?name=${encodeURIComponent(postOwnerLabel ?? "")}&background=e5e7eb&color=374151&size=64`;
+      return (
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", flex: 1, paddingRight: 8 }}>
+            <Image
+              source={{ uri: actorAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginRight: 6 }}
+            />
+            <ProfileLink username={actor.username}>
+              <Text style={styles.headerNameText}>{actorLabel}</Text>
+            </ProfileLink>
+            <Text style={styles.headerText}> commented on </Text>
+            <ProfileLink username={targetPost?.user?.username ?? ""}>
+              <Text style={styles.headerNameText}>{postOwnerLabel ?? ""}</Text>
+            </ProfileLink>
+            <Text style={styles.headerText}>'s post</Text>
+            <Image
+              source={{ uri: postOwnerAvatarUri }}
+              style={{ width: 32, height: 32, borderRadius: 16, marginLeft: 6 }}
+            />
+          </View>
+          <Text style={styles.timestamp}>
+            {new Date(createdAt).toLocaleString()}
+          </Text>
+        </View>
+      );
+    }
 
 
     if (type === "like") {

@@ -9,6 +9,7 @@ import {
 import { User } from "../users/user.entity";
 import { Post } from "../posts/post.entity";
 import type { ActivityType } from "./activity.constants";
+import { Comment } from "../comments/comment.entity";
 
 @Entity()
 export class Activity {
@@ -32,6 +33,13 @@ export class Activity {
 
     @Column({ nullable: true })
     targetPostId?: number;
+
+
+    @ManyToOne(() => Comment, { nullable: true, onDelete: 'CASCADE' })
+    targetComment?: Comment;
+
+    @Column({ nullable: true })
+    targetCommentId?: number;
 
     @Column()
     type: ActivityType;

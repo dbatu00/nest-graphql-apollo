@@ -11,6 +11,7 @@ import { User } from '../users/user.entity';
 import { Post } from '../posts/post.entity';
 import { LIKE_TYPE } from '../likes/likes.constants';
 import { LikesService } from '../likes/likes.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Injectable()
 export class CommentsService {
@@ -20,6 +21,7 @@ export class CommentsService {
         @InjectRepository(Comment)
         private readonly commentsRepo: Repository<Comment>,
         private readonly likesService: LikesService,
+        private readonly activityService: ActivityService,
     ) { }
 
     async findById(id: number): Promise<Comment> {
@@ -49,13 +51,26 @@ export class CommentsService {
                 if (!user) throw new NotFoundException('User not found');
                 if (!post) throw new NotFoundException('Post not found');
 
-                return manager.save(Comment, {
+                const comment = await manager.save(Comment, {
                     content,
                     user,
                     userId,
                     post,
                     postId,
                 });
+
+                // Log activity for comment creation
+                await this.activityService.logActivity(
+                    {
+                        type: 'comment',
+                        actor: user,
+                        targetPost: post,
+                        targetComment: comment,
+                    },
+                    manager,
+                );
+
+                return comment;
             });
 
             this.logger.log(`Comment created by userId=${userId}, postId=${postId}, commentId=${comment.id}`);
