@@ -18,6 +18,14 @@ export class AddCommentArgs {
 }
 
 @ArgsType()
+export class CommentByIdArgs {
+    @Field(() => Int)
+    @IsInt()
+    @Min(1)
+    id: number;
+}
+
+@ArgsType()
 export class CommentIdArgs {
     @Field(() => Int)
     @IsInt()

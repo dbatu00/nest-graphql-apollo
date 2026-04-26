@@ -12,6 +12,7 @@ import {
     FOLLOWING_QUERY,
     FOLLOWING_WITH_FOLLOW_STATE_QUERY,
     FOLLOW_USER_MUTATION,
+    GET_COMMENT_LIKED_USERS_QUERY,
     GET_LIKED_USERS_QUERY,
     IS_EMAIL_USED_QUERY,
     LIKED_POSTS_QUERY,
@@ -249,6 +250,14 @@ export async function fetchLikedUsers(postId: number): Promise<FollowUser[]> {
     }>(GET_LIKED_USERS_QUERY, { postId });
 
     return data.post?.likedUsers ?? [];
+}
+
+export async function fetchCommentLikedUsers(commentId: number): Promise<FollowUser[]> {
+    const data = await graphqlFetch<{
+        comment: { likedUsers: FollowUser[] };
+    }>(GET_COMMENT_LIKED_USERS_QUERY, { commentId });
+
+    return data.comment?.likedUsers ?? [];
 }
 
 export async function fetchUserProfile(username: string): Promise<ProfileData | null> {

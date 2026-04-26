@@ -298,6 +298,20 @@ export const GET_LIKED_USERS_QUERY = `
   }
 `;
 
+export const GET_COMMENT_LIKED_USERS_QUERY = `
+  query GetCommentLikedUsers($commentId: Int!) {
+    comment(id: $commentId) {
+      likedUsers {
+        id
+        username
+        displayName
+        avatarUrl
+        followedByMe
+      }
+    }
+  }
+`;
+
 export const FOLLOWERS_QUERY = `
   query Followers($username: String!) {
     followers(username: $username) {

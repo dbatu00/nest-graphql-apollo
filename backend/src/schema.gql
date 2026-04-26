@@ -45,6 +45,7 @@ type Comment {
   updatedAt: DateTime!
   likesCount: Int!
   likedByMe: Boolean!
+  likedUsers: [User!]!
 }
 
 type Activity {
@@ -74,6 +75,7 @@ type Query {
   posts: [Post!]!
   likedPosts(username: String!): [Post!]!
   post(id: Int!): Post!
+  comment(id: Int!): Comment!
   me: User!
   isEmailUsed(email: String!): Boolean!
   followers(username: String!): [User!]!

@@ -22,6 +22,16 @@ export class CommentsService {
         private readonly likesService: LikesService,
     ) { }
 
+    async findById(id: number): Promise<Comment> {
+        const comment = await this.commentsRepo.findOne({
+            where: { id },
+            relations: ['user'],
+        });
+
+        if (!comment) throw new NotFoundException('Comment not found');
+        return comment;
+    }
+
     async getCommentsByPost(postId: number): Promise<Comment[]> {
         return this.commentsRepo.find({
             where: { postId },
@@ -89,6 +99,10 @@ export class CommentsService {
 
     async getLikeMeta(commentId: number, userId?: number) {
         return this.likesService.getLikeMeta(LIKE_TYPE.COMMENT, commentId, userId);
+    }
+
+    async getUsersWhoLiked(commentId: number) {
+        return this.likesService.getUsersWhoLiked(LIKE_TYPE.COMMENT, commentId);
     }
 
     async likeComment(userId: number, commentId: number): Promise<boolean> {

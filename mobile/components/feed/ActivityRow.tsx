@@ -5,7 +5,7 @@ import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { Activity } from "@/types/Activity";
 import { feedStyles } from "@/styles/feed";
-import { fetchLikedUsers } from "@/graphql/client";
+import { fetchCommentLikedUsers, fetchLikedUsers } from "@/graphql/client";
 
 type Props = {
   activity: Activity;
@@ -60,6 +60,21 @@ export const ActivityRow = ({
       setLikedUsers(users);
     } catch (err: unknown) {
       console.error("[ActivityRow] failed to load liked users", err);
+      setLikedUsers([]);
+    } finally {
+      setLikedLoading(false);
+    }
+  };
+
+  const handleOpenCommentLikesModal = async (commentId: number) => {
+    try {
+      setLikedLoading(true);
+      setLikedModalVisible(true);
+
+      const users = await fetchCommentLikedUsers(commentId);
+      setLikedUsers(users);
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to load comment liked users", err);
       setLikedUsers([]);
     } finally {
       setLikedLoading(false);
@@ -280,9 +295,13 @@ export const ActivityRow = ({
                         </TouchableOpacity>
 
                         {(comment.likesCount ?? 0) > 0 && (
-                          <Text style={{ marginLeft: 6, fontSize: 12, color: "#6b7280" }}>
-                            {comment.likesCount}
-                          </Text>
+                          <TouchableOpacity
+                            onPress={() => handleOpenCommentLikesModal(comment.id)}
+                          >
+                            <Text style={{ marginLeft: 6, fontSize: 12, color: "#6b7280" }}>
+                              {comment.likesCount}
+                            </Text>
+                          </TouchableOpacity>
                         )}
                       </View>
                     )}

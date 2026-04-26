@@ -6,6 +6,7 @@ import {
     Parent,
     Context,
     Int,
+    Query,
 } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/security/current-user.decorator';
@@ -15,6 +16,7 @@ import { Comment } from './comment.entity';
 import { CommentsService } from './comments.service';
 import {
     AddCommentArgs,
+    CommentByIdArgs,
     CommentIdArgs,
 } from './dto/comments.args';
 
@@ -29,6 +31,12 @@ type ResolverContext = {
 @Resolver(() => Comment)
 export class CommentsResolver {
     constructor(private readonly commentsService: CommentsService) { }
+
+    @UseGuards(GqlAuthGuard)
+    @Query(() => Comment)
+    async comment(@Args() args: CommentByIdArgs) {
+        return this.commentsService.findById(args.id);
+    }
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Comment)
@@ -61,6 +69,11 @@ export class CommentsResolver {
 
         const meta = await this.commentsService.getLikeMeta(comment.id, userId);
         return meta.likedByMe;
+    }
+
+    @ResolveField(() => [User])
+    async likedUsers(@Parent() comment: Comment) {
+        return this.commentsService.getUsersWhoLiked(comment.id);
     }
 
     @UseGuards(GqlAuthGuard)
