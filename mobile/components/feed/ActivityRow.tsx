@@ -190,6 +190,35 @@ export const ActivityRow = ({
         >
           <Text style={feedStyles.content}>{targetPost.content}</Text>
 
+          {(targetPost.comments?.length ?? 0) > 0 && (
+            <View style={{ marginTop: 10, gap: 6 }}>
+              {targetPost.comments?.map((comment) => {
+                const commentAuthor = comment.user.displayName?.trim() || comment.user.username;
+
+                return (
+                  <View
+                    key={comment.id}
+                    style={{
+                      backgroundColor: "#ffffff",
+                      borderRadius: 8,
+                      paddingHorizontal: 8,
+                      paddingVertical: 6,
+                      borderWidth: 1,
+                      borderColor: "#e5e7eb",
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151" }}>
+                      {commentAuthor}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: "#1f2937", marginTop: 2 }}>
+                      {comment.content}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           <Text style={{ fontSize: 12, color: "#d1d5db", marginTop: 4, alignSelf: "flex-end" }}>
             {new Date(targetPost.createdAt).toLocaleString()}
           </Text>

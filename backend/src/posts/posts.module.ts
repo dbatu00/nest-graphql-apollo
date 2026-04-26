@@ -7,6 +7,7 @@ import { Post } from './post.entity';
 import { User } from 'src/users/user.entity';
 import { ActivityModule } from 'src/activity/activity.module';
 import { LikesModule } from 'src/likes/likes.module';
+import { CommentsModule } from 'src/comments/comments.module';
 
 
 @Module({
@@ -14,6 +15,7 @@ import { LikesModule } from 'src/likes/likes.module';
     TypeOrmModule.forFeature([Post, User]),
     ActivityModule,
     LikesModule,
+    CommentsModule,
   ],
   providers: [PostsService, PostsResolver],
 })

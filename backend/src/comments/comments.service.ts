@@ -14,6 +14,14 @@ export class CommentsService {
         private readonly commentsRepo: Repository<Comment>,
     ) { }
 
+    async getCommentsByPost(postId: number): Promise<Comment[]> {
+        return this.commentsRepo.find({
+            where: { postId },
+            relations: ['user'],
+            order: { createdAt: 'ASC' },
+        });
+    }
+
     async addComment(userId: number, postId: number, content: string): Promise<Comment> {
         try {
             const comment = await this.commentsRepo.manager.transaction(async (manager) => {

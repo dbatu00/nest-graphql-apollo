@@ -28,6 +28,17 @@ export const FEED_QUERY = `
         createdAt
         likesCount
         likedByMe
+        comments {
+          id
+          content
+          createdAt
+          user {
+            id
+            username
+            displayName
+            avatarUrl
+          }
+        }
         user {
           id
           username

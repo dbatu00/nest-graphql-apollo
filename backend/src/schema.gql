@@ -11,6 +11,7 @@ type Post {
   likesCount: Int!
   likedByMe: Boolean!
   likedUsers: [User!]!
+  comments: [Comment!]!
 }
 
 """
@@ -33,6 +34,15 @@ type User {
   followedByMe: Boolean!
   followersCount: Int!
   followingCount: Int!
+}
+
+type Comment {
+  id: Int!
+  content: String!
+  user: User!
+  post: Post!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type Activity {
@@ -76,6 +86,7 @@ type Mutation {
   deletePost(postId: Int!): Boolean!
   likePost(postId: Int!): Boolean!
   unlikePost(postId: Int!): Boolean!
+  addComment(postId: Int!, content: String!): Comment!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(identifier: String!, password: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
