@@ -16,3 +16,11 @@ export class AddCommentArgs {
     @NotBlank('content must not be empty')
     content: string;
 }
+
+@ArgsType()
+export class DeleteCommentArgs {
+    @Field(() => Int)
+    @IsInt()
+    @Min(1)
+    commentId: number;
+}

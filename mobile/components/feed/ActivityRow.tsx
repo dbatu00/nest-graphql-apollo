@@ -12,6 +12,7 @@ type Props = {
   currentUserId?: number;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
+  onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
   onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
   onAddComment?: (postId: number, content: string) => Promise<void>;
 };
@@ -29,6 +30,7 @@ export const ActivityRow = ({
   currentUserId,
   onToggleFollow,
   onDeletePost,
+  onDeleteComment,
   onToggleLike,
   onAddComment,
 }: Props) => {
@@ -214,6 +216,10 @@ export const ActivityRow = ({
             <View style={{ marginTop: 10, gap: 6 }}>
               {targetPost.comments?.map((comment) => {
                 const commentAuthor = comment.user.displayName?.trim() || comment.user.username;
+                const canDeleteComment =
+                  !!onDeleteComment &&
+                  currentUserId != null &&
+                  Number(currentUserId) === Number(comment.user.id);
 
                 return (
                   <View
@@ -227,9 +233,30 @@ export const ActivityRow = ({
                       borderColor: "#e5e7eb",
                     }}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: "600", color: "#374151" }}>
-                      {commentAuthor}
-                    </Text>
+                    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: "600",
+                          color: "#374151",
+                          flex: 1,
+                          marginRight: 8,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {commentAuthor}
+                      </Text>
+
+                      {canDeleteComment && targetPost && (
+                        <TouchableOpacity
+                          onPress={() => onDeleteComment(comment.id, targetPost.id)}
+                        >
+                          <Text style={{ fontSize: 11, color: "#dc2626", fontWeight: "600" }}>
+                            Delete
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     <Text style={{ fontSize: 13, color: "#1f2937", marginTop: 2 }}>
                       {comment.content}
                     </Text>

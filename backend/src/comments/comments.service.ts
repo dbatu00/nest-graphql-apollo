@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+    Injectable,
+    Logger,
+    NotFoundException,
+    ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Comment } from './comment.entity';
@@ -45,6 +50,34 @@ export class CommentsService {
         } catch (error) {
             this.logger.error(
                 `addComment failed for userId=${userId}, postId=${postId}`,
+                error instanceof Error ? error.stack : undefined,
+            );
+            throw error;
+        }
+    }
+
+    async deleteComment(commentId: number, userId: number): Promise<boolean> {
+        try {
+            await this.commentsRepo.manager.transaction(async (manager) => {
+                const comment = await manager.findOne(Comment, {
+                    where: { id: commentId },
+                    relations: ['user'],
+                });
+
+                if (!comment) throw new NotFoundException('Comment not found');
+                if (comment.user.id !== userId)
+                    throw new ForbiddenException('You can only delete your own comment');
+
+                await manager.remove(Comment, comment);
+            });
+
+            this.logger.log(
+                `Comment deleted by userId=${userId}, commentId=${commentId}`,
+            );
+            return true;
+        } catch (error) {
+            this.logger.error(
+                `deleteComment failed for userId=${userId}, commentId=${commentId}`,
                 error instanceof Error ? error.stack : undefined,
             );
             throw error;

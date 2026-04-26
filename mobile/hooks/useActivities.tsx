@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/utils/currentUser";
 import { Activity } from "@/types/Activity";
 import {
   addPost,
+  deleteComment as deleteCommentMutation,
   deletePost as deletePostMutation,
   fetchFeed,
   followUser,
@@ -171,6 +172,36 @@ export function useActivities(params: Params = {}) {
     [refresh]
   );
 
+  /* ---------------- DELETE COMMENT ---------------- */
+
+  const deleteCommentFromPost = useCallback(
+    async (commentId: number, postId: number) => {
+      setActivities(prev =>
+        prev.map(a => {
+          if (a.targetPost?.id !== postId) return a;
+
+          return {
+            ...a,
+            targetPost: {
+              ...a.targetPost,
+              comments: (a.targetPost.comments ?? []).filter(
+                comment => comment.id !== commentId
+              ),
+            },
+          };
+        })
+      );
+
+      try {
+        await deleteCommentMutation(commentId);
+      } catch (err: unknown) {
+        console.error("[useActivities] delete comment failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
   /* ---------------- PUBLISH ---------------- */
 
   const publish = useCallback(
@@ -232,6 +263,7 @@ export function useActivities(params: Params = {}) {
     toggleFollowOptimistic,
     toggleLikeOptimistic,
     deletePost,
+    deleteCommentFromPost,
     publish,
     addCommentToPost,
   };

@@ -4,6 +4,7 @@ import {
     AUTH_ME_QUERY,
     CHANGE_MY_EMAIL_MUTATION,
     CHANGE_MY_PASSWORD_MUTATION,
+    DELETE_COMMENT_MUTATION,
     DELETE_POST_MUTATION,
     FEED_QUERY,
     FOLLOWERS_QUERY,
@@ -189,6 +190,11 @@ export async function unlikePost(postId: number): Promise<boolean> {
 export async function deletePost(postId: number): Promise<boolean> {
     const data = await graphqlFetch<{ deletePost: boolean }>(DELETE_POST_MUTATION, { postId });
     return data.deletePost;
+}
+
+export async function deleteComment(commentId: number): Promise<boolean> {
+    const data = await graphqlFetch<{ deleteComment: boolean }>(DELETE_COMMENT_MUTATION, { commentId });
+    return data.deleteComment;
 }
 
 export async function addPost(content: string): Promise<number> {

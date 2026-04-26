@@ -251,6 +251,12 @@ export const ADD_COMMENT_MUTATION = `
   }
 `;
 
+export const DELETE_COMMENT_MUTATION = `
+  mutation DeleteComment($commentId: Int!) {
+    deleteComment(commentId: $commentId)
+  }
+`;
+
 export const UPDATE_MY_PROFILE_MUTATION = `
   mutation UpdateMyProfile($displayName: String, $bio: String, $avatarUrl: String, $coverUrl: String) {
     updateMyProfile(displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl) {

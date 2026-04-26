@@ -5,7 +5,7 @@ import { GqlAuthGuard } from '../auth/security/gql-auth.guard';
 import { User } from '../users/user.entity';
 import { Comment } from './comment.entity';
 import { CommentsService } from './comments.service';
-import { AddCommentArgs } from './dto/comments.args';
+import { AddCommentArgs, DeleteCommentArgs } from './dto/comments.args';
 
 @Resolver(() => Comment)
 export class CommentsResolver {
@@ -18,5 +18,14 @@ export class CommentsResolver {
         @Args() args: AddCommentArgs,
     ) {
         return this.commentsService.addComment(user.id, args.postId, args.content);
+    }
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    async deleteComment(
+        @CurrentUser() user: User,
+        @Args() args: DeleteCommentArgs,
+    ) {
+        return this.commentsService.deleteComment(args.commentId, user.id);
     }
 }

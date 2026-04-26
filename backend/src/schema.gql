@@ -87,6 +87,7 @@ type Mutation {
   likePost(postId: Int!): Boolean!
   unlikePost(postId: Int!): Boolean!
   addComment(postId: Int!, content: String!): Comment!
+  deleteComment(commentId: Int!): Boolean!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(identifier: String!, password: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!

@@ -174,6 +174,7 @@ export default function Feed() {
                 onToggleFollow={feed.toggleFollowOptimistic}
                 onToggleLike={feed.toggleLikeOptimistic}
                 onDeletePost={feed.deletePost}
+                onDeleteComment={feed.deleteCommentFromPost}
                 onAddComment={feed.addCommentToPost}
               />
             ))}
