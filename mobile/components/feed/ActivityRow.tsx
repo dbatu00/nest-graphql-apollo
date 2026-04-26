@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, Modal, ScrollView, Platform, Image } from "react-native";
+import { View, Text, TouchableOpacity, Modal, ScrollView, Platform, Image, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
@@ -13,6 +13,7 @@ type Props = {
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onAddComment?: (postId: number, content: string) => Promise<void>;
 };
 
 type LikedUser = {
@@ -29,6 +30,7 @@ export const ActivityRow = ({
   onToggleFollow,
   onDeletePost,
   onToggleLike,
+  onAddComment,
 }: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
   const router = useRouter();
@@ -40,6 +42,10 @@ export const ActivityRow = ({
   const [likedUsers, setLikedUsers] = useState<LikedUser[]>([]);
   const [likedModalVisible, setLikedModalVisible] = useState(false);
   const [likedLoading, setLikedLoading] = useState(false);
+
+  /* ---------- COMMENT INPUT STATE ---------- */
+  const [commentText, setCommentText] = useState("");
+  const [commentLoading, setCommentLoading] = useState(false);
 
   const handleOpenLikesModal = async (postId: number) => {
     try {
@@ -70,6 +76,20 @@ export const ActivityRow = ({
 
     if (onToggleFollow) {
       await onToggleFollow(username, shouldFollow);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!commentText.trim() || !targetPost || !onAddComment) return;
+
+    try {
+      setCommentLoading(true);
+      await onAddComment(targetPost.id, commentText.trim());
+      setCommentText("");
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to add comment", err);
+    } finally {
+      setCommentLoading(false);
     }
   };
 
@@ -216,6 +236,50 @@ export const ActivityRow = ({
                   </View>
                 );
               })}
+            </View>
+          )}
+
+          {onAddComment && (
+            <View style={{ marginTop: 10, flexDirection: "row", gap: 6 }}>
+              <TextInput
+                placeholder="Add a comment..."
+                placeholderTextColor="#9ca3af"
+                value={commentText}
+                onChangeText={setCommentText}
+                editable={!commentLoading}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: 6,
+                  paddingHorizontal: 8,
+                  paddingVertical: 6,
+                  fontSize: 13,
+                  color: "#1f2937",
+                  borderWidth: 1,
+                  borderColor: "#e5e7eb",
+                }}
+              />
+              <TouchableOpacity
+                onPress={handleAddComment}
+                disabled={!commentText.trim() || commentLoading}
+                style={{
+                  backgroundColor: commentText.trim() && !commentLoading ? "#3b82f6" : "#d1d5db",
+                  borderRadius: 6,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  justifyContent: "center",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "#fff",
+                    fontWeight: "600",
+                    fontSize: 12,
+                  }}
+                >
+                  {commentLoading ? "..." : "Post"}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
 

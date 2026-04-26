@@ -235,6 +235,22 @@ export const ADD_POST_MUTATION = `
   }
 `;
 
+export const ADD_COMMENT_MUTATION = `
+  mutation AddComment($postId: Int!, $content: String!) {
+    addComment(postId: $postId, content: $content) {
+      id
+      content
+      createdAt
+      user {
+        id
+        username
+        displayName
+        avatarUrl
+      }
+    }
+  }
+`;
+
 export const UPDATE_MY_PROFILE_MUTATION = `
   mutation UpdateMyProfile($displayName: String, $bio: String, $avatarUrl: String, $coverUrl: String) {
     updateMyProfile(displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl) {

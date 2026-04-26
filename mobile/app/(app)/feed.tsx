@@ -174,6 +174,7 @@ export default function Feed() {
                 onToggleFollow={feed.toggleFollowOptimistic}
                 onToggleLike={feed.toggleLikeOptimistic}
                 onDeletePost={feed.deletePost}
+                onAddComment={feed.addCommentToPost}
               />
             ))}
         </Animated.ScrollView>

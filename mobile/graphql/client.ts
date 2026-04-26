@@ -1,5 +1,6 @@
 import {
     ADD_POST_MUTATION,
+    ADD_COMMENT_MUTATION,
     AUTH_ME_QUERY,
     CHANGE_MY_EMAIL_MUTATION,
     CHANGE_MY_PASSWORD_MUTATION,
@@ -193,6 +194,35 @@ export async function deletePost(postId: number): Promise<boolean> {
 export async function addPost(content: string): Promise<number> {
     const data = await graphqlFetch<{ addPost: { id: number } }>(ADD_POST_MUTATION, { content });
     return data.addPost.id;
+}
+
+export async function addComment(postId: number, content: string): Promise<{
+    id: number;
+    content: string;
+    createdAt: string;
+    user: {
+        id: number;
+        username: string;
+        displayName?: string;
+        avatarUrl?: string;
+    };
+}> {
+    const data = await graphqlFetch<{
+        addComment: {
+            id: number;
+            content: string;
+            createdAt: string;
+            user: {
+                id: number;
+                username: string;
+                displayName?: string;
+                avatarUrl?: string;
+            };
+        };
+    }>(ADD_COMMENT_MUTATION, { postId, content });
+    return {
+        ...data.addComment,
+    };
 }
 
 export async function fetchLikedUsers(postId: number): Promise<FollowUser[]> {

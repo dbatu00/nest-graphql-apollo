@@ -9,6 +9,7 @@ import {
   likePost,
   unfollowUser,
   unlikePost,
+  addComment,
 } from "@/graphql/client";
 
 type Params = {
@@ -188,6 +189,40 @@ export function useActivities(params: Params = {}) {
     [refresh]
   );
 
+  /* ---------------- ADD COMMENT ---------------- */
+
+  const addCommentToPost = useCallback(
+    async (postId: number, content: string) => {
+      if (!content.trim()) return;
+
+      try {
+        const result = await addComment(postId, content);
+
+        // Optimistically add comment to the post in the feed
+        setActivities(prev =>
+          prev.map(a => {
+            if (a.targetPost?.id !== postId) return a;
+
+            return {
+              ...a,
+              targetPost: {
+                ...a.targetPost,
+                comments: [
+                  ...(a.targetPost.comments ?? []),
+                  result,
+                ],
+              },
+            };
+          })
+        );
+      } catch (err: unknown) {
+        console.error("[useActivities] add comment failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
   return {
     activities,
     loading,
@@ -198,5 +233,6 @@ export function useActivities(params: Params = {}) {
     toggleLikeOptimistic,
     deletePost,
     publish,
+    addCommentToPost,
   };
 }

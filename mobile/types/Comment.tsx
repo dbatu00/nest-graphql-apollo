@@ -2,7 +2,7 @@ export type Comment = {
     id: number;
     content: string;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string;
     user: {
         id: number;
         username: string;
