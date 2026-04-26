@@ -43,6 +43,8 @@ type Comment {
   post: Post!
   createdAt: DateTime!
   updatedAt: DateTime!
+  likesCount: Int!
+  likedByMe: Boolean!
 }
 
 type Activity {
@@ -88,6 +90,8 @@ type Mutation {
   unlikePost(postId: Int!): Boolean!
   addComment(postId: Int!, content: String!): Comment!
   deleteComment(commentId: Int!): Boolean!
+  likeComment(commentId: Int!): Boolean!
+  unlikeComment(commentId: Int!): Boolean!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(identifier: String!, password: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!

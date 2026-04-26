@@ -32,6 +32,8 @@ export const FEED_QUERY = `
           id
           content
           createdAt
+          likesCount
+          likedByMe
           user {
             id
             username
@@ -254,6 +256,18 @@ export const ADD_COMMENT_MUTATION = `
 export const DELETE_COMMENT_MUTATION = `
   mutation DeleteComment($commentId: Int!) {
     deleteComment(commentId: $commentId)
+  }
+`;
+
+export const LIKE_COMMENT_MUTATION = `
+  mutation LikeComment($commentId: Int!) {
+    likeComment(commentId: $commentId)
+  }
+`;
+
+export const UNLIKE_COMMENT_MUTATION = `
+  mutation UnlikeComment($commentId: Int!) {
+    unlikeComment(commentId: $commentId)
   }
 `;
 

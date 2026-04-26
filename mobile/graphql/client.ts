@@ -22,7 +22,9 @@ import {
     UNFOLLOW_USER_MUTATION,
     UNLIKE_POST_MUTATION,
     LIKE_POST_MUTATION,
+    LIKE_COMMENT_MUTATION,
     UPDATE_MY_PROFILE_MUTATION,
+    UNLIKE_COMMENT_MUTATION,
     USER_PROFILE_QUERY,
 } from "@/graphql/operations";
 import { EmailSendResult } from "@/types/Auth";
@@ -185,6 +187,16 @@ export async function likePost(postId: number): Promise<boolean> {
 export async function unlikePost(postId: number): Promise<boolean> {
     const data = await graphqlFetch<{ unlikePost: boolean }>(UNLIKE_POST_MUTATION, { postId });
     return data.unlikePost;
+}
+
+export async function likeComment(commentId: number): Promise<boolean> {
+    const data = await graphqlFetch<{ likeComment: boolean }>(LIKE_COMMENT_MUTATION, { commentId });
+    return data.likeComment;
+}
+
+export async function unlikeComment(commentId: number): Promise<boolean> {
+    const data = await graphqlFetch<{ unlikeComment: boolean }>(UNLIKE_COMMENT_MUTATION, { commentId });
+    return data.unlikeComment;
 }
 
 export async function deletePost(postId: number): Promise<boolean> {

@@ -18,7 +18,7 @@ export class AddCommentArgs {
 }
 
 @ArgsType()
-export class DeleteCommentArgs {
+export class CommentIdArgs {
     @Field(() => Int)
     @IsInt()
     @Min(1)

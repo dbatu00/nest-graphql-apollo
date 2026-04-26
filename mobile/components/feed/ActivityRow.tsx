@@ -14,6 +14,7 @@ type Props = {
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
   onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onToggleCommentLike?: (commentId: number, postId: number, currentlyLiked: boolean) => Promise<void>;
   onAddComment?: (postId: number, content: string) => Promise<void>;
 };
 
@@ -32,6 +33,7 @@ export const ActivityRow = ({
   onDeletePost,
   onDeleteComment,
   onToggleLike,
+  onToggleCommentLike,
   onAddComment,
 }: Props) => {
   const { type, actor, targetUser, targetPost, createdAt } = activity;
@@ -260,6 +262,30 @@ export const ActivityRow = ({
                     <Text style={{ fontSize: 13, color: "#1f2937", marginTop: 2 }}>
                       {comment.content}
                     </Text>
+
+                    {targetPost && onToggleCommentLike && (
+                      <View style={{ marginTop: 6, flexDirection: "row", alignItems: "center", alignSelf: "flex-end" }}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            onToggleCommentLike(
+                              comment.id,
+                              targetPost.id,
+                              comment.likedByMe ?? false
+                            )
+                          }
+                        >
+                          <Text style={{ color: comment.likedByMe ? "red" : "gray", fontSize: 12 }}>
+                            ♥
+                          </Text>
+                        </TouchableOpacity>
+
+                        {(comment.likesCount ?? 0) > 0 && (
+                          <Text style={{ marginLeft: 6, fontSize: 12, color: "#6b7280" }}>
+                            {comment.likesCount}
+                          </Text>
+                        )}
+                      </View>
+                    )}
                   </View>
                 );
               })}

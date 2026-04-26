@@ -7,8 +7,10 @@ import {
   deletePost as deletePostMutation,
   fetchFeed,
   followUser,
+  likeComment,
   likePost,
   unfollowUser,
+  unlikeComment,
   unlikePost,
   addComment,
 } from "@/graphql/client";
@@ -202,6 +204,48 @@ export function useActivities(params: Params = {}) {
     [refresh]
   );
 
+  /* ---------------- COMMENT LIKE ---------------- */
+
+  const toggleCommentLikeOptimistic = useCallback(
+    async (commentId: number, postId: number, currentlyLiked: boolean) => {
+      setActivities(prev =>
+        prev.map(a => {
+          if (a.targetPost?.id !== postId) return a;
+
+          return {
+            ...a,
+            targetPost: {
+              ...a.targetPost,
+              comments: (a.targetPost.comments ?? []).map(comment => {
+                if (comment.id !== commentId) return comment;
+
+                return {
+                  ...comment,
+                  likedByMe: !currentlyLiked,
+                  likesCount:
+                    (comment.likesCount ?? 0) +
+                    (currentlyLiked ? -1 : 1),
+                };
+              }),
+            },
+          };
+        })
+      );
+
+      try {
+        if (currentlyLiked) {
+          await unlikeComment(commentId);
+        } else {
+          await likeComment(commentId);
+        }
+      } catch (err: unknown) {
+        console.error("[useActivities] comment like toggle failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
   /* ---------------- PUBLISH ---------------- */
 
   const publish = useCallback(
@@ -262,6 +306,7 @@ export function useActivities(params: Params = {}) {
     currentUserId,
     toggleFollowOptimistic,
     toggleLikeOptimistic,
+    toggleCommentLikeOptimistic,
     deletePost,
     deleteCommentFromPost,
     publish,

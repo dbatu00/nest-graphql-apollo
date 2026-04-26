@@ -9,6 +9,8 @@ import { Repository } from 'typeorm';
 import { Comment } from './comment.entity';
 import { User } from '../users/user.entity';
 import { Post } from '../posts/post.entity';
+import { LIKE_TYPE } from '../likes/likes.constants';
+import { LikesService } from '../likes/likes.service';
 
 @Injectable()
 export class CommentsService {
@@ -17,6 +19,7 @@ export class CommentsService {
     constructor(
         @InjectRepository(Comment)
         private readonly commentsRepo: Repository<Comment>,
+        private readonly likesService: LikesService,
     ) { }
 
     async getCommentsByPost(postId: number): Promise<Comment[]> {
@@ -78,6 +81,72 @@ export class CommentsService {
         } catch (error) {
             this.logger.error(
                 `deleteComment failed for userId=${userId}, commentId=${commentId}`,
+                error instanceof Error ? error.stack : undefined,
+            );
+            throw error;
+        }
+    }
+
+    async getLikeMeta(commentId: number, userId?: number) {
+        return this.likesService.getLikeMeta(LIKE_TYPE.COMMENT, commentId, userId);
+    }
+
+    async likeComment(userId: number, commentId: number): Promise<boolean> {
+        try {
+            return await this.commentsRepo.manager.transaction(async manager => {
+                const user = await manager.findOne(User, { where: { id: userId } });
+                const comment = await manager.findOne(Comment, { where: { id: commentId } });
+
+                if (!user) throw new NotFoundException('User not found');
+                if (!comment) throw new NotFoundException('Comment not found');
+
+                const { changed } = await this.likesService.like(
+                    userId,
+                    LIKE_TYPE.COMMENT,
+                    commentId,
+                    manager,
+                );
+
+                // Idempotent like: if already active, return success without extra writes.
+                if (!changed) return true;
+
+                this.logger.log(`Comment liked by userId=${userId}, commentId=${commentId}`);
+                return true;
+            });
+        } catch (error) {
+            this.logger.error(
+                `likeComment failed for userId=${userId}, commentId=${commentId}`,
+                error instanceof Error ? error.stack : undefined,
+            );
+            throw error;
+        }
+    }
+
+    async unlikeComment(userId: number, commentId: number): Promise<boolean> {
+        try {
+            return await this.commentsRepo.manager.transaction(async manager => {
+                const user = await manager.findOne(User, { where: { id: userId } });
+                const comment = await manager.findOne(Comment, { where: { id: commentId } });
+
+                if (!user) throw new NotFoundException('User not found');
+                if (!comment) throw new NotFoundException('Comment not found');
+
+                const { changed } = await this.likesService.unlike(
+                    userId,
+                    LIKE_TYPE.COMMENT,
+                    commentId,
+                    manager,
+                );
+
+                // Idempotent unlike: if no active row exists, return success.
+                if (!changed) return true;
+
+                this.logger.log(`Comment unliked by userId=${userId}, commentId=${commentId}`);
+                return true;
+            });
+        } catch (error) {
+            this.logger.error(
+                `unlikeComment failed for userId=${userId}, commentId=${commentId}`,
                 error instanceof Error ? error.stack : undefined,
             );
             throw error;
