@@ -10,6 +10,9 @@ This file tracks only open work. Completed items are intentionally removed.
 
 ## P1 — Auth & State Consistency
 
+- Audit all `await` calls for error handling and safe state ordering (e.g., feed.publish clears state even on failure).
+- Fix `useAuth` setSession: set user state first (sync), then save token (async) to prevent inconsistency if token save fails.
+- Remove `getMyProfile` fetch from `useActivities`; source current-user identity from `useAuth` in feed-level wiring (avoid duplicate auth source, keep profile usage lean).
 - Make mobile auth state a single source of truth.
 - Keep `me.emailVerified` handling consistent across auth hydration and routing.
 - Remove redundant manual redirects and let route guards own auth navigation.
@@ -19,6 +22,7 @@ This file tracks only open work. Completed items are intentionally removed.
 
 - Add activity reconciliation strategy for derived events.
 - Cover empty-database and startup edge cases.
+- Harden `LikesService.like` for concurrent requests (handle unique-violation idempotently or switch to atomic upsert).
 - Introduce clearer domain error mapping for GraphQL responses.
 - Harden follow-state mapping for raw/entities length mismatch.
 - Add invariants in activity logging inputs (`like` requires target post, `follow` requires target user).
@@ -26,6 +30,9 @@ This file tracks only open work. Completed items are intentionally removed.
 
 ## P2 — API & Service Cleanup
 
+- Optimize `likePost` / `unlikePost` / `likeComment` / `unlikeComment`: replace `.findOne()` with `.exists()` for user/post/comment validation (cheaper query, same validation result).
+- Remove ActivityResolver from root module providers (already in ActivityModule). Keep APP_GUARD there — global guards belong at root, but resolvers belong in their feature modules.
+- Replace loose `types?: string[]` feed params with a shared `ActivityType[]` union/enum across hook + GraphQL client boundaries.
 - Revisit followers-with-follow-state return shape naming/contract.
 - Decouple user profile lookup from post ordering concerns.
 - Remove redundant reads and unneeded defensive checks where contracts are already strict.
@@ -39,6 +46,9 @@ This file tracks only open work. Completed items are intentionally removed.
 
 ## P2 — Mobile UX/Behavior
 
+- Remove type coercions (`as never`) in router calls — indicates routing type safety is broken. Fix the route or type registration.
+- Add optimistic create-post flow (temporary local post row + rollback/reconcile) for parity with other optimistic mutations.
+	- Note: current `addPost` returns `id`, but publish path mainly refreshes; either use `id` for optimistic reconciliation or simplify return contract.
 - Tighten owner/follow button guard logic in feed/profile views.
 - Unify profile tab refresh behavior.
 - Smooth loading transitions on web and standardize loading indicators.
@@ -55,3 +65,8 @@ This file tracks only open work. Completed items are intentionally removed.
 - Should signup response payload be reduced further (for example remove redundant fields)?
 - Should profile settings preserve unsaved edits across tab switches?
 - For comment activity cards, should feed show both post context and highlighted comment (including reply context + "view thread" affordance)?
+- Should we add runtime response-shape validation at GraphQL client boundaries (e.g., zod/valibot) to protect against backend schema drift beyond TypeScript compile-time types?
+
+
+dont show self activity except posts 
+Charlie followed you

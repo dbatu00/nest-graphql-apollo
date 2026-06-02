@@ -1,8 +1,16 @@
+/**
+ * useActivities.tsx
+ *
+ * Data layer hook for the activity feed.
+ * Owns all server communication (fetch, follow, like, comment, delete),
+ * optimistic UI updates, and the current-user identity needed by feed rows.
+ * Components consume this hook and pass the resulting callbacks down as props.
+ */
 import { useEffect, useState, useCallback } from "react";
-import { getCurrentUser } from "@/utils/currentUser";
 import { Activity } from "@/types/Activity";
 import {
   addPost,
+  getMyProfile,
   deleteComment as deleteCommentMutation,
   deletePost as deletePostMutation,
   fetchFeed,
@@ -27,13 +35,18 @@ export function useActivities(params: Params = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    getCurrentUser()
-      .then(user => setCurrentUserId(user?.id ?? null))
+    getMyProfile()
+      .then(user => {
+        setCurrentUserId(user?.id ?? null);
+        setCurrentUserAvatarUrl(user?.avatarUrl?.trim() || null);
+      })
       .catch((err: unknown) => {
         console.warn("[useActivities] failed to resolve current user", err);
         setCurrentUserId(null);
+        setCurrentUserAvatarUrl(null);
       });
   }, []);
 
@@ -304,6 +317,7 @@ export function useActivities(params: Params = {}) {
     error,
     refresh,
     currentUserId,
+    currentUserAvatarUrl,
     toggleFollowOptimistic,
     toggleLikeOptimistic,
     toggleCommentLikeOptimistic,

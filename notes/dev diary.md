@@ -320,3 +320,27 @@ Polymorphic. Reasons:
 - `LikesService` is pure data: `like`, `unlike`, `getLikeMeta`, `getUsersWhoLiked`, `getActiveLikesByUser`. No side effects, no domain knowledge.
 - Domain services (`PostsService`, future `CommentsService`) orchestrate: call `LikesService` for the DB write, then call `ActivityService` to log it. This keeps `LikesService` generic and prevents it from taking on cross-cutting concerns.
 - `LIKE_TYPE` constant (`post`, `comment`, ...) mirrors `ACTIVITY_TYPE` convention.
+
+## 2026-06-03 — Keeping like_type instead of refactoring to activity-based targets
+
+**Question:** Should likes reference `activityId` instead of using `targetType` + `targetId`?
+
+**Options considered**
+
+- **Current:** `Like` table uses `(targetType: enum, targetId: number)`. Callers pass `LIKE_TYPE.POST` or `LIKE_TYPE.COMMENT`. No activity lookup required for like operations.
+- **Refactor:** Change `Like` to `targetActivityId` foreign key. Callers pass only `postId` or `commentId`; `LikesService` resolves the activity row, then upserts the like.
+
+**Tradeoffs**
+
+- **Current cost:** Callers pass a redundant type parameter (but it's explicit and simple).
+- **Refactor cost:** One extra `activity` table lookup per like/unlike, plus cross-domain coupling (likes needing to know about activity internals for target resolution).
+
+**Decision:** Keep `like_type`.
+
+**Reasoning:**
+
+- For a demo app at current scale, avoiding extra reads is cleaner than "purer" architecture.
+- Activity logging already performs its own lookups for dedupe; no need to add lookup cost to the like operation itself.
+- Keeping type explicit in the API prevents caller ambiguity and makes error handling simpler.
+- Future scaling (event-driven, async activity logging) can decouple this later without data migration risk.
+- Does not corrupt activity table: activity table is fed on-demand by `logActivity`, never auto-populated by likes. No dangling references.

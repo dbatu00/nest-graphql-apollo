@@ -21,26 +21,32 @@ export function Composer({ value, onChange, onPublish }: Props) {
         onChangeText={onChange}
         placeholder="What's happening?"
         placeholderTextColor="#d1d5db"
-        style={{
-          flex: 1,
-          borderWidth: 0,
-          borderColor: "transparent",
-          borderRadius: 8,
-          padding: 10,
-          textAlignVertical: "top",
-          backgroundColor: "#eff6ff",
-          color: "#1f2937",
-          fontSize: 15,
-          ...Platform.select({
-            ios: {
-              shadowColor: "#3b82f6",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.08,
-              shadowRadius: 2,
-            },
-            android: { elevation: 1 },
-          }),
-        }}
+        underlineColorAndroid="transparent"
+        style={[
+          {
+            flex: 1,
+            borderWidth: 0,
+            borderColor: "transparent",
+            borderRadius: 8,
+            padding: 10,
+            textAlignVertical: "top",
+            backgroundColor: "#eff6ff",
+            color: "#1f2937",
+            fontSize: 15,
+            ...Platform.select({
+              ios: {
+                shadowColor: "#3b82f6",
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.08,
+                shadowRadius: 2,
+              },
+              android: { elevation: 1 },
+            }),
+          },
+          Platform.OS === "web"
+            ? ({ outlineStyle: "none", outlineWidth: 0 } as never)
+            : null,
+        ]}
       />
 
       <TouchableOpacity
