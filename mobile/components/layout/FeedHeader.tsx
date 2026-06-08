@@ -15,6 +15,15 @@ type Props = {
 export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false, rightActions }: Props) {
   const { user, logout } = useAuth();
 
+  const handleTitlePress = () => {
+    if (onRefresh) {
+      onRefresh();
+      return;
+    }
+
+    router.push("/feed");
+  };
+
   const handleProfile = () => {
     if (!user?.username) {
       return;
@@ -52,32 +61,20 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={{ fontWeight: "700", fontSize: 18, color: "#fff", letterSpacing: 0.3 }}>
-            {title}
-          </Text>
-
-          {onRefresh && (
-            <TouchableOpacity
-              onPress={onRefresh}
-              disabled={isRefreshing}
-              style={{
-                marginLeft: 8,
-                width: 28,
-                height: 28,
-                borderRadius: 14,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-                opacity: isRefreshing ? 0.75 : 1,
-              }}
-            >
-              {isRefreshing ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="refresh-outline" size={16} color="#fff" />
-              )}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={handleTitlePress}
+            disabled={isRefreshing && !!onRefresh}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              opacity: isRefreshing && onRefresh ? 0.75 : 1,
+            }}
+          >
+            <Text style={{ fontWeight: "700", fontSize: 18, color: "#fff", letterSpacing: 0.3 }}>
+              {title}
+            </Text>
+            {isRefreshing && onRefresh && <ActivityIndicator size="small" color="#fff" style={{ marginLeft: 8 }} />}
+          </TouchableOpacity>
         </View>
 
         {rightActions ? (
