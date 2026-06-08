@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -14,6 +13,7 @@ import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
 import { FeedHeader } from "@/components/layout/FeedHeader";
+import { PageShell } from "@/components/layout/PageShell";
 import { UserSettingsButton } from "@/components/common/UserSettingsButton";
 import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
 import { useActivities } from "@/hooks/useActivities";
@@ -163,8 +163,8 @@ export default function UsernameScreen() {
   /* ---------------- RENDER ---------------- */
 
   return (
-    <View style={styles.container}>
-      <FeedHeader
+    <PageShell
+      header={<FeedHeader
         title="BookBook"
         rightActions={(
           <>
@@ -201,189 +201,187 @@ export default function UsernameScreen() {
             />
           </>
         )}
-      />
+      />}
+    >
+      {/* Profile card */}
+      <View style={{
+        paddingHorizontal: 0,
+        paddingTop: 12,
+        borderBottomWidth: 0,
+        marginBottom: 12,
+      }}>
+        <View
+          style={{
+            height: 240,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "#bfdbfe",
+            backgroundColor: "#eff6ff",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 16,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          {profileCoverUrl ? (
+            <Image
+              source={{ uri: profileCoverUrl }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={24} color="#60a5fa" />
+              <Text style={{ marginTop: 6, color: "#60a5fa", fontWeight: "500", fontSize: 12 }}>
+                Cover photo
+              </Text>
+            </>
+          )}
 
-      <View style={styles.pageGutter}>
-        {/* Profile card */}
-        <View style={{
-          paddingHorizontal: 0,
-          paddingTop: 12,
-          borderBottomWidth: 0,
-          marginBottom: 12,
-        }}>
           <View
             style={{
-              height: 240,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: "#bfdbfe",
-              backgroundColor: "#eff6ff",
+              position: "absolute",
+              left: 14,
+              bottom: 12,
+              width: 84,
+              height: 84,
+              borderRadius: 42,
+              borderWidth: 3,
+              borderColor: "#fff",
+              backgroundColor: "#dbeafe",
               alignItems: "center",
               justifyContent: "center",
-              marginBottom: 16,
-              position: "relative",
               overflow: "hidden",
             }}
           >
-            {profileCoverUrl ? (
+            {profileAvatarUrl ? (
               <Image
-                source={{ uri: profileCoverUrl }}
+                source={{ uri: profileAvatarUrl }}
                 style={{ width: "100%", height: "100%" }}
                 resizeMode="cover"
               />
             ) : (
-              <>
-                <Ionicons name="image-outline" size={24} color="#60a5fa" />
-                <Text style={{ marginTop: 6, color: "#60a5fa", fontWeight: "500", fontSize: 12 }}>
-                  Cover photo
-                </Text>
-              </>
+              <Ionicons name="person-outline" size={34} color="#3b82f6" />
             )}
-
-            <View
-              style={{
-                position: "absolute",
-                left: 14,
-                bottom: 12,
-                width: 84,
-                height: 84,
-                borderRadius: 42,
-                borderWidth: 3,
-                borderColor: "#fff",
-                backgroundColor: "#dbeafe",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-              }}
-            >
-              {profileAvatarUrl ? (
-                <Image
-                  source={{ uri: profileAvatarUrl }}
-                  style={{ width: "100%", height: "100%" }}
-                  resizeMode="cover"
-                />
-              ) : (
-                <Ionicons name="person-outline" size={34} color="#3b82f6" />
-              )}
-            </View>
-          </View>
-
-          <View style={{ paddingHorizontal: 4 }}>
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "700",
-                color: "#1f2937",
-              }}
-              numberOfLines={1}
-            >
-              {profileDisplayName}
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                fontWeight: "500",
-                color: "#6b7280",
-                marginTop: 2,
-              }}
-              numberOfLines={1}
-            >
-              @{username}
-            </Text>
-            <Text
-              style={{
-                marginTop: 8,
-                fontSize: 13,
-                color: profileBio ? "#374151" : "#9ca3af",
-              }}
-              numberOfLines={2}
-            >
-              {profileBio || "No bio yet"}
-            </Text>
           </View>
         </View>
 
-        {/* Tabs */}
-        <View
-          style={{
-            marginHorizontal: 0,
-            marginBottom: 16,
-            backgroundColor: "#f9fafb",
-            borderRadius: 10,
-            padding: 4,
-            ...Platform.select({
-              ios: {
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.04,
-                shadowRadius: 3,
-              },
-              android: { elevation: 1 },
-            }),
-          }}
-        >
-          <View style={{ flexDirection: "row", gap: 4 }}>
-            {(
-              [
-                "posts",
-                "likes",
-                "activity",
-                "followers",
-                "following",
-              ] as Tab[]
-            ).map(t => (
-              <TouchableOpacity
-                key={t}
-                onPress={() => setTab(t)}
+        <View style={{ paddingHorizontal: 4 }}>
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1f2937",
+            }}
+            numberOfLines={1}
+          >
+            {profileDisplayName}
+          </Text>
+          <Text
+            style={{
+              fontSize: 13,
+              fontWeight: "500",
+              color: "#6b7280",
+              marginTop: 2,
+            }}
+            numberOfLines={1}
+          >
+            @{username}
+          </Text>
+          <Text
+            style={{
+              marginTop: 8,
+              fontSize: 13,
+              color: profileBio ? "#374151" : "#9ca3af",
+            }}
+            numberOfLines={2}
+          >
+            {profileBio || "No bio yet"}
+          </Text>
+        </View>
+      </View>
+
+      {/* Tabs */}
+      <View
+        style={{
+          marginHorizontal: 0,
+          marginBottom: 16,
+          backgroundColor: "#f9fafb",
+          borderRadius: 10,
+          padding: 4,
+          ...Platform.select({
+            ios: {
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 1 },
+              shadowOpacity: 0.04,
+              shadowRadius: 3,
+            },
+            android: { elevation: 1 },
+          }),
+        }}
+      >
+        <View style={{ flexDirection: "row", gap: 4 }}>
+          {(
+            [
+              "posts",
+              "likes",
+              "activity",
+              "followers",
+              "following",
+            ] as Tab[]
+          ).map(t => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 8,
+                backgroundColor: tab === t ? "#fff" : "transparent",
+                ...(tab === t ? {
+                  ...Platform.select({
+                    ios: {
+                      shadowColor: "#2563eb",
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.08,
+                      shadowRadius: 2,
+                    },
+                    android: { elevation: 2 },
+                  }),
+                } : {}),
+                alignItems: "center",
+              }}
+            >
+              <Text
                 style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  paddingHorizontal: 8,
-                  borderRadius: 8,
-                  backgroundColor: tab === t ? "#fff" : "transparent",
-                  ...(tab === t ? {
-                    ...Platform.select({
-                      ios: {
-                        shadowColor: "#2563eb",
-                        shadowOffset: { width: 0, height: 1 },
-                        shadowOpacity: 0.08,
-                        shadowRadius: 2,
-                      },
-                      android: { elevation: 2 },
-                    }),
-                  } : {}),
-                  alignItems: "center",
+                  fontWeight:
+                    tab === t ? "600" : "500",
+                  color: tab === t ? "#2563eb" : "#9ca3af",
+                  fontSize: 11,
+                  textAlign: "center",
                 }}
               >
-                <Text
-                  style={{
-                    fontWeight:
-                      tab === t ? "600" : "500",
-                    color: tab === t ? "#2563eb" : "#9ca3af",
-                    fontSize: 11,
-                    textAlign: "center",
-                  }}
-                >
-                  {t}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                {t}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
       {/* Followers / Following */}
       {(tab === "followers" ||
         tab === "following") && (
-          <View style={[styles.pageGutter, { flex: 1 }]}>
+          <View style={{ flex: 1 }}>
             {followLoading && (
-              <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+              <View style={{ justifyContent: "center", alignItems: "center", minHeight: 200 }}>
                 <ActivityIndicator size="large" color="#2563eb" />
               </View>
             )}
 
             {!followLoading && (
-              <ScrollView style={{ flex: 1, paddingTop: 8 }}>
+              <View style={{ paddingTop: 8 }}>
                 {followUsers.map(user => (
                   <View
                     key={user.id}
@@ -416,7 +414,7 @@ export default function UsernameScreen() {
                     />
                   </View>
                 ))}
-              </ScrollView>
+              </View>
             )}
           </View>
         )}
@@ -432,7 +430,7 @@ export default function UsernameScreen() {
               <Text>{feed.error}</Text>
             )}
 
-            <ScrollView style={[styles.pageGutter, { flex: 1 }]}>
+            <View>
               {feed.activities.map(
                 activity => (
                   <ActivityRow
@@ -459,9 +457,9 @@ export default function UsernameScreen() {
                   />
                 )
               )}
-            </ScrollView>
+            </View>
           </>
         )}
-    </View>
+    </PageShell>
   );
 }

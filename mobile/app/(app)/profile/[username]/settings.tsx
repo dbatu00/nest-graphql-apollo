@@ -15,6 +15,7 @@ import {
 } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedHeader } from "@/components/layout/FeedHeader";
+import { PageShell } from "@/components/layout/PageShell";
 
 const coverOptions = [
   "https://picsum.photos/seed/bookbook-cover-1/1200/600",
@@ -380,7 +381,10 @@ export default function ProfileSettingsScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <PageShell
+      header={<FeedHeader title="BookBook" />}
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
       {successNoticeVisible && (
         <Animated.View
           style={{
@@ -407,9 +411,7 @@ export default function ProfileSettingsScreen() {
         </Animated.View>
       )}
 
-      <FeedHeader title="BookBook" />
-
-      <View style={[styles.pageGutter, { flex: 1 }]}>
+      <View style={{ flex: 1 }}>
 
         {/* Tabs */}
         <View style={{ flexDirection: "row", marginTop: 8, marginBottom: 8, paddingHorizontal: 0 }}>
@@ -918,6 +920,6 @@ export default function ProfileSettingsScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </PageShell>
   );
 }
