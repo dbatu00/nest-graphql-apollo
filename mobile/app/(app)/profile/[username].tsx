@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { UserRow } from "@/components/user/UserRow";
-import { ActivityRow } from "@/components/feed/ActivityRow";
+import { ActivityList } from "@/components/feed/ActivityList";
 import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
 import { UserSettingsButton } from "@/components/common/SettingsButton";
@@ -419,46 +419,9 @@ export default function UsernameScreen() {
         )}
 
       {/* Activity Based Tabs */}
-      {tab !== "followers" &&
-        tab !== "following" && (
-          <>
-            {feed.loading && (
-              <Text>Loading…</Text>
-            )}
-            {feed.error && (
-              <Text>{feed.error}</Text>
-            )}
-
-            <View>
-              {feed.activities.map(
-                activity => (
-                  <ActivityRow
-                    key={activity.id}
-                    activity={activity}
-                    currentUserId={
-                      feed.currentUserId ?? 0
-                    }
-                    currentUserAvatarUrl={
-                      feed.currentUserAvatarUrl ?? undefined
-                    }
-                    currentUserLabel={
-                      feed.currentUserLabel ?? undefined
-                    }
-                    onToggleFollow={
-                      feed.toggleFollowOptimistic
-                    }
-                    onToggleLike={
-                      feed.toggleLikeOptimistic
-                    }
-                    onDeletePost={
-                      feed.deletePost
-                    }
-                  />
-                )
-              )}
-            </View>
-          </>
-        )}
+      {tab !== "followers" && tab !== "following" && (
+        <ActivityList feed={feed} />
+      )}
     </PageShell>
   );
 }

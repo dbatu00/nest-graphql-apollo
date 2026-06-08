@@ -10,6 +10,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { Composer } from "@/components/feed/Composer";
 import { useActivities } from "@/hooks/useActivities";
 import { ActivityRow } from "@/components/feed/ActivityRow";
+import { ActivityList } from "@/components/feed/ActivityList";
 
 export default function Feed() {
   const feed = useActivities();
@@ -51,25 +52,10 @@ export default function Feed() {
         <Composer value={content} onChange={setContent} onPublish={handlePublish} />
       </View>
 
-      {feed.error && <Text>{feed.error}</Text>}
-
-      {feed.activities
-        .filter(a => a.type !== "follow" || a.active)
-        .map(activity => (
-          <ActivityRow
-            key={activity.id}
-            activity={activity}
-            currentUserId={feed.currentUserId ?? undefined}
-            currentUserAvatarUrl={feed.currentUserAvatarUrl ?? undefined}
-            currentUserLabel={feed.currentUserLabel ?? undefined}
-            onToggleFollow={feed.toggleFollowOptimistic}
-            onToggleLike={feed.toggleLikeOptimistic}
-            onToggleCommentLike={feed.toggleCommentLikeOptimistic}
-            onDeletePost={feed.deletePost}
-            onDeleteComment={feed.deleteCommentFromPost}
-            onAddComment={feed.addCommentToPost}
-          />
-        ))}
+      <ActivityList
+        feed={feed}
+        filter={a => a.type !== "follow" || a.active}
+      />
     </PageShell>
   );
 }
