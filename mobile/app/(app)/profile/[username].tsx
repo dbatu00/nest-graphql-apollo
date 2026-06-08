@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -69,8 +70,7 @@ export default function UsernameScreen() {
   /* ---------------- FOLLOW LIST STATE ---------------- */
 
   const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
-  const [followLoading, setFollowLoading] =
-    useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [profileMeta, setProfileMeta] = useState<ProfileMeta | null>(null);
 
   useEffect(() => {
@@ -84,41 +84,26 @@ export default function UsernameScreen() {
     const loadProfileMeta = async () => {
       try {
         const profile = await fetchUserProfileMeta(username);
-
-        if (cancelled) {
-          return;
-        }
-
+        if (cancelled) return;
         setProfileMeta(profile ?? null);
       } catch {
-        if (!cancelled) {
-          setProfileMeta(null);
-        }
+        if (!cancelled) setProfileMeta(null);
       }
     };
 
     loadProfileMeta();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [username]);
 
   useEffect(() => {
-    if (
-      tab !== "followers" &&
-      tab !== "following"
-    )
-      return;
+    if (tab !== "followers" && tab !== "following") return;
 
     const load = async () => {
       setFollowLoading(true);
-
       try {
         const rows = tab === "followers"
           ? await fetchFollowers(username)
           : await fetchFollowing(username);
-
         setFollowUsers(rows);
       } catch {
         setFollowUsers([]);
@@ -141,11 +126,7 @@ export default function UsernameScreen() {
           : u
       )
     );
-
-    await feed.toggleFollowOptimistic(
-      targetUsername,
-      shouldFollow
-    );
+    await feed.toggleFollowOptimistic(targetUsername, shouldFollow);
   };
 
   const profileDisplayName = profileMeta?.displayName?.trim() || username;
@@ -178,10 +159,7 @@ export default function UsernameScreen() {
             {isOwnProfile && (
               <UserSettingsButton
                 onPress={() => {
-                  if (!username) {
-                    return;
-                  }
-
+                  if (!username) return;
                   router.push({
                     pathname: "/profile/[username]/settings",
                     params: { username },
@@ -203,61 +181,26 @@ export default function UsernameScreen() {
       />}
     >
       {/* Profile card */}
-      <View style={{
-        paddingHorizontal: 0,
-        paddingTop: 12,
-        borderBottomWidth: 0,
-        marginBottom: 12,
-      }}>
-        <View
-          style={{
-            height: 240,
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: "#bfdbfe",
-            backgroundColor: "#eff6ff",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 16,
-            position: "relative",
-            overflow: "hidden",
-          }}
-        >
+      <View style={styles.profileCard}>
+        <View style={styles.coverContainer}>
           {profileCoverUrl ? (
             <Image
               source={{ uri: profileCoverUrl }}
-              style={{ width: "100%", height: "100%" }}
+              style={styles.fullSize}
               resizeMode="cover"
             />
           ) : (
             <>
               <Ionicons name="image-outline" size={24} color="#60a5fa" />
-              <Text style={{ marginTop: 6, color: "#60a5fa", fontWeight: "500", fontSize: 12 }}>
-                Cover photo
-              </Text>
+              <Text style={styles.coverPlaceholderText}>Cover photo</Text>
             </>
           )}
 
-          <View
-            style={{
-              position: "absolute",
-              left: 14,
-              bottom: 12,
-              width: 84,
-              height: 84,
-              borderRadius: 42,
-              borderWidth: 3,
-              borderColor: "#fff",
-              backgroundColor: "#dbeafe",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-            }}
-          >
+          <View style={styles.avatarContainer}>
             {profileAvatarUrl ? (
               <Image
                 source={{ uri: profileAvatarUrl }}
-                style={{ width: "100%", height: "100%" }}
+                style={styles.fullSize}
                 resizeMode="cover"
               />
             ) : (
@@ -266,34 +209,15 @@ export default function UsernameScreen() {
           </View>
         </View>
 
-        <View style={{ paddingHorizontal: 4 }}>
-          <Text
-            style={{
-              fontSize: 20,
-              fontWeight: "700",
-              color: "#1f2937",
-            }}
-            numberOfLines={1}
-          >
+        <View style={styles.profileInfo}>
+          <Text style={styles.displayName} numberOfLines={1}>
             {profileDisplayName}
           </Text>
-          <Text
-            style={{
-              fontSize: 13,
-              fontWeight: "500",
-              color: "#6b7280",
-              marginTop: 2,
-            }}
-            numberOfLines={1}
-          >
+          <Text style={styles.usernameText} numberOfLines={1}>
             @{username}
           </Text>
           <Text
-            style={{
-              marginTop: 8,
-              fontSize: 13,
-              color: profileBio ? "#374151" : "#9ca3af",
-            }}
+            style={[styles.bioText, { color: profileBio ? "#374151" : "#9ca3af" }]}
             numberOfLines={2}
           >
             {profileBio || "No bio yet"}
@@ -302,66 +226,15 @@ export default function UsernameScreen() {
       </View>
 
       {/* Tabs */}
-      <View
-        style={{
-          marginHorizontal: 0,
-          marginBottom: 4,
-          backgroundColor: "#f9fafb",
-          borderRadius: 10,
-          padding: 4,
-          ...Platform.select({
-            ios: {
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 1 },
-              shadowOpacity: 0.04,
-              shadowRadius: 3,
-            },
-            android: { elevation: 1 },
-          }),
-        }}
-      >
-        <View style={{ flexDirection: "row", gap: 4 }}>
-          {(
-            [
-              "posts",
-              "likes",
-              "activity",
-              "followers",
-              "following",
-            ] as Tab[]
-          ).map(t => (
+      <View style={styles.tabsContainer}>
+        <View style={styles.tabsRow}>
+          {(["posts", "likes", "activity", "followers", "following"] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}
-              style={{
-                flex: 1,
-                paddingVertical: 10,
-                paddingHorizontal: 8,
-                borderRadius: 8,
-                backgroundColor: tab === t ? "#fff" : "transparent",
-                ...(tab === t ? {
-                  ...Platform.select({
-                    ios: {
-                      shadowColor: "#2563eb",
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.08,
-                      shadowRadius: 2,
-                    },
-                    android: { elevation: 2 },
-                  }),
-                } : {}),
-                alignItems: "center",
-              }}
+              style={[styles.tabButton, tab === t && styles.tabButtonActive]}
             >
-              <Text
-                style={{
-                  fontWeight:
-                    tab === t ? "600" : "500",
-                  color: tab === t ? "#2563eb" : "#9ca3af",
-                  fontSize: 11,
-                  textAlign: "center",
-                }}
-              >
+              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
                 {t}
               </Text>
             </TouchableOpacity>
@@ -370,53 +243,30 @@ export default function UsernameScreen() {
       </View>
 
       {/* Followers / Following */}
-      {(tab === "followers" ||
-        tab === "following") && (
-          <View style={{ flex: 1 }}>
-            {followLoading && (
-              <View style={{ justifyContent: "center", alignItems: "center", minHeight: 200 }}>
-                <ActivityIndicator size="large" color="#2563eb" />
-              </View>
-            )}
+      {(tab === "followers" || tab === "following") && (
+        <View style={styles.followListContainer}>
+          {followLoading && (
+            <View style={styles.followLoadingContainer}>
+              <ActivityIndicator size="large" color="#2563eb" />
+            </View>
+          )}
 
-            {!followLoading && (
-              <View style={{ paddingTop: 8 }}>
-                {followUsers.map(user => (
-                  <View
-                    key={user.id}
-                    style={{
-                      backgroundColor: "#fff",
-                      marginHorizontal: 0,
-                      marginVertical: 6,
-                      borderRadius: 10,
-                      ...Platform.select({
-                        ios: {
-                          shadowColor: "#000",
-                          shadowOffset: { width: 0, height: 1 },
-                          shadowOpacity: 0.04,
-                          shadowRadius: 2,
-                        },
-                        android: { elevation: 1 },
-                      }),
-                    }}
-                  >
-                    <UserRow
-                      user={user}
-                      currentUserId={
-                        feed.currentUserId ??
-                        undefined
-                      }
-                      onToggleFollow={
-                        handleToggleFollowInList
-                      }
-                      isCompact={false}
-                    />
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
+          {!followLoading && (
+            <View style={styles.followListInner}>
+              {followUsers.map(user => (
+                <View key={user.id} style={styles.followUserCard}>
+                  <UserRow
+                    user={user}
+                    currentUserId={feed.currentUserId ?? undefined}
+                    onToggleFollow={handleToggleFollowInList}
+                    isCompact={false}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Activity Based Tabs */}
       {tab !== "followers" && tab !== "following" && (
@@ -425,3 +275,142 @@ export default function UsernameScreen() {
     </PageShell>
   );
 }
+
+const styles = StyleSheet.create({
+  profileCard: {
+    paddingHorizontal: 0,
+    paddingTop: 12,
+    borderBottomWidth: 0,
+    marginBottom: 12,
+  },
+  coverContainer: {
+    height: 240,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    position: "relative",
+    overflow: "hidden",
+  },
+  fullSize: {
+    width: "100%",
+    height: "100%",
+  },
+  coverPlaceholderText: {
+    marginTop: 6,
+    color: "#60a5fa",
+    fontWeight: "500",
+    fontSize: 12,
+  },
+  avatarContainer: {
+    position: "absolute",
+    left: 14,
+    bottom: 12,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3,
+    borderColor: "#fff",
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  profileInfo: {
+    paddingHorizontal: 4,
+  },
+  displayName: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#1f2937",
+  },
+  usernameText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6b7280",
+    marginTop: 2,
+  },
+  bioText: {
+    marginTop: 8,
+    fontSize: 13,
+  },
+  tabsContainer: {
+    marginHorizontal: 0,
+    marginBottom: 4,
+    backgroundColor: "#f9fafb",
+    borderRadius: 10,
+    padding: 4,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+  tabsRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    backgroundColor: "transparent",
+    alignItems: "center",
+  },
+  tabButtonActive: {
+    backgroundColor: "#fff",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#2563eb",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  tabText: {
+    fontWeight: "500",
+    color: "#9ca3af",
+    fontSize: 11,
+    textAlign: "center",
+  },
+  tabTextActive: {
+    fontWeight: "600",
+    color: "#2563eb",
+  },
+  followListContainer: {
+    flex: 1,
+  },
+  followLoadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: 200,
+  },
+  followListInner: {
+    paddingTop: 8,
+  },
+  followUserCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 0,
+    marginVertical: 6,
+    borderRadius: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 2,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+});
