@@ -21,7 +21,7 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
       return;
     }
 
-    router.push("/feed");
+    router.replace("/feed");
   };
 
   const handleProfile = () => {
