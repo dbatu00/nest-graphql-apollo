@@ -65,7 +65,7 @@ export class FollowsService {
                         type: "follow",
                         actor: follower,
                         targetUser: following,
-                        active: true,
+                        shouldBeActive: true,
                     },
                     manager,
                 );
@@ -113,7 +113,7 @@ export class FollowsService {
                         type: "follow",
                         actor: follower,
                         targetUser: following,
-                        active: false,
+                        shouldBeActive: false,
                     },
                     manager,
                 );

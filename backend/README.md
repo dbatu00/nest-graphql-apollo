@@ -128,6 +128,7 @@ When adding new resolver args:
 - Like/unlike and follow/unfollow are designed to be idempotent.
 - Activity entries are updated as part of write flows.
 - Feed excludes inactive like/follow activity records.
+- In GraphQL flows, resolver methods are the API entry layer; service-thrown errors bubble to Apollo/Nest (transactional writes rollback on throw unless the error is swallowed).
 - CORS is enabled globally.
 
 ## Current Caveats
