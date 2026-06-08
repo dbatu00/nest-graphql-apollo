@@ -305,7 +305,7 @@ export default function UsernameScreen() {
       <View
         style={{
           marginHorizontal: 0,
-          marginBottom: 16,
+          marginBottom: 4,
           backgroundColor: "#f9fafb",
           borderRadius: 10,
           padding: 4,
