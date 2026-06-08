@@ -1,10 +1,12 @@
 // Database entity for timeline activity rows.
 import {
     Entity,
+    Index,
     PrimaryGeneratedColumn,
     Column,
     ManyToOne,
     CreateDateColumn,
+    UpdateDateColumn,
 } from "typeorm";
 import { User } from "../users/user.entity";
 import { Post } from "../posts/post.entity";
@@ -12,6 +14,18 @@ import type { ActivityType } from "./activity.constants";
 import { Comment } from "../comments/comment.entity";
 
 @Entity()
+@Index('IDX_activity_like_post_unique', ['actorId', 'targetPostId'], {
+    unique: true,
+    where: `"type" = 'like' AND "targetCommentId" IS NULL`,
+})
+@Index('IDX_activity_like_comment_unique', ['actorId', 'targetCommentId'], {
+    unique: true,
+    where: `"type" = 'like'`,
+})
+@Index('IDX_activity_follow_unique', ['actorId', 'targetUserId'], {
+    unique: true,
+    where: `"type" = 'follow'`,
+})
 export class Activity {
     @PrimaryGeneratedColumn()
     id: number;
@@ -28,7 +42,7 @@ export class Activity {
     @Column({ nullable: true })
     targetUserId?: number;
 
-    @ManyToOne(() => Post, { nullable: true })
+    @ManyToOne(() => Post, { nullable: true, onDelete: 'CASCADE' })
     targetPost?: Post;
 
     @Column({ nullable: true })
@@ -49,4 +63,7 @@ export class Activity {
 
     @CreateDateColumn()
     createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

@@ -1,6 +1,7 @@
 import { ArgsType, Field } from '@nestjs/graphql';
 import { IsArray, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { ACTIVITY_TYPE } from '../activity.constants';
+import type { ActivityType } from '../activity.constants';
 
 @ArgsType()
 export class FeedArgs {
@@ -15,5 +16,5 @@ export class FeedArgs {
     @IsArray()
     @IsString({ each: true })
     @IsIn(Object.values(ACTIVITY_TYPE), { each: true })
-    types?: string[];
+    types?: ActivityType[];
 }
