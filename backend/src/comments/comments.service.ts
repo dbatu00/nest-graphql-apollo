@@ -5,13 +5,14 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Comment } from './comment.entity';
 import { User } from '../users/user.entity';
 import { Post } from '../posts/post.entity';
 import { LIKE_TYPE } from '../likes/likes.constants';
 import { LikesService } from '../likes/likes.service';
 import { ActivityService } from '../activity/activity.service';
+import { lockEntityByIdOrThrow } from 'src/common/row-lock';
 
 @Injectable()
 export class CommentsService {
@@ -87,15 +88,11 @@ export class CommentsService {
     async deleteComment(commentId: number, userId: number): Promise<boolean> {
         try {
             await this.commentsRepo.manager.transaction(async (manager) => {
-                const comment = await manager.findOne(Comment, {
-                    where: { id: commentId },
-                    relations: ['user'],
-                });
-
-                if (!comment) throw new NotFoundException('Comment not found');
+                const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
                 if (comment.user.id !== userId)
                     throw new ForbiddenException('You can only delete your own comment');
 
+                await this.likesService.deleteLikes(LIKE_TYPE.COMMENT, commentId, manager);
                 await manager.remove(Comment, comment);
             });
 
@@ -124,10 +121,11 @@ export class CommentsService {
         try {
             return await this.commentsRepo.manager.transaction(async manager => {
                 const user = await manager.findOne(User, { where: { id: userId } });
-                const comment = await manager.findOne(Comment, { where: { id: commentId } });
+                const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
+                const post = await manager.findOne(Post, { where: { id: comment?.postId } });
 
                 if (!user) throw new NotFoundException('User not found');
-                if (!comment) throw new NotFoundException('Comment not found');
+                if (!post) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.like(
                     userId,
@@ -138,6 +136,17 @@ export class CommentsService {
 
                 // Idempotent like: if already active, return success without extra writes.
                 if (!changed) return true;
+
+                await this.activityService.logActivity(
+                    {
+                        type: 'like',
+                        actor: user,
+                        targetPost: post,
+                        targetComment: comment,
+                        shouldBeActive: true,
+                    },
+                    manager,
+                );
 
                 this.logger.log(`Comment liked by userId=${userId}, commentId=${commentId}`);
                 return true;
@@ -155,10 +164,11 @@ export class CommentsService {
         try {
             return await this.commentsRepo.manager.transaction(async manager => {
                 const user = await manager.findOne(User, { where: { id: userId } });
-                const comment = await manager.findOne(Comment, { where: { id: commentId } });
+                const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
+                const post = await manager.findOne(Post, { where: { id: comment?.postId } });
 
                 if (!user) throw new NotFoundException('User not found');
-                if (!comment) throw new NotFoundException('Comment not found');
+                if (!post) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.unlike(
                     userId,
@@ -169,6 +179,17 @@ export class CommentsService {
 
                 // Idempotent unlike: if no active row exists, return success.
                 if (!changed) return true;
+
+                await this.activityService.logActivity(
+                    {
+                        type: 'like',
+                        actor: user,
+                        targetPost: post,
+                        targetComment: comment,
+                        shouldBeActive: false,
+                    },
+                    manager,
+                );
 
                 this.logger.log(`Comment unliked by userId=${userId}, commentId=${commentId}`);
                 return true;

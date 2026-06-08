@@ -6,12 +6,14 @@ import {
     Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Post } from './post.entity';
+import { Comment } from '../comments/comment.entity';
 import { User } from '../users/user.entity';
 import { ActivityService } from 'src/activity/activity.service';
 import { LIKE_TYPE } from 'src/likes/likes.constants';
 import { LikesService } from 'src/likes/likes.service';
+import { lockEntityByIdOrThrow } from 'src/common/row-lock';
 
 @Injectable()
 export class PostsService {
@@ -28,6 +30,17 @@ export class PostsService {
 
         private readonly likesService: LikesService,
     ) { }
+
+    private async lockCommentIdsForPost(manager: EntityManager, postId: number): Promise<number[]> {
+        const comments = await manager
+            .createQueryBuilder(Comment, 'comment')
+            .select('comment.id', 'id')
+            .where('comment.postId = :postId', { postId })
+            .setLock('pessimistic_write')
+            .getMany();
+
+        return comments.map((comment) => comment.id);
+    }
 
     // ------------------------
     // BASIC QUERIES
@@ -103,17 +116,18 @@ export class PostsService {
 
     async deletePost(postId: number, userId: number): Promise<boolean> {
         try {
-            const post = await this.postsRepo.findOne({
-                where: { id: postId },
-                relations: ['user'],
+            await this.postsRepo.manager.transaction(async manager => {
+                const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user'], 'Post not found');
+                if (post.user.id !== userId)
+                    throw new ForbiddenException('Cannot delete as post does not belong to user.');
+
+                const commentIds = await this.lockCommentIdsForPost(manager, postId);
+
+                await this.likesService.deleteLikes(LIKE_TYPE.POST, postId, manager);
+                await this.likesService.deleteLikes(LIKE_TYPE.COMMENT, commentIds, manager);
+
+                await manager.remove(Post, post);
             });
-
-            if (!post) throw new NotFoundException('Post not found');
-            if (post.user.id !== userId)
-                throw new ForbiddenException('Cannot delete');
-
-            await this.activityService.deleteActivitiesForPost(postId);
-            await this.postsRepo.remove(post);
 
             this.logger.log(`Post deleted by userId=${userId}, postId=${postId}`);
             return true;
@@ -143,10 +157,12 @@ export class PostsService {
         try {
             return await this.postsRepo.manager.transaction(async manager => {
                 const user = await manager.findOne(User, { where: { id: userId } });
-                const post = await manager.findOne(Post, { where: { id: postId } });
+                // Lock the post row so like/unlike cannot race with post deletion inside
+                // another transaction; this keeps target existence stable for the like
+                // write and its paired activity write.
+                const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user'], 'Post not found');
 
                 if (!user) throw new NotFoundException('User not found');
-                if (!post) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.like(
                     userId,
@@ -163,7 +179,7 @@ export class PostsService {
                         type: 'like',
                         actor: user,
                         targetPost: post,
-                        active: true,
+                        shouldBeActive: true,
                     },
                     manager,
                 );
@@ -181,10 +197,11 @@ export class PostsService {
         try {
             return await this.postsRepo.manager.transaction(async manager => {
                 const user = await manager.findOne(User, { where: { id: userId } });
-                const post = await manager.findOne(Post, { where: { id: postId } });
+                // Same lock rationale as likePost: keep the post stable while the unlike
+                // write and activity update run in this transaction.
+                const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user'], 'Post not found');
 
                 if (!user) throw new NotFoundException('User not found');
-                if (!post) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.unlike(
                     userId,
@@ -201,7 +218,7 @@ export class PostsService {
                         type: 'like',
                         actor: user,
                         targetPost: post,
-                        active: false,
+                        shouldBeActive: false,
                     },
                     manager,
                 );
