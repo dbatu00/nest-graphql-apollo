@@ -5,8 +5,12 @@ import {
   ManyToOne,
   Unique,
   CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
+  Check,
 } from 'typeorm';
 import { User } from '../users/user.entity';
+
 import type { LikeType } from './likes.constants';
 
 @Entity()
@@ -32,4 +36,7 @@ export class Like {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

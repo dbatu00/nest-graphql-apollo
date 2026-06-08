@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { Like } from './like.entity';
 import { LikeType } from './likes.constants';
 
@@ -53,47 +53,62 @@ export class LikesService {
     });
   }
 
+  // Atomically inserts or reactivates a like in a single round-trip.
+  // Requires a unique constraint on (userId, targetType, targetId) — provided by @Unique on the entity.
+  // Column names are quoted because TypeORM creates them as camelCase in PG;
+  // without quotes, PG would silently lowercase them and the conflict clause would break.
+  // The DO UPDATE ... WHERE clause collapses three cases into one statement:
+  //   - No row        → INSERT fires            → changed: true
+  //   - Row, inactive → UPDATE fires            → changed: true
+  //   - Row, active   → WHERE false, no-op      → changed: false
   async like(userId: number, targetType: LikeType, targetId: number, manager?: EntityManager) {
-    const repo = manager ? manager.getRepository(Like) : this.likesRepo;
+    const em = manager ?? this.likesRepo.manager;
 
-    let like = await repo.findOne({
-      where: { userId, targetType, targetId },
-    });
+    const [row] = await em.query<Array<{ changed: boolean }>>(
+      `INSERT INTO "like" ("userId", "targetType", "targetId", active, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, true, now(), now())
+       ON CONFLICT ("userId", "targetType", "targetId")
+       DO UPDATE SET active = true, "updatedAt" = now()
+       WHERE "like".active = false
+       RETURNING true AS changed`,
+      [userId, targetType, targetId],
+    );
 
-    if (like?.active) {
-      return { changed: false };
-    }
-
-    if (like) {
-      like.active = true;
-      await repo.save(like);
-      return { changed: true };
-    }
-
-    await repo.save({
-      userId,
-      targetType,
-      targetId,
-      active: true,
-    });
-
-    return { changed: true };
+    // No row returned = conflict hit but WHERE was false = already active
+    return { changed: !!row };
   }
 
+  // Mirrors like() with the active flag flipped off; kept as a separate method
+  // for explicit API semantics and easier call-site readability.
+  // Atomically updates only if active = true, so concurrent calls are safe.
   async unlike(userId: number, targetType: LikeType, targetId: number, manager?: EntityManager) {
     const repo = manager ? manager.getRepository(Like) : this.likesRepo;
 
-    const like = await repo.findOne({
-      where: { userId, targetType, targetId },
-    });
+    const result = await repo.update(
+      { userId, targetType, targetId, active: true },
+      { active: false },
+    );
 
-    if (!like || !like.active) {
-      return { changed: false };
+    return { changed: (result.affected ?? 0) > 0 };
+  }
+
+  async deleteLikes(
+    targetType: LikeType,
+    targetIdOrIds: number | number[],
+    manager?: EntityManager,
+  ) {
+    // WARNING: this only deletes Like rows.
+    // It does not delete Activity rows.
+    // Activities are cleaned up when the owning Post/Comment is deleted
+    // via DB-level cascades on Activity.targetPost / Activity.targetComment.
+    const repo = manager ? manager.getRepository(Like) : this.likesRepo;
+
+    if (Array.isArray(targetIdOrIds)) {
+      if (targetIdOrIds.length === 0) return;
+      await repo.delete({ targetType, targetId: In(targetIdOrIds) });
+      return;
     }
 
-    like.active = false;
-    await repo.save(like);
-
-    return { changed: true };
+    await repo.delete({ targetType, targetId: targetIdOrIds });
   }
 }
