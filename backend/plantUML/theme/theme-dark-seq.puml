@@ -1,0 +1,25 @@
+@startuml theme-dark-seq
+!$COLOR_TEXT = "#FFFFFF"
+!$COLOR_BG_DARK = "#0B1220"
+!$COLOR_BG_BLUE = "#101e34"
+!$COLOR_ACCENT_ORANGE = "#b77d25"
+!$COLOR_GRAY = "#646a71"
+
+skinparam defaultFontColor $COLOR_TEXT
+
+skinparam backgroundColor $COLOR_BG_DARK
+skinparam ActorBackgroundColor $COLOR_BG_DARK
+skinparam NoteBorderColor $COLOR_BG_DARK
+
+skinparam NoteBackgroundColor $COLOR_ACCENT_ORANGE
+
+skinparam SequenceDividerBackgroundColor $COLOR_BG_BLUE
+
+skinparam SequenceGroupBackgroundColor $COLOR_GRAY
+skinparam SequenceLifeLineBorderColor $COLOR_GRAY
+skinparam ParticipantBorderColor $COLOR_GRAY
+skinparam ArrowColor $COLOR_GRAY
+skinparam ActorBorderColor $COLOR_GRAY
+
+skinparam ParticipantBackgroundColor $COLOR_BG_BLUE
+skinparam SequenceGroupBodyBackgroundColor $COLOR_BG_BLUE

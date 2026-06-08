@@ -1,0 +1,69 @@
+@startuml followUser
+!include ../../theme/theme-dark-seq.puml
+
+title followUser flow
+actor User
+participant Resolver
+participant FollowsService as F
+participant ActivityService as A
+database DB
+
+User -> Resolver: followUser()
+Resolver -> F: follow() : bool
+
+group followRepo.manager.transaction
+  F -> DB: manager.findOne(User)
+  DB --> F: follower | null
+
+  F -> DB: manager.findOne(User)
+  DB --> F: following | null
+
+  note over F,DB
+  Overall flow:
+  - if follower/following missing, return false
+  - if user tries to follow self, return false
+  - if follow already exists, return success immediately
+  - otherwise create follow row
+  - then log follow activity as active
+  end note
+
+  alt follower or following missing
+    F --> Resolver: false
+    Resolver --> User: data.followUser = false
+  else self-follow attempt
+    F --> Resolver: false
+    Resolver --> User: data.followUser = false
+  else lookup existing follow
+    F -> DB: manager.findOne(Follow)
+    DB --> F: follow | null
+
+    alt follow already exists
+      F --> Resolver: true
+      Resolver --> User: data.followUser = true
+    else no existing follow
+      F -> DB: manager.save(Follow)
+      alt unique conflict
+        DB --> F: duplicate key (23505)
+        F --> Resolver: true
+        Resolver --> User: data.followUser = true
+      else follow saved
+        DB --> F: follow saved
+        F -> A: logActivity()
+        A -> DB: repo.query()
+        DB --> A: activity row
+        A --> F: activity
+
+        F --> Resolver: true
+        Resolver --> User: data.followUser = true
+      end
+    end
+  end
+end
+
+== Error rule ==
+note over F,DB
+If any awaited step inside the transaction throws:
+TypeORM issues ROLLBACK, then error bubbles to resolver,
+and resolver returns a GraphQL error.
+end note
+@enduml

@@ -24,6 +24,9 @@ This file tracks only open work. Completed items are intentionally removed.
 - Cover empty-database and startup edge cases.
 - Harden `LikesService.like` for concurrent requests (handle unique-violation idempotently or switch to atomic upsert).
 - Introduce clearer domain error mapping for GraphQL responses.
+- Document and standardize service-error propagation rules for GraphQL resolvers (bubble vs swallow, rollback expectations).
+- Consolidate likes cleanup behind a single `deleteLikes` helper.
+- Require `EntityManager` for shared write APIs in `LikesService`/`ActivityService`, while keeping read APIs simple/manager-optional.
 - Harden follow-state mapping for raw/entities length mismatch.
 - Add invariants in activity logging inputs (`like` requires target post, `follow` requires target user).
 - [Ponder] Link comment likes to activity events (for richer timeline, notifications, or analytics?)
@@ -66,6 +69,8 @@ This file tracks only open work. Completed items are intentionally removed.
 - Should profile settings preserve unsaved edits across tab switches?
 - For comment activity cards, should feed show both post context and highlighted comment (including reply context + "view thread" affordance)?
 - Should we add runtime response-shape validation at GraphQL client boundaries (e.g., zod/valibot) to protect against backend schema drift beyond TypeScript compile-time types?
+- Should cross-service mutation payloads be slimmed to minimal IDs/flags instead of passing full entities (to reduce coupling and hidden data dependencies)?
+- Should like cleanup explicitly coordinate activity cleanup, or should that responsibility remain on Post/Comment deletion via cascade semantics only?
 
 
 dont show self activity except posts 

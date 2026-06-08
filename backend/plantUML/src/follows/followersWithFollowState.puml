@@ -1,0 +1,19 @@
+@startuml followersWithFollowState
+!include ../../theme/theme-dark-seq.puml
+
+title followersWithFollowState flow
+actor User
+participant Resolver
+participant FollowsService as F
+database DB
+
+User -> Resolver: followersWithFollowState()
+Resolver -> F: getFollowersWithFollowState() : { entities, raw }
+
+F -> DB: queryBuilder.getRawAndEntities()
+DB --> F: { entities, raw }
+
+F --> Resolver: { entities, raw }
+Resolver -> Resolver: map entities + normalize raw.followedByMe
+Resolver --> User: data.followersWithFollowState
+@enduml

@@ -1,0 +1,68 @@
+@startuml deletePost
+!include ../../theme/theme-dark-seq.puml
+title deletePost flow
+actor User
+participant Resolver
+participant PostsService as P
+participant LikesService as L
+database DB
+
+User -> Resolver: deletePost()
+Resolver -> P: deletePost() : bool
+
+group postsRepo.manager.transaction
+  P -> DB: lockEntityByIdOrThrow(Post) + load user relation
+  DB --> P: post
+
+  P -> P: validate ownership
+
+  P -> DB: lockCommentIdsForPost()
+  DB --> P: commentIds
+
+  P -> L: deleteLikes()
+  L -> DB: repo.delete() [post likes]
+  DB --> L: ok
+  L --> P: ok
+
+  P -> L: deleteLikes()
+  L -> DB: repo.delete() [comment likes]
+  DB --> L: ok
+  L --> P: ok
+
+  P -> DB: manager.remove(Post)
+
+  note over L,DB
+  FK cascade rules handle dependent deletes:
+  - post deletion triggers deleting its comments
+  - post deletion triggers deleting its and its like activities
+  - comment deletion triggers deleting its and its like activities
+  end note
+
+  par post-delete cascades
+    par 
+      DB -> DB: CASCADE delete post activities
+    else 
+      DB -> DB: CASCADE delete post-like activities
+    end
+  else comment-delete cascades
+    DB -> DB: CASCADE delete comments
+    par 
+      DB -> DB: CASCADE delete comment activities
+    else 
+      DB -> DB: CASCADE delete comment-like activities
+    end
+  end
+
+  DB --> P: post deleted
+end
+
+P --> Resolver: true
+Resolver --> User: data.deletePost = true
+
+== Error rule ==
+note over P,DB
+If any awaited step inside the transaction throws:
+TypeORM issues ROLLBACK, then error bubbles to resolver,
+and resolver returns a GraphQL error.
+end note
+@enduml

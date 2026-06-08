@@ -1,0 +1,38 @@
+@startuml addComment
+!include ../../theme/theme-dark-seq.puml
+title addComment flow
+actor User
+participant Resolver
+participant CommentsService as C
+participant ActivityService as A
+database DB
+
+User -> Resolver: addComment()
+Resolver -> C: addComment() : Comment
+
+group commentsRepo.manager.transaction
+  C -> DB: manager.findOne(User)
+  DB --> C: user
+
+  C -> DB: manager.findOne(Post)
+  DB --> C: post
+
+  C -> DB: manager.save(Comment)
+  DB --> C: comment
+
+  C -> A: logActivity()
+  A -> DB: repo.save()
+  DB --> A: activity row
+  A --> C: activity
+end
+
+C --> Resolver: comment
+Resolver --> User: data.addComment
+
+== Error rule ==
+note over C,DB
+If any awaited step inside the transaction throws:
+TypeORM issues ROLLBACK, then error bubbles to resolver,
+and resolver returns a GraphQL error.
+end note
+@enduml

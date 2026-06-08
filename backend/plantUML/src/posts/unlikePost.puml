@@ -1,0 +1,57 @@
+@startuml unlikePost
+!include ../../theme/theme-dark-seq.puml
+
+title unlikePost flow
+actor User
+participant Resolver
+participant PostsService as P
+participant LikesService as L
+participant ActivityService as A
+database DB
+
+User -> Resolver: unlikePost()
+Resolver -> P: unlikePost() : bool
+
+group postsRepo.manager.transaction
+  P -> DB: manager.findOne(User)
+  DB --> P: user
+
+  P -> DB: lockEntityByIdOrThrow(Post) + load user relation
+  DB --> P: post
+
+  P -> L: unlike()
+  L -> DB: repo.findOne()
+  DB --> L: like | null
+
+  note over L,P
+  Overall flow:
+  - if no active like exists, return success immediately
+  - otherwise deactivate the like
+  -- then log post-like activity as inactive
+  end note
+
+  alt no active like exists
+    L --> P: changed = false
+    P -> P: skip activity log (idempotent)
+  else like state changed
+    L -> DB: repo.save() [active=true -> false]
+    DB --> L: like deactivated
+    L --> P: changed = true
+
+    P -> A: logActivity()
+    A -> DB: repo.query()
+    DB --> A: activity row
+    A --> P: activity
+  end
+end
+
+P --> Resolver: true
+Resolver --> User: data.unlikePost = true
+
+== Error rule ==
+note over P,DB
+If any awaited step inside the transaction throws:
+TypeORM issues ROLLBACK, then error bubbles to resolver,
+and resolver returns a GraphQL error.
+end note
+@enduml

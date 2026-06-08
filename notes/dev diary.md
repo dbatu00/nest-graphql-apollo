@@ -344,3 +344,35 @@ Polymorphic. Reasons:
 - Keeping type explicit in the API prevents caller ambiguity and makes error handling simpler.
 - Future scaling (event-driven, async activity logging) can decouple this later without data migration risk.
 - Does not corrupt activity table: activity table is fed on-demand by `logActivity`, never auto-populated by likes. No dangling references.
+
+## 2026-06-06 — Transaction query parallelism note (`likePost` / `unlikePost`)
+
+**Question:** Can these two calls run in parallel inside the same transaction?
+
+```ts
+const user = await manager.findOne(User, { where: { id: userId } });
+const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user'], 'Post not found');
+```
+
+**Decision:** Keep them sequential.
+
+**Reasoning:**
+
+- Both calls use the same transactional `EntityManager` (same query runner / DB connection).
+- On one connection, DB work is effectively serialized; `Promise.all` does not provide real parallel query execution here.
+- Concurrent calls on the same transaction path reduce clarity and can make failure/locking behavior harder to reason about.
+- Readability and deterministic transaction flow are more valuable than a theoretical micro-optimization in this path.
+
+## 2026-06-06 — Shared module boundary: manager-required writes
+
+Decision:
+
+- Keep `LikesService` and `ActivityService` intentionally lean/shared.
+- Require `EntityManager` for write paths so caller modules own transaction boundaries.
+- Keep read paths simple (no required manager by default).
+
+Reasoning:
+
+- These modules are shared by many current/future domains (posts/comments/follows and potential songs/pages/books).
+- Caller-owned transactions keep domain orchestration in feature services while shared modules stay predictable and reusable.
+- This boundary reduces hidden write side effects and makes transaction scope explicit at call sites.

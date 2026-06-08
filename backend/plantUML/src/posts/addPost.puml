@@ -1,0 +1,35 @@
+@startuml addPost
+!include ../../theme/theme-dark-seq.puml
+title addPost flow
+actor User
+participant Resolver
+participant PostsService as P
+participant ActivityService as A
+database DB
+
+User -> Resolver: addPost()
+Resolver -> P: addPost() : Post
+
+group postsRepo.manager.transaction
+  P -> DB: manager.findOne(User)
+  DB --> P: user
+
+  P -> DB: manager.save(Post)
+  DB --> P: post
+
+  P -> A: logActivity()
+  A -> DB: repo.save()
+  DB --> A: activity row
+  A --> P: activity
+end
+
+P --> Resolver: post
+Resolver --> User: data.addPost
+
+== Error rule ==
+note over P,DB
+If any awaited step inside the transaction throws:
+TypeORM issues ROLLBACK, then error bubbles to resolver,
+and resolver returns a GraphQL error.
+end note
+@enduml

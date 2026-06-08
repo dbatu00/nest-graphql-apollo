@@ -1,0 +1,19 @@
+@startuml followingList
+!include ../../theme/theme-dark-seq.puml
+
+title following list flow
+actor User
+participant Resolver
+participant FollowsService as F
+database DB
+
+User -> Resolver: following()
+Resolver -> F: getFollowing() : Follow[]
+
+F -> DB: followRepo.find()
+DB --> F: follow rows + following relations
+
+Resolver -> Resolver: map rows => following users
+F --> Resolver: rows
+Resolver --> User: data.following
+@enduml

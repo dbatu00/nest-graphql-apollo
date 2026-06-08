@@ -36,5 +36,10 @@
 		}
 	],
 	"jest.runMode": "on-demand",
-	"testing.automaticallyOpenTestResults": "neverOpen"
+	"testing.automaticallyOpenTestResults": "neverOpen",
+	"plantuml.render": "PlantUMLServer",
+	"plantuml.server": "https://www.plantuml.com/plantuml",
+	"plantuml.diagramsRoot": "${workspaceFolder}/backend/plantuml/src",
+	"plantuml.exportOutDir": "${workspaceFolder}/backend/plantuml/out",
+	"plantuml.exportFormat": "png"
 }
