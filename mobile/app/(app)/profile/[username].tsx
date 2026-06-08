@@ -9,13 +9,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { commonStyles as styles } from "@/styles/common";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityRow } from "@/components/feed/ActivityRow";
-import { FeedHeader } from "@/components/layout/FeedHeader";
+import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
-import { UserSettingsButton } from "@/components/common/UserSettingsButton";
-import { FeedLogoutButton } from "@/components/common/FeedLogoutButton";
+import { UserSettingsButton } from "@/components/common/SettingsButton";
+import { FeedLogoutButton } from "@/components/common/LogoutButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchFollowers, fetchFollowing, fetchUserProfileMeta } from "@/graphql/client";
@@ -164,7 +163,7 @@ export default function UsernameScreen() {
 
   return (
     <PageShell
-      header={<FeedHeader
+      header={<Header
         title="BookBook"
         rightActions={(
           <>

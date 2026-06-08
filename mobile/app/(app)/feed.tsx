@@ -5,7 +5,7 @@ import {
   Platform,
 } from "react-native";
 
-import { FeedHeader } from "@/components/layout/FeedHeader";
+import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
 import { Composer } from "@/components/feed/Composer";
 import { useActivities } from "@/hooks/useActivities";
@@ -24,7 +24,7 @@ export default function Feed() {
 
   return (
     <PageShell
-      header={<FeedHeader title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />}
+      header={<Header title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />}
     >
       <View
         style={{

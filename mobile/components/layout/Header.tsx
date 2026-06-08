@@ -12,7 +12,7 @@ type Props = {
   rightActions?: ReactNode;
 };
 
-export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false, rightActions }: Props) {
+export function Header({ title = "BookBook", onRefresh, isRefreshing = false, rightActions }: Props) {
   const { user, logout } = useAuth();
 
   const handleTitlePress = () => {
@@ -21,7 +21,7 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
       return;
     }
 
-    router.push("/feed");
+    router.replace("/feed");
   };
 
   const handleProfile = () => {
