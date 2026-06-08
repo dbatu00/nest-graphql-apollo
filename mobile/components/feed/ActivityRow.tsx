@@ -63,6 +63,7 @@ type Props = {
   activity: Activity;
   currentUserId?: number;
   currentUserAvatarUrl?: string;
+  currentUserLabel?: string;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
@@ -331,6 +332,7 @@ type PostCardProps = {
   post: NonNullable<Activity["targetPost"]>;
   currentUserId?: number;
   currentUserAvatarUrl?: string;
+  currentUserLabel?: string;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
@@ -350,6 +352,7 @@ const PostCard = ({
   post,
   currentUserId,
   currentUserAvatarUrl,
+  currentUserLabel,
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
@@ -366,7 +369,7 @@ const PostCard = ({
   const [commentInputFocused, setCommentInputFocused] = React.useState(false);
   const authorLabel = getDisplayLabel(post.user);
   const authorAvatarUri = resolveAvatarUri(post.user.avatarUrl, authorLabel, 128);
-  const currentUserAvatarUri = resolveAvatarUri(currentUserAvatarUrl, "You", 64);
+  const currentUserAvatarUri = resolveAvatarUri(currentUserAvatarUrl, currentUserLabel?.trim() || "You", 64);
   const isOwner = isSameId(currentUserId, post.user.id);
   const likedByMe = post.likedByMe ?? false;
   const likesCount = post.likesCount ?? 0;
@@ -476,7 +479,12 @@ const PostCard = ({
                   onSubmitEditing={onSubmitComment}
                   returnKeyType="send"
                   underlineColorAndroid="transparent"
-                  style={styles.commentInput}
+                  style={[
+                    styles.commentInput,
+                    Platform.OS === "web"
+                      ? ({ outlineStyle: "none", outlineWidth: 0 } as never)
+                      : null,
+                  ]}
                 />
                 {commentText.trim().length > 0 && (
                   <TouchableOpacity onPress={onSubmitComment} disabled={commentLoading} style={styles.commentSendBtn}>
@@ -548,6 +556,7 @@ export const ActivityRow = ({
   activity,
   currentUserId,
   currentUserAvatarUrl,
+  currentUserLabel,
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
@@ -582,6 +591,7 @@ export const ActivityRow = ({
               post={targetPost}
               currentUserId={currentUserId}
               currentUserAvatarUrl={currentUserAvatarUrl}
+              currentUserLabel={currentUserLabel}
               onToggleFollow={onToggleFollow}
               onDeletePost={onDeletePost}
               onDeleteComment={onDeleteComment}
@@ -909,8 +919,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
   },
   commentInputWrapperFocused: {
-    borderColor: color.blueBg,
-    backgroundColor: color.bgWhite,
+    backgroundColor: color.bgComment,
   },
   commentInput: {
     flex: 1,

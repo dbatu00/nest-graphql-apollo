@@ -36,17 +36,20 @@ export function useActivities(params: Params = {}) {
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | null>(null);
+  const [currentUserLabel, setCurrentUserLabel] = useState<string | null>(null);
 
   useEffect(() => {
     getMyProfile()
       .then(user => {
         setCurrentUserId(user?.id ?? null);
         setCurrentUserAvatarUrl(user?.avatarUrl?.trim() || null);
+        setCurrentUserLabel(user?.displayName?.trim() || user?.username?.trim() || null);
       })
       .catch((err: unknown) => {
         console.warn("[useActivities] failed to resolve current user", err);
         setCurrentUserId(null);
         setCurrentUserAvatarUrl(null);
+        setCurrentUserLabel(null);
       });
   }, []);
 
@@ -318,6 +321,7 @@ export function useActivities(params: Params = {}) {
     refresh,
     currentUserId,
     currentUserAvatarUrl,
+    currentUserLabel,
     toggleFollowOptimistic,
     toggleLikeOptimistic,
     toggleCommentLikeOptimistic,

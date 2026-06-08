@@ -444,6 +444,9 @@ export default function UsernameScreen() {
                     currentUserAvatarUrl={
                       feed.currentUserAvatarUrl ?? undefined
                     }
+                    currentUserLabel={
+                      feed.currentUserLabel ?? undefined
+                    }
                     onToggleFollow={
                       feed.toggleFollowOptimistic
                     }

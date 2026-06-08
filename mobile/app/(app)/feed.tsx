@@ -38,6 +38,7 @@ export default function Feed() {
             } as never)
             : null,
         ]}
+        stickyHeaderIndices={[0]}
         contentContainerStyle={{ paddingBottom: 24 }}
       >
         <FeedHeader title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />
@@ -84,6 +85,7 @@ export default function Feed() {
                 activity={activity}
                 currentUserId={feed.currentUserId ?? undefined}
                 currentUserAvatarUrl={feed.currentUserAvatarUrl ?? undefined}
+                currentUserLabel={feed.currentUserLabel ?? undefined}
                 onToggleFollow={feed.toggleFollowOptimistic}
                 onToggleLike={feed.toggleLikeOptimistic}
                 onToggleCommentLike={feed.toggleCommentLikeOptimistic}

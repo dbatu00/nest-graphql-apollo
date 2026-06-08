@@ -37,7 +37,7 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
         width: "100%",
         flexDirection: "column",
         paddingHorizontal: 16,
-        paddingVertical: 14,
+        paddingVertical: 9,
         backgroundColor: "#2563eb",
         ...Platform.select({
           ios: {
@@ -52,7 +52,7 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={{ fontWeight: "700", fontSize: 20, color: "#fff", letterSpacing: 0.3 }}>
+          <Text style={{ fontWeight: "700", fontSize: 18, color: "#fff", letterSpacing: 0.3 }}>
             {title}
           </Text>
 
@@ -62,9 +62,9 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
               disabled={isRefreshing}
               style={{
                 marginLeft: 8,
-                width: 30,
-                height: 30,
-                borderRadius: 15,
+                width: 28,
+                height: 28,
+                borderRadius: 14,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: "rgba(255, 255, 255, 0.2)",
@@ -88,7 +88,7 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
               onPress={handleProfile}
               style={{
                 paddingHorizontal: 14,
-                paddingVertical: 8,
+                paddingVertical: 6,
                 borderWidth: 0,
                 borderColor: "transparent",
                 borderRadius: 8,
