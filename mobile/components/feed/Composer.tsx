@@ -1,4 +1,4 @@
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, Platform } from "react-native";
+import { View, TextInput, TouchableOpacity, Text, Platform } from "react-native";
 
 type Props = {
   value: string;

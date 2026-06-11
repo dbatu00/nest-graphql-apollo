@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   View,
-  Text,
   Platform,
 } from "react-native";
 
@@ -9,7 +8,6 @@ import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
 import { Composer } from "@/components/feed/Composer";
 import { useActivities } from "@/hooks/useActivities";
-import { ActivityRow } from "@/components/feed/ActivityRow";
 import { ActivityList } from "@/components/feed/ActivityList";
 
 export default function Feed() {

@@ -1,4 +1,3 @@
-import React from "react";
 import { View, Text } from "react-native";
 import { ActivityRow } from "@/components/feed/ActivityRow";
 import { useActivities } from "@/hooks/useActivities";
