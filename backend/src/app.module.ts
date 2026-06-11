@@ -15,7 +15,6 @@ import { AuthModule } from './auth/auth.module';
 import { Auth } from './auth/auth.entity';
 import { FollowsModule } from './follows/follows.module';
 import { Follow } from './follows/follow.entity';
-import { ActivityResolver } from './activity/activity.resolver';
 import { ActivityModule } from './activity/activity.module';
 import { Activity } from './activity/activity.entity';
 import { Like } from './likes/like.entity';
@@ -102,7 +101,6 @@ const databaseConfigLogger = new Logger('DatabaseConfig');
     CommentsModule,
   ],
   providers: [
-    ActivityResolver,
     {
       provide: APP_GUARD,
       useClass: GqlThrottlerGuard,
