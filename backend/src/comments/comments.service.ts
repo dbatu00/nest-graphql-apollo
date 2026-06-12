@@ -120,12 +120,12 @@ export class CommentsService {
     async likeComment(userId: number, commentId: number): Promise<boolean> {
         try {
             return await this.commentsRepo.manager.transaction(async manager => {
-                const user = await manager.findOne(User, { where: { id: userId } });
+                const userExists = await manager.exists(User, { where: { id: userId } });
                 const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const post = await manager.findOne(Post, { where: { id: comment?.postId } });
+                const postExists = await manager.exists(Post, { where: { id: comment?.postId } });
 
-                if (!user) throw new NotFoundException('User not found');
-                if (!post) throw new NotFoundException('Post not found');
+                if (!userExists) throw new NotFoundException('User not found');
+                if (!postExists) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.like(
                     userId,
@@ -140,8 +140,8 @@ export class CommentsService {
                 await this.activityService.logActivity(
                     {
                         type: 'like',
-                        actor: user,
-                        targetPost: post,
+                        actor: { id: userId } as User,
+                        targetPost: { id: comment.postId } as Post,
                         targetComment: comment,
                         shouldBeActive: true,
                     },
@@ -163,12 +163,12 @@ export class CommentsService {
     async unlikeComment(userId: number, commentId: number): Promise<boolean> {
         try {
             return await this.commentsRepo.manager.transaction(async manager => {
-                const user = await manager.findOne(User, { where: { id: userId } });
+                const userExists = await manager.exists(User, { where: { id: userId } });
                 const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const post = await manager.findOne(Post, { where: { id: comment?.postId } });
+                const postExists = await manager.exists(Post, { where: { id: comment?.postId } });
 
-                if (!user) throw new NotFoundException('User not found');
-                if (!post) throw new NotFoundException('Post not found');
+                if (!userExists) throw new NotFoundException('User not found');
+                if (!postExists) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.unlike(
                     userId,
@@ -183,8 +183,8 @@ export class CommentsService {
                 await this.activityService.logActivity(
                     {
                         type: 'like',
-                        actor: user,
-                        targetPost: post,
+                        actor: { id: userId } as User,
+                        targetPost: { id: comment.postId } as Post,
                         targetComment: comment,
                         shouldBeActive: false,
                     },

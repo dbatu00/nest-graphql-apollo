@@ -156,13 +156,13 @@ export class PostsService {
     async likePost(userId: number, postId: number): Promise<boolean> {
         try {
             return await this.postsRepo.manager.transaction(async manager => {
-                const user = await manager.findOne(User, { where: { id: userId } });
+                const userExists = await manager.exists(User, { where: { id: userId } });
                 // Lock the post row so like/unlike cannot race with post deletion inside
                 // another transaction; this keeps target existence stable for the like
                 // write and its paired activity write.
                 const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user'], 'Post not found');
 
-                if (!user) throw new NotFoundException('User not found');
+                if (!userExists) throw new NotFoundException('User not found');
 
                 const { changed } = await this.likesService.like(
                     userId,
@@ -177,7 +177,7 @@ export class PostsService {
                 await this.activityService.logActivity(
                     {
                         type: 'like',
-                        actor: user,
+                        actor: { id: userId } as User,
                         targetPost: post,
                         shouldBeActive: true,
                     },
@@ -196,12 +196,12 @@ export class PostsService {
     async unlikePost(userId: number, postId: number): Promise<boolean> {
         try {
             return await this.postsRepo.manager.transaction(async manager => {
-                const user = await manager.findOne(User, { where: { id: userId } });
+                const userExists = await manager.exists(User, { where: { id: userId } });
                 // Same lock rationale as likePost: keep the post stable while the unlike
                 // write and activity update run in this transaction.
                 const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user'], 'Post not found');
 
-                if (!user) throw new NotFoundException('User not found');
+                if (!userExists) throw new NotFoundException('User not found');
 
                 const { changed } = await this.likesService.unlike(
                     userId,
@@ -216,7 +216,7 @@ export class PostsService {
                 await this.activityService.logActivity(
                     {
                         type: 'like',
-                        actor: user,
+                        actor: { id: userId } as User,
                         targetPost: post,
                         shouldBeActive: false,
                     },

@@ -363,6 +363,7 @@ const post = await lockEntityByIdOrThrow(manager, Post, 'post', postId, ['user']
 - Concurrent calls on the same transaction path reduce clarity and can make failure/locking behavior harder to reason about.
 - Readability and deterministic transaction flow are more valuable than a theoretical micro-optimization in this path.
 
+
 ## 2026-06-06 — Shared module boundary: manager-required writes
 
 Decision:
@@ -376,3 +377,47 @@ Reasoning:
 - These modules are shared by many current/future domains (posts/comments/follows and potential songs/pages/books).
 - Caller-owned transactions keep domain orchestration in feature services while shared modules stay predictable and reusable.
 - This boundary reduces hidden write side effects and makes transaction scope explicit at call sites.
+
+
+
+## 2026-06-12 — `findOne` vs `select` in `resendVerification`
+
+**Question:** Should `resendVerification` use `findOne({ select: ['id', 'email', 'username', 'emailVerified'] })` instead of a bare `findOne` to fetch fewer columns?
+
+**Decision:** Keep as-is (bare `findOne`).
+
+**Reasoning:**
+
+- `issueVerificationTokenAndSendEmail` accepts a full `User` — using `select` would require an unsafe type cast (`Partial<User>` → `User`), weakening type safety.
+- PK lookup by `id` is already fast (`SELECT *` vs `SELECT 4 cols` makes no measurable difference for a single-row indexed query).
+- The network round-trip to the DB dominates the latency, not column projection.
+- Idiomatic NestJS/TypeORM code uses `findOne` without `select` — adding it would raise unnecessary questions for future readers.
+- Optimize on evidence: if profiling ever shows this endpoint as a bottleneck, the `select` is trivial to add then.
+
+**Related context (from systems engineering perspective):**
+
+In a low-level systems context (C/Rust, millions of req/s), trimming the projection would be worth it — fewer bytes over the wire, less deserialization overhead, potential index-only scans. But NestJS/TypeORM/PostgreSQL on a typical web backend operates in a different performance regime where the ORM overhead and network hop dwarf the savings.
+
+## 2026-06-12 — Tiny thing: `select: { id: true }` vs `exists` in `getLikeMeta`
+
+Came across this in `LikesService.getLikeMeta`:
+
+```ts
+const likedByMePromise =
+  userId !== undefined
+    ? repo.findOne({
+        where: { targetType, targetId, userId, active: true },
+        select: { id: true },
+      })
+    : Promise.resolve(null);
+```
+
+`select: { id: true }` is a lightweight existence check already — it only fetches one column. But the intent is purely boolean ("did I like this?"), and `repo.exists(...)` would express that more directly:
+
+```ts
+repo.exists({ where: { targetType, targetId, userId, active: true } })
+```
+
+Rather than "give me a row but only the id field," it says "I only want to know if this row exists."
+
+**Decision:** later

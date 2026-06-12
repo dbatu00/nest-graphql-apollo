@@ -90,14 +90,14 @@ export class AuthService {
 
         const normalizedEmail = this.normalizeEmail(email);
 
-        const [existingUsername, existingEmail] = await Promise.all([
-            this.userRepo.findOne({ where: { username } }),
-            this.userRepo.findOne({ where: { email: normalizedEmail } })
+        const [usernameExists, emailExists] = await Promise.all([
+            this.userRepo.exists({ where: { username } }),
+            this.userRepo.exists({ where: { email: normalizedEmail } })
         ]);
 
-        if (existingUsername && existingEmail) throw new BadRequestException("Username and email already taken");
-        if (existingUsername) throw new BadRequestException("Username already taken");
-        if (existingEmail) throw new BadRequestException("Email already taken");
+        if (usernameExists && emailExists) throw new BadRequestException("Username and email already taken");
+        if (usernameExists) throw new BadRequestException("Username already taken");
+        if (emailExists) throw new BadRequestException("Email already taken");
 
         const passwordHash = await argon2.hash(password);
 
@@ -307,8 +307,7 @@ export class AuthService {
      */
     async isEmailUsed(email: string) {
         const normalizedEmail = this.normalizeEmail(email);
-        const user = await this.userRepo.findOne({ where: { email: normalizedEmail } });
-        return !!user;
+        return this.userRepo.exists({ where: { email: normalizedEmail } });
     }
 
     //------------------------------------------------

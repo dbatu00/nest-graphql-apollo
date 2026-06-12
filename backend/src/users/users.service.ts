@@ -23,15 +23,7 @@ export class UsersService {
   }
 
   async findByUsername(username: string) {
-    return this.userRepo.findOne({
-      where: { username },
-      relations: ["posts"],
-      order: {
-        posts: {
-          createdAt: "DESC",
-        },
-      },
-    });
+    return this.userRepo.findOne({ where: { username } });
   }
 
   async isFollowing(followerId: number, followingId: number): Promise<boolean> {
@@ -40,7 +32,7 @@ export class UsersService {
         follower: { id: followerId },
         following: { id: followingId },
       },
-      select: { id: true }, // important: keeps query cheap
+      select: { id: true }, // selecting only id keeps query cheap
     });
 
     return !!follow;

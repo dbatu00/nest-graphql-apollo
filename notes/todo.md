@@ -33,11 +33,8 @@ This file tracks only open work. Completed items are intentionally removed.
 
 ## P2 — API & Service Cleanup
 
-- Optimize `likePost` / `unlikePost` / `likeComment` / `unlikeComment`: replace `.findOne()` with `.exists()` for user/post/comment validation (cheaper query, same validation result).
-- Remove ActivityResolver from root module providers (already in ActivityModule). Keep APP_GUARD there — global guards belong at root, but resolvers belong in their feature modules.
 - Replace loose `types?: string[]` feed params with a shared `ActivityType[]` union/enum across hook + GraphQL client boundaries.
 - Revisit followers-with-follow-state return shape naming/contract.
-- Decouple user profile lookup from post ordering concerns.
 - Remove redundant reads and unneeded defensive checks where contracts are already strict.
 - Re-evaluate whether some computed fields should be client-derived.
 
