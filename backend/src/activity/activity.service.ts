@@ -4,7 +4,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, EntityManager } from "typeorm";
 
 import { Activity } from "./activity.entity";
-import { ActivityType } from "./activity.constants";
+import { ACTIVITY_TYPE, ActivityType } from "./activity.constants";
 import { User } from "src/users/user.entity";
 import { Post } from "src/posts/post.entity";
 import { Comment } from "../comments/comment.entity";
@@ -122,29 +122,38 @@ export class ActivityService {
         }
     }
 
-    //comment-likes are not shown in feed so they are not read here
-    async getActivityFeed(username?: string, types?: ActivityType[], limit = 50) {
+
+    async getActivityFeed(username: string | undefined, types: ActivityType[], limit = 50) {
+        if (types.length === 0) throw new Error('at least one activity type is required');
+
         try {
             const safeLimit = Math.min(Math.max(limit, 1), 100);
             const qb = this.activityRepo
                 .createQueryBuilder('a')
-                .leftJoinAndSelect('a.actor', 'actor')
-                .leftJoinAndSelect('a.targetPost', 'targetPost')
-                .leftJoinAndSelect('targetPost.user', 'targetPostUser')
-                .leftJoinAndSelect('a.targetUser', 'targetUser')
-                // Follow entries are only shown when currently active.
-                .where('(a.type != :followType OR a.active = true)', { followType: 'follow' })
-                // Like entries are only shown when currently active and only for post likes (not comment likes).
-                .andWhere('(a.type != :likeType OR (a.active = true AND a.targetCommentId IS NULL))', { likeType: 'like' })
+                .leftJoinAndSelect('a.actor', 'actor')                   // activity.actorId → users.id (who did the action)
+                .leftJoinAndSelect('a.targetPost', 'targetPost')         // activity.targetPostId → posts.id (the post acted on)
+                .leftJoinAndSelect('targetPost.user', 'targetPostOwner') // posts.userId → users.id (owner of that post, not the actor)
+                .leftJoinAndSelect('a.targetUser', 'targetUser')         // activity.targetUserId → users.id (e.g. follow target)
+                /*
+                 * Feed visibility rules:
+                 * 1. Hard whitelist: only feed-relevant types are ever returned.
+                 * 2. active=false means the action was undone (unfollow, unlike) — hide it.
+                 * 3. Comment-likes are tracked in activity but never shown in the feed;
+                 *    post-likes are shown. Distinguish by targetCommentId being NULL.
+                 *    Note: type='comment' also has targetCommentId set, so the filter
+                 *    is scoped to type='like' only to avoid hiding comment activity.
+                 */
+                .where('a.type IN (:...feedTypes)', {
+                    feedTypes: [ACTIVITY_TYPE.POST, ACTIVITY_TYPE.FOLLOW, ACTIVITY_TYPE.LIKE, ACTIVITY_TYPE.SHARE, ACTIVITY_TYPE.COMMENT],
+                })
+                .andWhere('a.active = true')
+                .andWhere('(a.type != :likeType OR a.targetCommentId IS NULL)', { likeType: ACTIVITY_TYPE.LIKE }) // don't show comment-likes
+                .andWhere('a.type IN (:...types)', { types })
                 .orderBy('a.updatedAt', 'DESC')
                 .take(safeLimit);
 
-            if (types && types.length > 0) {
-                qb.andWhere('a.type IN (:...types)', { types });
-            }
-
             if (username) {
-                qb.andWhere('actor.username = :username', { username });
+                qb.andWhere('actor.username = :username', { username }); // narrow feed to a single user's actions
             }
 
             return qb.getMany();

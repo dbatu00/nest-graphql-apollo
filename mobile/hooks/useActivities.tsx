@@ -25,10 +25,10 @@ import {
 
 type Params = {
   username?: string;
-  types?: string[];
+  types: string[];
 };
 
-export function useActivities(params: Params = {}) {
+export function useActivities(params: Params) {
   const { username, types } = params;
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -150,7 +150,7 @@ export function useActivities(params: Params = {}) {
           })
           .filter(a => {
             // If we are in likes-only view and user unlikes → remove activity
-            if (types?.includes("like") && currentlyLiked) {
+            if (types.includes("like") && currentlyLiked) {
               return a.targetPost?.id !== postId;
             }
             return true;

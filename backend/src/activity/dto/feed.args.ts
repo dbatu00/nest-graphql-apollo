@@ -11,10 +11,9 @@ export class FeedArgs {
     @MinLength(1)
     username?: string;
 
-    @Field(() => [String], { nullable: true })
-    @IsOptional()
+    @Field(() => [String])
     @IsArray()
     @IsString({ each: true })
     @IsIn(Object.values(ACTIVITY_TYPE), { each: true })
-    types?: ActivityType[];
+    types: ActivityType[];
 }

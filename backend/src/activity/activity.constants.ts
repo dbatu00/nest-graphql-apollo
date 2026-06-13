@@ -4,7 +4,7 @@ export const ACTIVITY_TYPE = {
     POST: "post",
     FOLLOW: "follow",
     LIKE: "like",
-    SHARE: "share",
+    SHARE: "share", //later
     COMMENT: "comment",
 } as const;
 

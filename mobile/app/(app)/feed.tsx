@@ -11,7 +11,7 @@ import { useActivities } from "@/hooks/useActivities";
 import { ActivityList } from "@/components/feed/ActivityList";
 
 export default function Feed() {
-  const feed = useActivities();
+  const feed = useActivities({ types: ["post", "like", "follow", "comment"] });
 
   const [content, setContent] = useState("");
 
