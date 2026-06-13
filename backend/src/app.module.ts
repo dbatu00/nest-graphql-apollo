@@ -33,7 +33,7 @@ const databaseConfigLogger = new Logger('DatabaseConfig');
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      validate: validateEnvironment,
+      validate: validateEnvironment, //hook validateEnvironment() from environment.ts
     }),
     GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,

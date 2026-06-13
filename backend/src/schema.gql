@@ -71,11 +71,11 @@ type FollowerView {
 }
 
 type Query {
-  feed(username: String, types: [String!]): [Activity!]!
   userByUsername(username: String!): User
   posts: [Post!]!
   likedPosts(username: String!): [Post!]!
   post(id: Int!): Post!
+  feed(username: String, types: [String!]): [Activity!]!
   comment(id: Int!): Comment!
   me: User!
   isEmailUsed(email: String!): Boolean!

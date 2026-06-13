@@ -1,3 +1,5 @@
+//validate, normalize, return config values as a typed object
+
 type RawEnv = Record<string, unknown>;
 
 function asString(value: unknown): string | undefined {
@@ -153,6 +155,7 @@ function asEmail(value: unknown, fallback?: string): string {
     return raw;
 }
 
+//returnsa spread of the original config with validated/normalized values overlaid
 export function validateEnvironment(config: RawEnv): RawEnv {
     const nodeEnv = asString(config.NODE_ENV) ?? 'development';
 
