@@ -6,18 +6,6 @@ This file tracks only open work. Completed items are intentionally removed.
 
 # P0 — Critical Fixes (Correctness + Data Integrity + Config)
 
-- Fix follow-state mapping bug:
-  - `getgetProfileFollowersView` / `getgetProfileFollowingView`
-  - `getRawAndEntities()` is not correctly zipped back into entities
-  - Risk: `followedByMe` desync when raw/entities lengths diverge due to joins
-
-- Fix activity corruption in `_executeLogActivity`:
-  - Falls through to generic `repo.save()` when:
-    - `like` has no target post/comment
-    - `follow` has no target user
-  - Produces invalid activity rows with missing targets
-  - Add early validation guards
-
 - DB indexing
 ---
 
