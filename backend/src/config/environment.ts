@@ -210,10 +210,11 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         DB_NAME:
             asString(config.DB_NAME) ?? 'nest_graphql',
 
-        // Auto-sync remains development-friendly but is disabled by default in production.
+        // Schema sync is only safe in local development.
+        // Disabled by default in test and production — set explicitly to override.
         DB_SYNCHRONIZE: asBoolean(
             config.DB_SYNCHRONIZE,
-            nodeEnv !== 'production',
+            nodeEnv === 'development',
         ),
 
         // Comma-separated env value supports per-environment allowlists without code edits.

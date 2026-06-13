@@ -6,9 +6,6 @@ This file tracks only open work. Completed items are intentionally removed.
 
 # P0 — Critical Fixes (Correctness + Data Integrity + Config)
 
-- Add stricter environment validation for required secrets and URLs.
-- Disable schema sync outside local development.
-
 - Fix follow-state mapping bug:
   - `getFollowersWithFollowState` / `getFollowingWithFollowState`
   - `getRawAndEntities()` is not correctly zipped back into entities
