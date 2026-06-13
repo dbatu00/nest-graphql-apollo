@@ -1,4 +1,5 @@
 import { getToken } from "@/utils/token";
+import { env } from "@/utils/env";
 
 type GraphQLErrorItem = {
   message?: string;
@@ -86,11 +87,7 @@ export async function graphqlFetch<T>(
   query: string,
   variables: Record<string, unknown> = {}
 ): Promise<T> {
-  const url = process.env.EXPO_PUBLIC_API_URL;
-
-  if (!url) {
-    throw new Error("EXPO_PUBLIC_API_URL is not defined");
-  }
+  const url = env.API_URL;
 
   const token = await getToken();
 

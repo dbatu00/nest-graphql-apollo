@@ -52,7 +52,6 @@ describe('AuthService', () => {
                 EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: 86400,
                 EMAIL_VERIFICATION_RESEND_COOLDOWN_MS: 60000,
                 EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR: 5,
-                EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS: 5,
             };
             return defaults[key];
         });
@@ -622,7 +621,6 @@ describe('AuthService', () => {
                     EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: 86400,
                     EMAIL_VERIFICATION_RESEND_COOLDOWN_MS: 60000,
                     EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR: 5,
-                    EMAIL_VERIFICATION_RESEND_FREE_ATTEMPTS: 0,
                 };
                 return defaults[key];
             });
