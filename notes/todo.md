@@ -7,6 +7,7 @@ This file tracks only open work. Completed items are intentionally removed.
 # P0 — Critical Fixes (Correctness + Data Integrity + Config)
 
 - DB indexing
+
 ---
 
 # P1 — Core System Consistency (Auth + Backend Rules)
@@ -42,8 +43,6 @@ This file tracks only open work. Completed items are intentionally removed.
 ## API / GraphQL
 
 - Replace `types?: string[]` with shared `ActivityType` enum
-- Revisit `followers-with-follow-state` contract (naming + design)
-  - unclear follow module behavior
 - Decide which computed fields should be client-derived
 - Remove redundant reads / defensive checks where contracts are strict
 
