@@ -5,6 +5,7 @@ import { Repository } from "typeorm";
 import { Follow } from "./follow.entity";
 import { User } from "../users/user.entity";
 import { ActivityService } from "src/activity/activity.service";
+import { FollowerView } from "./dto/follower-view.type";
 
 @Injectable()
 export class FollowsService {
@@ -149,63 +150,46 @@ export class FollowsService {
     // FOLLOWERS TAB (WITH followedByMe FOR VIEWER)
     // ==================================================
 
-    async getFollowersWithFollowState(
-        profileUsername: string,
-        viewerId: number,
-    ) {
-        const qb = this.userRepo
+    // WARNING: getRawAndEntities() aligns raw[] with entities[] by index.
+    // Any join that produces multiple rows per user (e.g. a many-to-many) will
+    // silently desync the two arrays. Keep every join strictly 1:1 with user rows.
+    async getProfileFollowersView(profileUsername: string, viewerId: number): Promise<FollowerView[]> {
+        const { entities, raw } = await this.userRepo
             .createQueryBuilder("u")
             .innerJoin(Follow, "f", "f.followerId = u.id")
             .innerJoin("users", "profile", "profile.id = f.followingId")
-            .leftJoin(
-                Follow,
-                "f2",
-                "f2.followerId = :viewerId AND f2.followingId = u.id",
-                { viewerId },
-            )
+            .leftJoin(Follow, "f2", "f2.followerId = :viewerId AND f2.followingId = u.id", { viewerId })
             .where("profile.username = :profileUsername", { profileUsername })
-            .select([
-                "u.id",
-                "u.username",
-                "u.displayName",
-            ])
-            .addSelect(
-                "CASE WHEN f2.id IS NULL THEN false ELSE true END",
-                "followedByMe",
-            );
+            .select(["u.id", "u.username", "u.displayName"])
+            .addSelect("CASE WHEN f2.id IS NULL THEN false ELSE true END", "followedByMe")
+            .getRawAndEntities();
 
-        return qb.getRawAndEntities();
+        return entities.map((u, i) => ({
+            user: u,
+            followedByMe: raw[i].followedByMe === true || raw[i].followedByMe === "true",
+        }));
     }
-
     // ==================================================
     // FOLLOWING TAB (WITH followedByMe FOR VIEWER)
     // ==================================================
 
-    async getFollowingWithFollowState(
-        profileUsername: string,
-        viewerId: number,
-    ) {
-        const qb = this.userRepo
+    // WARNING: getRawAndEntities() aligns raw[] with entities[] by index.
+    // Any join that produces multiple rows per user (e.g. a many-to-many) will
+    // silently desync the two arrays. Keep every join strictly 1:1 with user rows.
+    async getProfileFollowingView(profileUsername: string, viewerId: number): Promise<FollowerView[]> {
+        const { entities, raw } = await this.userRepo
             .createQueryBuilder("u")
             .innerJoin(Follow, "f", "f.followingId = u.id")
             .innerJoin("users", "profile", "profile.id = f.followerId")
-            .leftJoin(
-                Follow,
-                "f2",
-                "f2.followerId = :viewerId AND f2.followingId = u.id",
-                { viewerId },
-            )
+            .leftJoin(Follow, "f2", "f2.followerId = :viewerId AND f2.followingId = u.id", { viewerId })
             .where("profile.username = :profileUsername", { profileUsername })
-            .select([
-                "u.id",
-                "u.username",
-                "u.displayName",
-            ])
-            .addSelect(
-                "CASE WHEN f2.id IS NULL THEN false ELSE true END",
-                "followedByMe",
-            );
+            .select(["u.id", "u.username", "u.displayName"])
+            .addSelect("CASE WHEN f2.id IS NULL THEN false ELSE true END", "followedByMe")
+            .getRawAndEntities();
 
-        return qb.getRawAndEntities();
+        return entities.map((u, i) => ({
+            user: u,
+            followedByMe: raw[i].followedByMe === true || raw[i].followedByMe === "true",
+        }));
     }
 }

@@ -7,7 +7,7 @@ This file tracks only open work. Completed items are intentionally removed.
 # P0 — Critical Fixes (Correctness + Data Integrity + Config)
 
 - Fix follow-state mapping bug:
-  - `getFollowersWithFollowState` / `getFollowingWithFollowState`
+  - `getgetProfileFollowersView` / `getgetProfileFollowingView`
   - `getRawAndEntities()` is not correctly zipped back into entities
   - Risk: `followedByMe` desync when raw/entities lengths diverge due to joins
 
@@ -18,6 +18,7 @@ This file tracks only open work. Completed items are intentionally removed.
   - Produces invalid activity rows with missing targets
   - Add early validation guards
 
+- DB indexing
 ---
 
 # P1 — Core System Consistency (Auth + Backend Rules)

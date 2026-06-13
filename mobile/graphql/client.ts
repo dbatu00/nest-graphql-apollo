@@ -280,22 +280,22 @@ export async function fetchFollowing(username: string): Promise<FollowUser[]> {
     return data.following ?? [];
 }
 
-export async function fetchFollowersWithFollowState(username: string): Promise<FollowStateRow[]> {
-    const data = await graphqlFetch<{ followersWithFollowState: FollowStateRow[] }>(
+export async function fetchgetProfileFollowersView(username: string): Promise<FollowStateRow[]> {
+    const data = await graphqlFetch<{ getProfileFollowersView: FollowStateRow[] }>(
         FOLLOWERS_WITH_FOLLOW_STATE_QUERY,
         { username }
     );
 
-    return data.followersWithFollowState ?? [];
+    return data.getProfileFollowersView ?? [];
 }
 
-export async function fetchFollowingWithFollowState(username: string): Promise<FollowStateRow[]> {
-    const data = await graphqlFetch<{ followingWithFollowState: FollowStateRow[] }>(
+export async function fetchgetProfileFollowingView(username: string): Promise<FollowStateRow[]> {
+    const data = await graphqlFetch<{ getProfileFollowingView: FollowStateRow[] }>(
         FOLLOWING_WITH_FOLLOW_STATE_QUERY,
         { username }
     );
 
-    return data.followingWithFollowState ?? [];
+    return data.getProfileFollowingView ?? [];
 }
 
 export async function fetchLikedPosts(username: string): Promise<Post[]> {

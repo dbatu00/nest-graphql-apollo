@@ -46,48 +46,15 @@ export class FollowsResolver {
             .then(rows => rows.map(r => r.following));
     }
 
-
-
     @UseGuards(GqlAuthGuard)
     @Query(() => [FollowerView])
-    async followersWithFollowState(
-        @Args() args: UsernameArgs,
-        @CurrentUser() user: User,
-    ) {
-        const { entities, raw } =
-            await this.followsService.getFollowersWithFollowState(
-                args.username,
-                user.id,
-            );
-
-        // Raw SQL CASE can arrive as boolean or string depending on driver/config.
-        return entities.map((u, i) => ({
-            user: u,
-            followedByMe:
-                raw[i].followedByMe === true ||
-                raw[i].followedByMe === "true",
-        }));
+    async getProfileFollowersView(@Args() args: UsernameArgs, @CurrentUser() user: User) {
+        return this.followsService.getProfileFollowersView(args.username, user.id);
     }
 
     @UseGuards(GqlAuthGuard)
     @Query(() => [FollowerView])
-    async followingWithFollowState(
-        @Args() args: UsernameArgs,
-        @CurrentUser() user: User,
-    ) {
-        const { entities, raw } =
-            await this.followsService.getFollowingWithFollowState(
-                args.username,
-                user.id
-            );
-
-        // Normalize both boolean and string representations from raw projection.
-        return entities.map((u, i) => ({
-            user: u,
-            followedByMe: raw[i].followedByMe === true || raw[i].followedByMe === "true",
-        }));
+    async getProfileFollowingView(@Args() args: UsernameArgs, @CurrentUser() user: User) {
+        return this.followsService.getProfileFollowingView(args.username, user.id);
     }
-
-
-
 }

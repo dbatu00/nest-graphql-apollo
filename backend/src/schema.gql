@@ -81,8 +81,8 @@ type Query {
   isEmailUsed(email: String!): Boolean!
   followers(username: String!): [User!]!
   following(username: String!): [User!]!
-  followersWithFollowState(username: String!): [FollowerView!]!
-  followingWithFollowState(username: String!): [FollowerView!]!
+  getProfileFollowersView(username: String!): [FollowerView!]!
+  getProfileFollowingView(username: String!): [FollowerView!]!
 }
 
 type Mutation {

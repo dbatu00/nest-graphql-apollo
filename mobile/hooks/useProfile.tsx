@@ -2,8 +2,8 @@ import { useEffect, useState, useCallback } from "react";
 import { Post } from "@/types/Post";
 import { getCurrentUser } from "@/utils/currentUser";
 import {
-  fetchFollowersWithFollowState,
-  fetchFollowingWithFollowState,
+  fetchgetProfileFollowersView,
+  fetchgetProfileFollowingView,
   fetchLikedPosts as fetchLikedPostsQuery,
   fetchUserProfile,
   followUser,
@@ -109,7 +109,7 @@ export function useProfile(username: string) {
     if (!username) return;
 
     try {
-      const rows = await fetchFollowersWithFollowState(username);
+      const rows = await fetchgetProfileFollowersView(username);
 
       setFollowers(
         rows.map(f => ({
@@ -127,7 +127,7 @@ export function useProfile(username: string) {
     if (!username) return;
 
     try {
-      const rows = await fetchFollowingWithFollowState(username);
+      const rows = await fetchgetProfileFollowingView(username);
 
       setFollowing(
         rows.map(f => ({

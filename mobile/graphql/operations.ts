@@ -93,8 +93,8 @@ export const LIKED_POSTS_QUERY = `
 `;
 
 export const FOLLOWERS_WITH_FOLLOW_STATE_QUERY = `
-  query FollowersWithFollowState($username: String!) {
-    followersWithFollowState(username: $username) {
+  query getProfileFollowersView($username: String!) {
+    getProfileFollowersView(username: $username) {
       followedByMe
       user {
         id
@@ -107,8 +107,8 @@ export const FOLLOWERS_WITH_FOLLOW_STATE_QUERY = `
 `;
 
 export const FOLLOWING_WITH_FOLLOW_STATE_QUERY = `
-  query FollowingWithFollowState($username: String!) {
-    followingWithFollowState(username: $username) {
+  query getProfileFollowingView($username: String!) {
+    getProfileFollowingView(username: $username) {
       followedByMe
       user {
         id
