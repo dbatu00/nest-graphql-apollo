@@ -4,6 +4,7 @@ import {
     Column,
     ManyToOne,
     CreateDateColumn,
+    UpdateDateColumn,
     Index,
 } from "typeorm";
 import { User } from "../../users/user.entity";
@@ -33,4 +34,7 @@ export class VerificationToken {
 
     @CreateDateColumn()
     createdAt: Date;
+
+    @UpdateDateColumn()
+    updatedAt: Date;
 }

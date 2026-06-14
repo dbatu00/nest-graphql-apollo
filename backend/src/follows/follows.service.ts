@@ -136,6 +136,7 @@ export class FollowsService {
         return this.followRepo.find({
             where: { following: { username } },
             relations: ["follower"],
+            order: { updatedAt: 'DESC' },
         });
     }
 
@@ -143,6 +144,7 @@ export class FollowsService {
         return this.followRepo.find({
             where: { follower: { username } },
             relations: ["following"],
+            order: { updatedAt: 'DESC' },
         });
     }
 

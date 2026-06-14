@@ -6,11 +6,13 @@ import {
     OneToOne,
     JoinColumn,
     CreateDateColumn,
-    UpdateDateColumn
+    UpdateDateColumn,
+    Index,
 } from "typeorm";
 import { User } from "../users/user.entity";
 
 @Entity('auth')
+@Index('IDX_auth_user_updated', ['user', 'updatedAt'])
 export class Auth {
     @PrimaryGeneratedColumn()
     id: number;
