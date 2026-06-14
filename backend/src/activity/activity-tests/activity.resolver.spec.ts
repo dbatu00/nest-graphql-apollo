@@ -14,7 +14,7 @@ describe('ActivityResolver', () => {
     });
 
     it('throws when authenticated user is missing', async () => {
-        expect(() => resolver.feed({}, undefined)).toThrow(UnauthorizedException);
+        expect(() => resolver.feed({ types: [] } as any, undefined)).toThrow(UnauthorizedException);
         expect(activityService.getActivityFeed).not.toHaveBeenCalled();
     });
 
@@ -33,9 +33,9 @@ describe('ActivityResolver', () => {
         activityService.getActivityFeed.mockResolvedValue(rows);
 
         await expect(
-            resolver.feed({}, { id: 1 } as any),
+            resolver.feed({ types: ['post'] } as any, { id: 1 } as any),
         ).resolves.toBe(rows as any);
-        expect(activityService.getActivityFeed).toHaveBeenCalledWith(undefined, undefined);
+        expect(activityService.getActivityFeed).toHaveBeenCalledWith(undefined, ['post']);
     });
 
     it('passes empty types array through unchanged', async () => {

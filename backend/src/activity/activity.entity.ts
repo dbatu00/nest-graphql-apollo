@@ -26,6 +26,9 @@ import { Comment } from "../comments/comment.entity";
     unique: true,
     where: `"type" = 'follow'`,
 })
+@Index('IDX_activity_feed', ['type', 'active', 'updatedAt'])
+// updatedAt is ASC here; PostgreSQL will scan backwards for ORDER BY DESC — acceptable
+
 export class Activity {
     @PrimaryGeneratedColumn()
     id: number;
