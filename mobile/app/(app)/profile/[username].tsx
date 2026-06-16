@@ -23,7 +23,6 @@ import { fetchFollowers, fetchFollowing, fetchUserProfileMeta } from "@/graphql/
 type Tab =
   | "posts"
   | "likes"
-  | "activity"
   | "followers"
   | "following";
 
@@ -52,19 +51,15 @@ export default function UsernameScreen() {
 
   /* ---------------- ACTIVITY TYPES ---------------- */
 
-  const types = useMemo(() => {
+  const type = useMemo(() => {
     if (tab === "posts") return ["post"];
     if (tab === "likes") return ["like"];
-    if (tab === "activity") return undefined;
-    return undefined;
+    return [];
   }, [tab]);
 
   const feed = useActivities({
     username,
-    types:
-      tab === "followers" || tab === "following"
-        ? undefined
-        : types,
+    types: type,
   });
 
   /* ---------------- FOLLOW LIST STATE ---------------- */
@@ -228,7 +223,7 @@ export default function UsernameScreen() {
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <View style={styles.tabsRow}>
-          {(["posts", "likes", "activity", "followers", "following"] as Tab[]).map(t => (
+          {(["posts", "likes", "followers", "following"] as Tab[]).map(t => (
             <TouchableOpacity
               key={t}
               onPress={() => setTab(t)}

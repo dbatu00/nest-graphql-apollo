@@ -67,6 +67,10 @@ This file tracks only open work. Completed items are intentionally removed.
   - disable save when unchanged
 - Add verify-email escape/back flow
 - Hide self-activity except posts
+- on login/signup show all errors/missing fields at once and highlight
+- audit all screens for behaviour when window is squeezed
+- handle token expiration gracefully
+- on empty profile tabs : "nothing to show yet"
 
 ---
 
