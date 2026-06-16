@@ -47,26 +47,21 @@ export default function UsernameScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  const [tab, setTab] = useState<Tab>("posts");
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/(auth)/login");
+  };
 
-  /* ---------------- ACTIVITY TYPES ---------------- */
 
-  const type = useMemo(() => {
-    if (tab === "posts") return ["post"];
-    if (tab === "likes") return ["like"];
-    return [];
-  }, [tab]);
+  /* ---------------- PROFILE HYDRATION ---------------- */
 
-  const feed = useActivities({
-    username,
-    types: type,
-  });
-
-  /* ---------------- FOLLOW LIST STATE ---------------- */
-
-  const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
-  const [followLoading, setFollowLoading] = useState(false);
   const [profileMeta, setProfileMeta] = useState<ProfileMeta | null>(null);
+
+  const profileDisplayName = profileMeta?.displayName?.trim() || username;
+  const profileBio = profileMeta?.bio?.trim();
+  const profileAvatarUrl = profileMeta?.avatarUrl?.trim();
+  const profileCoverUrl = profileMeta?.coverUrl?.trim();
+  const isOwnProfile = user?.username === username;
 
   useEffect(() => {
     if (!username) {
@@ -89,6 +84,28 @@ export default function UsernameScreen() {
     loadProfileMeta();
     return () => { cancelled = true; };
   }, [username]);
+
+
+  /* ---------------- ACTIVITY TYPES ---------------- */
+
+  const [tab, setTab] = useState<Tab>("posts"); //default is posts tab
+
+  const type = useMemo(() => {
+    if (tab === "posts") return ["post"];
+    if (tab === "likes") return ["like"];
+    return [];
+  }, [tab]);
+
+  const feed = useActivities({
+    username,
+    types: type,
+  });
+
+
+  /* ---------------- FOLLOW STUFF ---------------- */
+
+  const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     if (tab !== "followers" && tab !== "following") return;
@@ -124,16 +141,6 @@ export default function UsernameScreen() {
     await feed.toggleFollowOptimistic(targetUsername, shouldFollow);
   };
 
-  const profileDisplayName = profileMeta?.displayName?.trim() || username;
-  const profileBio = profileMeta?.bio?.trim();
-  const profileAvatarUrl = profileMeta?.avatarUrl?.trim();
-  const profileCoverUrl = profileMeta?.coverUrl?.trim();
-  const isOwnProfile = user?.username === username;
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/(auth)/login");
-  };
 
   /* ---------------- RENDER ---------------- */
 

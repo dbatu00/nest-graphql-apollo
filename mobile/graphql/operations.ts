@@ -64,11 +64,6 @@ export const USER_PROFILE_QUERY = `
       coverUrl
       followersCount
       followingCount
-      posts {
-        id
-        content
-        createdAt
-      }
     }
   }
 `;
