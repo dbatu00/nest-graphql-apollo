@@ -71,7 +71,7 @@ This file tracks only open work. Completed items are intentionally removed.
 - audit all screens for behaviour when window is squeezed
 - handle token expiration gracefully
 - on empty profile tabs : "nothing to show yet"
-
+- audit settings.tsx
 ---
 
 # P3 — Architecture (Only if needed)
