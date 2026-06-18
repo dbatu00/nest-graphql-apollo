@@ -274,8 +274,11 @@ const CommentRow = ({
                       <TouchableOpacity
                         style={styles.commentOptionsMenuItem}
                         onPress={async () => {
-                          await onDeleteComment!(comment.id, postId);
-                          setOptionsOpen(false);
+                          try {
+                            await onDeleteComment?.(comment.id, postId);
+                          } finally {
+                            setOptionsOpen(false);
+                          }
                         }}
                       >
                         <MaterialCommunityIcons name="trash-can-outline" size={14} color={color.deleteRed} />

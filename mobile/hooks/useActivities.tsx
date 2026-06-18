@@ -194,8 +194,12 @@ export function useActivities(params: Params = {}) {
 
   const deleteCommentFromPost = useCallback(
     async (commentId: number, postId: number) => {
-      setActivities(prev =>
-        prev.map(a => {
+      let previousState: Activity[] | null = null;
+
+      setActivities(prev => {
+        previousState = prev;
+
+        return prev.map(a => {
           if (a.targetPost?.id !== postId) return a;
 
           return {
@@ -207,17 +211,21 @@ export function useActivities(params: Params = {}) {
               ),
             },
           };
-        })
-      );
+        });
+      });
 
       try {
         await deleteCommentMutation(commentId);
       } catch (err: unknown) {
         console.error("[useActivities] delete comment failed", err);
-        refresh();
+
+        // rollback instead of full refresh
+        if (previousState) {
+          setActivities(previousState);
+        }
       }
     },
-    [refresh]
+    []
   );
 
   /* ---------------- COMMENT LIKE ---------------- */
