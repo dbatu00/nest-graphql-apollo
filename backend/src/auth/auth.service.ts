@@ -177,15 +177,25 @@ export class AuthService {
 
     async verifyEmail(rawToken: string): Promise<User> {
         const tokenHash = this.hashToken(rawToken);
+
         const token = await this.tokenRepo.findOne({
             where: { tokenHash, type: "email_verification" },
-            relations: ["user"]
+            relations: ["user"],
         });
-        if (!token) throw new BadRequestException(VerifyEmailResult.INVALID_TOKEN);
-        if (token.consumedAt) throw new BadRequestException(VerifyEmailResult.TOKEN_ALREADY_USED);
-        if (token.expiresAt < new Date()) throw new BadRequestException(VerifyEmailResult.TOKEN_EXPIRED);
 
-        // Idempotency guard: if already verified (e.g. concurrent request), skip the write.
+        if (!token) {
+            throw new BadRequestException("Invalid or expired verification token");
+        }
+
+        if (token.consumedAt) {
+            throw new BadRequestException("Verification token has already been used");
+        }
+
+        if (token.expiresAt < new Date()) {
+            throw new BadRequestException("Verification token has expired");
+        }
+
+        // Idempotency guard
         if (token.user.emailVerified) {
             return token.user;
         }
