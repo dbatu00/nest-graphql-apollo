@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
 import { resendMyVerificationLink } from "@/graphql/client";
@@ -15,13 +15,21 @@ function sleep(ms: number) {
 
 export default function VerifyMail() {
   const { user, refreshAuth } = useAuth();
-  const resendSuccessMessage = "Verification link sent. Please check your email.";
+
+  const resendSuccessMessage =
+    "Verification link sent. Please check your email.";
+
   const [checking, setChecking] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
+  const mountedRef = useRef(true);
+  const refreshLockRef = useRef(false);
+
   useEffect(() => {
+    mountedRef.current = true;
+
     if (!user) {
       router.replace("/(auth)/login");
       return;
@@ -33,35 +41,56 @@ export default function VerifyMail() {
     }
 
     const intervalId = setInterval(() => {
-      void refreshAuth();
+      if (refreshLockRef.current) return;
+
+      refreshLockRef.current = true;
+      void refreshAuth().finally(() => {
+        refreshLockRef.current = false;
+      });
     }, 4000);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(intervalId);
+    };
   }, [user, refreshAuth]);
 
   const checkVerificationStatus = async () => {
     setError("");
     setInfo("");
     setChecking(true);
+
     const startTime = Date.now();
 
     try {
       const refreshedUser = await refreshAuth();
+
       const elapsedMs = Date.now() - startTime;
       if (elapsedMs < MIN_ACTION_MS) {
         await sleep(MIN_ACTION_MS - elapsedMs);
       }
+
+      if (!mountedRef.current) return;
 
       if (refreshedUser?.emailVerified) {
         router.replace("/(app)/feed");
         return;
       }
 
-      setInfo("Not verified yet. Open the email link first, then tap continue.");
+      setInfo(
+        "Not verified yet. Open the email link first, then tap continue."
+      );
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not check verification status");
+      if (!mountedRef.current) return;
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not check verification status"
+      );
     } finally {
-      setChecking(false);
+      if (mountedRef.current) {
+        setChecking(false);
+      }
     }
   };
 
@@ -69,6 +98,7 @@ export default function VerifyMail() {
     setError("");
     setInfo("");
     setResendLoading(true);
+
     const startTime = Date.now();
 
     try {
@@ -86,22 +116,56 @@ export default function VerifyMail() {
         await sleep(MIN_ACTION_MS - elapsed);
       }
 
+      if (!mountedRef.current) return;
+
       setInfo(messages[resendStatus] ?? "Unknown status");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not resend verification email");
+      if (!mountedRef.current) return;
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Could not resend verification email"
+      );
     } finally {
-      setResendLoading(false);
+      if (mountedRef.current) {
+        setResendLoading(false);
+      }
     }
   };
 
   return (
-    <View style={[commonStyles.container, commonStyles.pageGutter, { backgroundColor: "#f3f4f6", justifyContent: "center" }]}>
+    <View
+      style={[
+        commonStyles.container,
+        commonStyles.pageGutter,
+        { backgroundColor: "#f3f4f6", justifyContent: "center" },
+      ]}
+    >
       <View style={{ alignSelf: "center", width: "100%", maxWidth: 520 }}>
         <AppLogo subtitle="One more step" />
-        <Text style={{ fontSize: 42, fontWeight: "800", color: "#0f172a", marginBottom: 10 }}>Verify your email</Text>
 
-        <Text style={{ fontSize: 17, color: "#111827", marginBottom: 28, lineHeight: 24 }}>
-          Open the verification link we sent to your email. We’ll move you to feed once your account is verified.
+        <Text
+          style={{
+            fontSize: 42,
+            fontWeight: "800",
+            color: "#0f172a",
+            marginBottom: 10,
+          }}
+        >
+          Verify your email
+        </Text>
+
+        <Text
+          style={{
+            fontSize: 17,
+            color: "#111827",
+            marginBottom: 28,
+            lineHeight: 24,
+          }}
+        >
+          Open the verification link we sent to your email. We’ll move you to
+          feed once your account is verified.
         </Text>
 
         <Pressable
@@ -140,13 +204,23 @@ export default function VerifyMail() {
         </Pressable>
 
         {error ? (
-          <Text style={{ color: "#dc2626", marginTop: 12, textAlign: "center", fontSize: 16 }}>{error}</Text>
+          <Text
+            style={{
+              color: "#dc2626",
+              marginTop: 12,
+              textAlign: "center",
+              fontSize: 16,
+            }}
+          >
+            {error}
+          </Text>
         ) : null}
 
         {info ? (
           <Text
             style={{
-              color: info === resendSuccessMessage ? "#059669" : "#d97706",
+              color:
+                info === resendSuccessMessage ? "#059669" : "#d97706",
               marginTop: 12,
               textAlign: "center",
               fontSize: 16,
