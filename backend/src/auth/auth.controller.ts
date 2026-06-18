@@ -1,5 +1,12 @@
-import { BadRequestException, Controller, Get, Query, Res } from "@nestjs/common";
+import {
+    BadRequestException,
+    Controller,
+    Get,
+    Query,
+    Res,
+} from "@nestjs/common";
 import type { Response } from "express";
+
 import { AuthService } from "./auth.service";
 import { VerificationLinkResult } from "./verification/verification-link-result.enum";
 
@@ -7,45 +14,82 @@ import { VerificationLinkResult } from "./verification/verification-link-result.
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
-    // Email clients open a normal URL, so verification entrypoint is HTTP controller (not GraphQL mutation).
     @Get("verify-email")
     async verifyEmailFromLink(
         @Query("token") token: string,
         @Res() res: Response,
     ): Promise<void> {
-        if (!token?.trim()) {
+        const cleanToken = token?.trim();
+
+        if (!cleanToken) {
             throw new BadRequestException("Verification token is required");
         }
 
-        // Service returns enum result; controller maps it to user-facing HTML and status code.
-        const result: VerificationLinkResult = await this.authService.processVerificationLink(token);
+        const result =
+            await this.authService.processVerificationLink(cleanToken);
 
-        if (result === VerificationLinkResult.VERIFIED) {
-            res.status(200).type("html").send(this.renderHtmlPage("Email verified", "Your email has been verified. You can return to the app and log in."));
-            return;
+        const response = this.mapResult(result);
+
+        res
+            .status(response.status)
+            .type("html")
+            .send(this.renderHtmlPage(response.title, response.message));
+    }
+
+    private mapResult(result: VerificationLinkResult): {
+        status: number;
+        title: string;
+        message: string;
+    } {
+        switch (result) {
+            case VerificationLinkResult.VERIFIED:
+                return {
+                    status: 200,
+                    title: "Email verified",
+                    message:
+                        "Your email has been verified. You can return to the app and log in.",
+                };
+
+            case VerificationLinkResult.ALREADY_VERIFIED:
+                return {
+                    status: 200,
+                    title: "Email verified",
+                    message:
+                        "Your email was already verified. You can return to the app and log in.",
+                };
+
+            case VerificationLinkResult.EXPIRED_RESENT:
+                return {
+                    status: 400,
+                    title: "Link expired",
+                    message:
+                        "This verification link has expired. We sent a new verification email. Please check your inbox.",
+                };
+
+            case VerificationLinkResult.EXPIRED_THROTTLED:
+                return {
+                    status: 429,
+                    title: "Link expired",
+                    message:
+                        "This verification link has expired. Please wait briefly before trying again.",
+                };
+
+            case VerificationLinkResult.EXPIRED_DELIVERY_FAILED:
+                return {
+                    status: 503,
+                    title: "Link expired",
+                    message:
+                        "This verification link has expired, and we could not send a new verification email right now. Please try again shortly.",
+                };
+
+            default:
+                return {
+                    status: 400,
+                    title: "Verification failed",
+                    message:
+                        "This verification link is invalid or already used.",
+                };
         }
-
-        if (result === VerificationLinkResult.ALREADY_VERIFIED) {
-            res.status(200).type("html").send(this.renderHtmlPage("Email verified", "Your email was already verified. You can return to the app and log in."));
-            return;
-        }
-
-        if (result === VerificationLinkResult.EXPIRED_RESENT) {
-            res.status(400).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired. We sent a new verification email. Please check your inbox."));
-            return;
-        }
-
-        if (result === VerificationLinkResult.EXPIRED_THROTTLED) {
-            res.status(429).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired. Please wait briefly before trying again."));
-            return;
-        }
-
-        if (result === VerificationLinkResult.EXPIRED_DELIVERY_FAILED) {
-            res.status(503).type("html").send(this.renderHtmlPage("Link expired", "This verification link has expired, and we could not send a new verification email right now. Please try again shortly."));
-            return;
-        }
-
-        res.status(400).type("html").send(this.renderHtmlPage("Verification failed", "This verification link is invalid or already used."));
     }
 
     private renderHtmlPage(title: string, message: string): string {
@@ -54,20 +98,49 @@ export class AuthController {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${title}</title>
+  <title>${this.escapeHtml(title)}</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #f5f7fb; margin: 0; padding: 24px; }
-    .card { max-width: 480px; margin: 48px auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; }
-    h1 { margin: 0 0 12px; font-size: 22px; color: #111827; }
-    p { margin: 0; color: #374151; line-height: 1.5; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      margin: 0;
+      padding: 24px;
+    }
+    .card {
+      max-width: 480px;
+      margin: 48px auto;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 24px;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 22px;
+      color: #111827;
+    }
+    p {
+      margin: 0;
+      color: #374151;
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>${title}</h1>
-    <p>${message}</p>
+    <h1>${this.escapeHtml(title)}</h1>
+    <p>${this.escapeHtml(message)}</p>
   </div>
 </body>
 </html>`;
+    }
+
+    private escapeHtml(input: string): string {
+        return input
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
     }
 }
