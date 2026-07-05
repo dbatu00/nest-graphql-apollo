@@ -67,7 +67,7 @@ type Props = {
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
-  onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onTogglePostLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
   onToggleCommentLike?: (commentId: number, postId: number, currentlyLiked: boolean) => Promise<void>;
   onAddComment?: (postId: number, content: string) => Promise<void>;
 };
@@ -339,11 +339,11 @@ type PostCardProps = {
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
-  onToggleLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
+  onTogglePostLike?: (postId: number, currentlyLiked: boolean) => Promise<void>;
   onToggleCommentLike?: (commentId: number, postId: number, currentlyLiked: boolean) => Promise<void>;
   showCommentInput: boolean;
   // from hook
-  onOpenLikes: (postId: number) => void;
+  onOpenPostLikes: (postId: number) => void;
   onOpenCommentLikes: (commentId: number) => void;
   commentText: string;
   setCommentText: (t: string) => void;
@@ -359,10 +359,10 @@ const PostCard = ({
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
-  onToggleLike,
+  onTogglePostLike,
   onToggleCommentLike,
   showCommentInput,
-  onOpenLikes,
+  onOpenPostLikes,
   onOpenCommentLikes,
   commentText,
   setCommentText,
@@ -419,8 +419,8 @@ const PostCard = ({
       <Text style={styles.postContent}>{post.content}</Text>
 
       <View style={styles.engagementRow}>
-        {onToggleLike ? (
-          <TouchableOpacity style={styles.likeBtn} onPress={() => onToggleLike(post.id, likedByMe)}>
+        {onTogglePostLike ? (
+          <TouchableOpacity style={styles.likeBtn} onPress={() => onTogglePostLike(post.id, likedByMe)}>
             <MaterialCommunityIcons
               name={likedByMe ? "thumb-up" : "thumb-up-outline"}
               size={18}
@@ -433,7 +433,7 @@ const PostCard = ({
 
         {likesCount > 0 && (
           <Pressable
-            onPress={() => onOpenLikes(post.id)}
+            onPress={() => onOpenPostLikes(post.id)}
             style={({ hovered }) => [
               styles.likeCountBtn,
               hovered && styles.likeCountBtnHover,
@@ -563,7 +563,7 @@ export const ActivityRow = ({
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
-  onToggleLike,
+  onTogglePostLike,
   onToggleCommentLike,
   onAddComment,
 }: Props) => {
@@ -598,10 +598,10 @@ export const ActivityRow = ({
               onToggleFollow={onToggleFollow}
               onDeletePost={onDeletePost}
               onDeleteComment={onDeleteComment}
-              onToggleLike={onToggleLike}
+              onTogglePostLike={onTogglePostLike}
               onToggleCommentLike={onToggleCommentLike}
               showCommentInput={!!onAddComment}
-              onOpenLikes={handleOpenLikesModal}
+              onOpenPostLikes={handleOpenLikesModal}
               onOpenCommentLikes={handleOpenCommentLikesModal}
               commentText={commentText}
               setCommentText={setCommentText}

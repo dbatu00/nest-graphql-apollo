@@ -17,7 +17,7 @@ export default function Feed() {
 
   const handlePublish = async () => {
     if (!content.trim()) return;
-    await feed.publish(content);
+    await feed.publishPost(content);
     setContent("");
   };
 

@@ -160,11 +160,13 @@ export function validateEnvironment(config: RawEnv): RawEnv {
     const smtpUser = asString(config.SMTP_USER);
     const smtpPass = asString(config.SMTP_PASS);
 
-    if (smtpHost && (!smtpUser || !smtpPass)) {
+
+    if (nodeEnv != "development" && smtpHost && (!smtpUser || !smtpPass)) {
         throw new Error(
             'SMTP_USER and SMTP_PASS are required when SMTP_HOST is set',
         );
     }
+
 
     return {
         ...config,

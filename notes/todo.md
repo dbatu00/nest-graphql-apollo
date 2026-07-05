@@ -72,6 +72,7 @@ This file tracks only open work. Completed items are intentionally removed.
 - handle token expiration gracefully
 - on empty profile tabs : "nothing to show yet"
 - audit settings.tsx
+- audit hooks
 ---
 
 # P3 — Architecture (Only if needed)

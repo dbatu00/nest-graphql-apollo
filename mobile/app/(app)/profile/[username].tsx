@@ -18,7 +18,13 @@ import { UserSettingsButton } from "@/components/common/SettingsButton";
 import { FeedLogoutButton } from "@/components/common/LogoutButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
-import { fetchFollowers, fetchFollowing, fetchUserProfileMeta } from "@/graphql/client";
+import {
+  fetchFollowers,
+  fetchFollowing,
+  fetchUserProfileMeta,
+  followUser,
+  unfollowUser,
+} from "@/graphql/client";
 
 type Tab =
   | "posts"
@@ -40,6 +46,25 @@ type ProfileMeta = {
   avatarUrl?: string;
   coverUrl?: string;
 };
+
+/**
+ * Only mounted for the "posts"/"likes" tabs. Keeping this as its own
+ * component means useActivities (and its fetch) never runs at all for
+ * "followers"/"following" — those tabs have their own data source and
+ * the backend rejects an empty `types` array, so we don't want the hook
+ * instantiated in that case, not even with a placeholder type.
+ */
+function TabFeed({
+  username,
+  tab,
+}: {
+  username?: string;
+  tab: "posts" | "likes";
+}) {
+  const type = useMemo(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
+  const feed = useActivities({ username, types: type });
+  return <ActivityList feed={feed} />;
+}
 
 export default function UsernameScreen() {
   const { username } =
@@ -86,20 +111,9 @@ export default function UsernameScreen() {
   }, [username]);
 
 
-  /* ---------------- ACTIVITY TYPES ---------------- */
+  /* ---------------- TAB ---------------- */
 
   const [tab, setTab] = useState<Tab>("posts"); //default is posts tab
-
-  const type = useMemo(() => {
-    if (tab === "posts") return ["post"];
-    if (tab === "likes") return ["like"];
-    return [];
-  }, [tab]);
-
-  const feed = useActivities({
-    username,
-    types: type,
-  });
 
 
   /* ---------------- FOLLOW STUFF ---------------- */
@@ -138,7 +152,16 @@ export default function UsernameScreen() {
           : u
       )
     );
-    await feed.toggleFollowOptimistic(targetUsername, shouldFollow);
+
+    try {
+      if (shouldFollow) {
+        await followUser(targetUsername);
+      } else {
+        await unfollowUser(targetUsername);
+      }
+    } catch (err: unknown) {
+      console.error("[UsernameScreen] follow toggle failed", err);
+    }
   };
 
 
@@ -255,11 +278,11 @@ export default function UsernameScreen() {
 
           {!followLoading && (
             <View style={styles.followListInner}>
-              {followUsers.map(user => (
-                <View key={user.id} style={styles.followUserCard}>
+              {followUsers.map(followUser => (
+                <View key={followUser.id} style={styles.followUserCard}>
                   <UserRow
-                    user={user}
-                    currentUserId={feed.currentUserId ?? undefined}
+                    user={followUser}
+                    currentUserId={user?.id}
                     onToggleFollow={handleToggleFollowInList}
                     isCompact={false}
                   />
@@ -271,8 +294,8 @@ export default function UsernameScreen() {
       )}
 
       {/* Activity Based Tabs */}
-      {tab !== "followers" && tab !== "following" && (
-        <ActivityList feed={feed} />
+      {(tab === "posts" || tab === "likes") && (
+        <TabFeed username={username} tab={tab} />
       )}
     </PageShell>
   );

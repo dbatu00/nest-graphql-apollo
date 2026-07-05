@@ -76,63 +76,104 @@ export function useActivities(params: Params = {}) {
     refresh();
   }, [refresh]);
 
-  /* ---------------- FOLLOW ---------------- */
+  /**
+   * Shared shape for all "flip a boolean, hit one of two endpoints,
+   * recover on failure" actions (post like, comment like, follow).
+   *
+   * `apply` is the optimistic state transform, computed from the *current*
+   * activities so each caller can build it as a plain closure.
+   * `isOn` decides which of onFn/offFn to call.
+   * `rollback`, if provided, restores exact prior state on failure instead
+   * of doing a full server refresh (cheaper + no flash of stale data).
+   */
+  const optimisticToggle = useCallback(
+    async (
+      apply: (prev: Activity[]) => Activity[],
+      isOn: boolean,
+      onFn: () => Promise<unknown>,
+      offFn: () => Promise<unknown>,
+      rollback?: (prev: Activity[]) => void
+    ) => {
+      let previousState: Activity[] | null = null;
 
-  const toggleFollowOptimistic = useCallback(
-    async (targetUsername: string, shouldFollow: boolean) => {
-      // Optimistically propagate follow state through every user reference in feed rows.
-      setActivities(prev =>
-        prev.map(a => {
-          const updated = { ...a };
-
-          if (a.actor?.username === targetUsername) {
-            updated.actor = {
-              ...a.actor,
-              followedByMe: shouldFollow,
-            };
-          }
-
-          if (a.targetUser?.username === targetUsername) {
-            updated.targetUser = {
-              ...a.targetUser,
-              followedByMe: shouldFollow,
-            };
-          }
-
-          if (a.targetPost?.user?.username === targetUsername) {
-            updated.targetPost = {
-              ...a.targetPost,
-              user: {
-                ...a.targetPost.user,
-                followedByMe: shouldFollow,
-              },
-            };
-          }
-
-          return updated;
-        })
-      );
+      setActivities(prev => {
+        previousState = prev;
+        return apply(prev);
+      });
 
       try {
-        if (shouldFollow) {
-          await followUser(targetUsername);
-        } else {
-          await unfollowUser(targetUsername);
-        }
+        await (isOn ? offFn() : onFn());
       } catch (err: unknown) {
-        console.error("[useActivities] follow toggle failed", err);
-        refresh(); // rollback via truth
+        console.error("[useActivities] optimistic toggle failed", err);
+        if (rollback && previousState) {
+          rollback(previousState);
+        } else {
+          refresh();
+        }
       }
     },
     [refresh]
   );
 
-  /* ---------------- LIKE ---------------- */
+  /**
+   * Shared shape for delete actions: optimistically remove something from
+   * `activities`, and roll back to the exact prior state on failure rather
+   * than triggering a full refresh.
+   */
+  const optimisticDelete = useCallback(
+    async (
+      apply: (prev: Activity[]) => Activity[],
+      deleteFn: () => Promise<unknown>
+    ) => {
+      let previousState: Activity[] | null = null;
 
-  const toggleLikeOptimistic = useCallback(
+      setActivities(prev => {
+        previousState = prev;
+        return apply(prev);
+      });
+
+      try {
+        await deleteFn();
+      } catch (err: unknown) {
+        console.error("[useActivities] delete failed", err);
+        if (previousState) {
+          setActivities(previousState);
+        }
+      }
+    },
+    []
+  );
+
+  /* POST STUFF */
+
+  const publishPost = useCallback(
+    async (content: string) => {
+      if (!content.trim()) return;
+
+      try {
+        await addPost(content);
+        refresh();
+      } catch (err: unknown) {
+        console.error("[useActivities] publishPost failed", err);
+        refresh();
+      }
+    },
+    [refresh]
+  );
+
+  const deletePost = useCallback(
+    async (postId: number) => {
+      await optimisticDelete(
+        prev => prev.filter(a => a.targetPost?.id !== postId),
+        () => deletePostMutation(postId)
+      );
+    },
+    [optimisticDelete]
+  );
+
+  const togglePostLike = useCallback(
     async (postId: number, currentlyLiked: boolean) => {
-      // Optimistically flip like state and count locally before server confirmation.
-      setActivities(prev =>
+      const apply = (prev: Activity[]) =>
         prev
           .map(a => {
             if (a.targetPost?.id !== postId) return a;
@@ -155,142 +196,20 @@ export function useActivities(params: Params = {}) {
             }
             return true;
           })
+
+      await optimisticToggle(
+        apply,
+        currentlyLiked,
+        () => likePost(postId),
+        () => unlikePost(postId)
       );
-
-      try {
-        if (currentlyLiked) {
-          await unlikePost(postId);
-        } else {
-          await likePost(postId);
-        }
-      } catch (err: unknown) {
-        console.error("[useActivities] like toggle failed", err);
-        refresh();
-      }
     },
-    [types, refresh]
+    [types, optimisticToggle]
   );
 
-  /* ---------------- DELETE POST ---------------- */
+  /* COMMENT STUFF */
 
-  const deletePost = useCallback(
-    async (postId: number) => {
-      // Optimistically remove related rows, then rely on refresh if backend rejects.
-      setActivities(prev =>
-        prev.filter(a => a.targetPost?.id !== postId)
-      );
-
-      try {
-        await deletePostMutation(postId);
-      } catch (err: unknown) {
-        console.error("[useActivities] delete post failed", err);
-        refresh();
-      }
-    },
-    [refresh]
-  );
-
-  /* ---------------- DELETE COMMENT ---------------- */
-
-  const deleteCommentFromPost = useCallback(
-    async (commentId: number, postId: number) => {
-      let previousState: Activity[] | null = null;
-
-      setActivities(prev => {
-        previousState = prev;
-
-        return prev.map(a => {
-          if (a.targetPost?.id !== postId) return a;
-
-          return {
-            ...a,
-            targetPost: {
-              ...a.targetPost,
-              comments: (a.targetPost.comments ?? []).filter(
-                comment => comment.id !== commentId
-              ),
-            },
-          };
-        });
-      });
-
-      try {
-        await deleteCommentMutation(commentId);
-      } catch (err: unknown) {
-        console.error("[useActivities] delete comment failed", err);
-
-        // rollback instead of full refresh
-        if (previousState) {
-          setActivities(previousState);
-        }
-      }
-    },
-    []
-  );
-
-  /* ---------------- COMMENT LIKE ---------------- */
-
-  const toggleCommentLikeOptimistic = useCallback(
-    async (commentId: number, postId: number, currentlyLiked: boolean) => {
-      setActivities(prev =>
-        prev.map(a => {
-          if (a.targetPost?.id !== postId) return a;
-
-          return {
-            ...a,
-            targetPost: {
-              ...a.targetPost,
-              comments: (a.targetPost.comments ?? []).map(comment => {
-                if (comment.id !== commentId) return comment;
-
-                return {
-                  ...comment,
-                  likedByMe: !currentlyLiked,
-                  likesCount:
-                    (comment.likesCount ?? 0) +
-                    (currentlyLiked ? -1 : 1),
-                };
-              }),
-            },
-          };
-        })
-      );
-
-      try {
-        if (currentlyLiked) {
-          await unlikeComment(commentId);
-        } else {
-          await likeComment(commentId);
-        }
-      } catch (err: unknown) {
-        console.error("[useActivities] comment like toggle failed", err);
-        refresh();
-      }
-    },
-    [refresh]
-  );
-
-  /* ---------------- PUBLISH ---------------- */
-
-  const publish = useCallback(
-    async (content: string) => {
-      if (!content.trim()) return;
-
-      try {
-        await addPost(content);
-
-        refresh();
-      } catch (err: unknown) {
-        console.error("[useActivities] publish failed", err);
-        refresh();
-      }
-    },
-    [refresh]
-  );
-
-  /* ---------------- ADD COMMENT ---------------- */
-
-  const addCommentToPost = useCallback(
+  const publishComment = useCallback(
     async (postId: number, content: string) => {
       if (!content.trim()) return;
 
@@ -322,6 +241,98 @@ export function useActivities(params: Params = {}) {
     [refresh]
   );
 
+  const deleteComment = useCallback(
+    async (commentId: number, postId: number) => {
+      await optimisticDelete(
+        prev =>
+          prev.map(a => {
+            if (a.targetPost?.id !== postId) return a;
+
+            return {
+              ...a,
+              targetPost: {
+                ...a.targetPost,
+                comments: (a.targetPost.comments ?? []).filter(
+                  comment => comment.id !== commentId
+                ),
+              },
+            };
+          }),
+        () => deleteCommentMutation(commentId)
+      );
+    },
+    [optimisticDelete]
+  );
+
+  const toggleCommentLike = useCallback(
+    async (commentId: number, postId: number, currentlyLiked: boolean) => {
+      const apply = (prev: Activity[]) =>
+        prev.map(a => {
+          if (a.targetPost?.id !== postId) return a;
+
+          return {
+            ...a,
+            targetPost: {
+              ...a.targetPost,
+              comments: (a.targetPost.comments ?? []).map(comment => {
+                if (comment.id !== commentId) return comment;
+
+                return {
+                  ...comment,
+                  likedByMe: !currentlyLiked,
+                  likesCount:
+                    (comment.likesCount ?? 0) +
+                    (currentlyLiked ? -1 : 1),
+                };
+              }),
+            },
+          };
+        });
+
+      await optimisticToggle(
+        apply,
+        currentlyLiked,
+        () => likeComment(commentId),
+        () => unlikeComment(commentId)
+      );
+    },
+    [optimisticToggle]
+  );
+
+  /* FOLLOW */
+
+  const toggleFollow = useCallback(
+    async (targetUsername: string, shouldFollow: boolean) => {
+      // Optimistically propagate follow state through every user reference in feed rows.
+      const apply = (prev: Activity[]) =>
+        prev.map(a => {
+          const updated = { ...a };
+
+          if (a.targetPost?.user?.username === targetUsername) {
+            updated.targetPost = {
+              ...a.targetPost,
+              user: {
+                ...a.targetPost.user,
+                followedByMe: shouldFollow,
+              },
+            };
+          }
+
+          return updated;
+        });
+
+      // shouldFollow is the *target* state here (not "currentlyOn"), so we
+      // invert it before handing it to optimisticToggle's isOn param.
+      await optimisticToggle(
+        apply,
+        !shouldFollow,
+        () => followUser(targetUsername),
+        () => unfollowUser(targetUsername)
+      );
+    },
+    [optimisticToggle]
+  );
+
   return {
     activities,
     loading,
@@ -330,12 +341,12 @@ export function useActivities(params: Params = {}) {
     currentUserId,
     currentUserAvatarUrl,
     currentUserLabel,
-    toggleFollowOptimistic,
-    toggleLikeOptimistic,
-    toggleCommentLikeOptimistic,
+    toggleFollow,
+    togglePostLike,
+    toggleCommentLike,
     deletePost,
-    deleteCommentFromPost,
-    publish,
-    addCommentToPost,
+    deleteComment,
+    publishPost,
+    publishComment,
   };
 }

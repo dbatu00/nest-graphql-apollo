@@ -24,12 +24,12 @@ export function ActivityList({ feed, filter }: Props) {
                     currentUserId={feed.currentUserId ?? undefined}
                     currentUserAvatarUrl={feed.currentUserAvatarUrl ?? undefined}
                     currentUserLabel={feed.currentUserLabel ?? undefined}
-                    onToggleFollow={feed.toggleFollowOptimistic}
-                    onToggleLike={feed.toggleLikeOptimistic}
-                    onToggleCommentLike={feed.toggleCommentLikeOptimistic}
+                    onToggleFollow={feed.toggleFollow}
                     onDeletePost={feed.deletePost}
-                    onDeleteComment={feed.deleteCommentFromPost}
-                    onAddComment={feed.addCommentToPost}
+                    onTogglePostLike={feed.togglePostLike}
+                    onAddComment={feed.publishComment}
+                    onDeleteComment={feed.deleteComment}
+                    onToggleCommentLike={feed.toggleCommentLike}
                 />
             ))}
         </View>
