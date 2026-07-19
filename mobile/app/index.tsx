@@ -1,3 +1,24 @@
+/*
+Kind:
+Route component
+
+Role:
+Application entry route
+
+Responsibility:
+Choose the user's initial destination based on authentication state
+
+Owns:
+- Nothing
+
+Delegates:
+- Authentication state → useAuth
+- Navigation → Expo Router
+
+Used by:
+- Expo Router (when "/" is matched)
+*/
+
 import { useEffect } from "react";
 import { router } from "expo-router";
 import { useAuth } from "../hooks/useAuth";

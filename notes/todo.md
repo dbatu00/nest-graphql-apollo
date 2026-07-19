@@ -2,6 +2,8 @@
 
 This file tracks only open work. Completed items are intentionally removed.
 
+
+
 ---
 
 # P0 — Critical Fixes (Correctness + Data Integrity + Config)
@@ -102,3 +104,79 @@ This file tracks only open work. Completed items are intentionally removed.
   - post context + highlighted comment + thread affordance?
 - Should GraphQL client validate responses at runtime (zod/valibot)?
 - Should cross-service mutation payloads be minimal (IDs only) to reduce coupling?
+
+
+set linter:
+slint-plugin-react-hooks's exhaustive-deps
+
+feed.tsx:
+- Move inline composer card style block into Composer (or a shared style/theme
+  constant) so Feed doesn't own presentation details like shadows/border radius
+- Move activity filter predicate (a.type !== "follow" || a.active) into
+  useActivities (e.g. feed.visibleActivities) or pass as config to ActivityList,
+  so Feed doesn't own feed business logic
+  --aka instead of foo().filter(bar), expose common filtered views
+
+username.tsx:
+- Refactor into a tab coordinator:
+  - Keep profile info on the screen
+  - Own only the active tab state
+  - Posts/Likes → ActivityList + useActivities(types)
+  - Followers/Following → UserList + useFollow
+
+useActivities.tsx:
+- Move current user identity into useAuth (or another dedicated identity hook)
+- Move relationship logic (follow/unfollow) into useFollow so activity and
+  relationship concerns are owned separately (same underlying point as
+  username.tsx's last TODO — avoid two independent optimistic-follow
+  implementations drifting out of sync)
+
+  -remove useprofile.tsx(unused)
+
+useAuth.tsx:
+- Don't have logout() rely on each call site to also handle navigation
+  (currently only UsernameScreen's handleLogout does router.replace after
+  logout — a 401 interceptor or any other logout path would forget it)
+- Have routing react to auth state instead: a root-level layout/guard
+  watches `user` going null and redirects to /login, so every logout path
+  (button, interceptor, expiry) gets the redirect for free
+- Extract shared toAuthUser() helper — refreshAuth() and setSession() construct
+  the same AuthUser shape manually
+- Wrap clearToken() in try/catch in logout() and refreshAuth()'s
+  !currentUser branch so setUser(null) still runs if storage fails
+- Confirm whether refreshAuth()'s !currentUser branch is actually reachable
+  given backend auth guards; remove it or document it as defensive-only
+- Move logout navigation into AuthGate by reacting to user becoming null,
+  instead of relying on callers to redirect
+- Consider blocking authenticated route rendering in AuthGate until loading
+  resolves to eliminate the cold-start flash
+  -- useAuth.tsx:
+- Cold-start transient-failure gap: if getCurrentUser() fails on the very
+  first refreshAuth() call (app launch), userRef.current is still null
+  (no prior session in memory), so a valid stored token gets treated as
+  "logged out" even though nothing about the session was actually invalid.
+  Add a retry (e.g. on regaining network connectivity, or a bounded
+  retry/backoff before giving up) instead of silently falling through to
+  logged-out state on the very first failure.
+
+- Date getting stuff is too defensive in activityrow.tsx and actitivtyhelpers.ts
+- in activityrow.tsx : inline this:
+type ActivityBannerProps = {
+  activity: Activity;
+};
+
+-in activityhelper.ts getabsolutedate and issameid are overkill
+
+-ActivityRow / ActivityBanner:
+- Remove unjustified defensive chaining on fields the schema guarantees
+  non-null/non-empty: actor.username, targetUser.username (once targetUser
+  itself is confirmed present), targetPost.user.username (pending
+  confirmation of Post's type) — these are enforced at the DB column level
+  (unique, non-nullable), not just the TS type level. Keep only the
+  genuinely optional checks: targetUser existing at all, targetPost
+  existing at all.
+- Remove .trim() calls on username fields — usernames should be validated/
+  normalized at signup, not defensively re-cleaned on every render.
+    -Dead code: targetVerb
+  -Likely no-op style
+commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.

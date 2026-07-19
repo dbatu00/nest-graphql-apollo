@@ -1,11 +1,32 @@
-/**
- * useActivities.tsx
- *
- * Data layer hook for the activity feed.
- * Owns all server communication (fetch, follow, like, comment, delete),
- * optimistic UI updates, and the current-user identity needed by feed rows.
- * Components consume this hook and pass the resulting callbacks down as props.
- */
+/*
+Kind:
+Hook
+
+Role:
+Feed data layer
+
+Responsibility:
+- Fetch activity feeds
+- Own feed state and mutations
+- Bridge UI components to the backend
+
+Owns:
+- Activities
+- Loading state
+- Error state
+
+Delegates:
+- Network requests → graphql/client
+- Activity model → Activity type
+
+Used by:
+- Feed
+- Username screen
+
+TODO:
+- Move current user identity into useAuth (or another dedicated identity hook)
+- Move follow stuff to a dedicated hook
+*/
 import { useEffect, useState, useCallback } from "react";
 import { Activity } from "@/types/Activity";
 import {

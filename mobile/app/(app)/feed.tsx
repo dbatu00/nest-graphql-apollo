@@ -1,3 +1,33 @@
+/*
+Kind:
+Component
+
+Role:
+Feed screen
+
+Responsibility:
+- Coordinate the feed feature
+- Own screen-level state and delegate feed logic and rendering
+
+Owns:
+- Draft post content
+
+Delegates:
+- Feed state → useActivities
+- Layout → PageShell
+- Composer → Composer
+- Activity rendering → ActivityList
+
+Used by:
+- Expo Router
+
+TODO:
+- Move inline composer card style block into Composer (or a shared style/theme
+  constant) so Feed doesn't own presentation details like shadows/border radius
+- Move activity filter predicate (a.type !== "follow" || a.active) into
+  useActivities (e.g. feed.visibleActivities) or pass as config to ActivityList,
+  so Feed doesn't own feed business logic
+*/
 import { useState } from "react";
 import {
   View,

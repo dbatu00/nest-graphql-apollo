@@ -1,8 +1,11 @@
+//TODO: getabsolutedate and issameid are overkill
+
 type DisplayLabelUser = {
     displayName?: string;
     username?: string;
 };
 
+//falls back to unknown user if there is no displayname
 export const getDisplayLabel = (user?: DisplayLabelUser, fallback = "Unknown user") => {
     const displayName = user?.displayName?.trim();
     if (displayName) return displayName;

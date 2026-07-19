@@ -1,0 +1,61 @@
+@startuml Authentication Architecture
+title Authentication Architecture
+
+left to right direction
+
+package "Application" {
+
+component AuthProvider
+component AuthContext
+component useAuth
+
+component AuthGate
+component LoginScreen
+component SignupScreen
+component FeedScreen
+component ProfileScreen
+
+component "utils/token" as Token
+component "utils/currentUser" as CurrentUser
+component "GraphQL Client" as GraphQL
+
+AuthProvider --> Token : get/save/clear
+AuthProvider --> CurrentUser : resolve user
+CurrentUser --> GraphQL
+
+AuthProvider --> AuthContext : provides
+useAuth --> AuthContext : reads
+
+AuthGate --> useAuth
+LoginScreen --> useAuth
+SignupScreen --> useAuth
+FeedScreen --> useAuth
+ProfileScreen --> useAuth
+
+note right of AuthProvider
+Owns:
+- user
+- loading
+
+Operations:
+- refreshAuth()
+- setSession()
+- logout()
+
+Single source of truth
+for authentication state.
+end note
+
+note bottom of useAuth
+Thin wrapper around
+useContext(AuthContext).
+end note
+
+note bottom of AuthGate
+Redirects based on
+authentication state.
+end note
+
+}
+
+@enduml

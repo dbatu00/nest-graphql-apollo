@@ -4,7 +4,7 @@ React Native client for the social feed app.
 
 - Framework: Expo + React Native + Expo Router
 - Data layer: GraphQL via typed client wrappers + `graphqlFetch`
-- State style: hook-driven (`useActivities`, `useProfile`, `useAuth`)
+- State style: hook-driven (`useActivities`, `useAuth`)
 
 ## Quick Start (Monorepo)
 

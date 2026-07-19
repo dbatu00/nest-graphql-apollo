@@ -1,3 +1,60 @@
+/*
+Kind:
+Component
+
+Role:
+Activity renderer
+
+Responsibility:
+- Transform a single Activity into its complete interactive UI
+- Compose the appropriate presentation components
+- Connect user interactions to feed mutations
+- Own only local, ephemeral UI state
+
+Owns:
+- Activity-specific presentation
+- Composition of ActivityBanner, PostCard and LikedUsersModal
+- Local, ephemeral UI state scoped to subcomponents defined in this file:
+  - CommentRow → comment options menu visibility
+  - PostCard → comment input focus
+  - DateToggleText → relative/absolute date toggle
+
+Delegates:
+- Feed mutations → useActivities (via props)
+- Activity-specific UI state → useActivityRow
+- Banner rendering → ActivityBanner
+- Post rendering → PostCard
+- Likes modal → LikedUsersModal
+- Activity model → Activity type
+
+Used by:
+- ActivityList
+
+TODO:
+- Remove current user identity props once useAuth (or a dedicated identity hook)
+  becomes the source of truth
+- Consider extracting remaining self-contained UI concepts only if they reduce
+  mental load rather than merely moving JSX into new files *
+  currently favoring this because i would like to open activityrow.tsx and see logic only
+- Date getting stuff is too defensive
+-inline this
+type ActivityBannerProps = {
+  activity: Activity;
+};
+- - Remove unjustified defensive chaining on fields the schema guarantees
+  non-null/non-empty: actor.username, targetUser.username (once targetUser
+  itself is confirmed present), targetPost.user.username (pending
+  confirmation of Post's type) — these are enforced at the DB column level
+  (unique, non-nullable), not just the TS type level. Keep only the
+  genuinely optional checks: targetUser existing at all, targetPost
+  existing at all.
+- Remove .trim() calls on username fields — usernames should be validated/
+  normalized at signup, not defensively re-cleaned on every render.
+  -Dead code: targetVerb
+  -Likely no-op style
+commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+*/
+
 import React from "react";
 import {
   View,
@@ -83,6 +140,19 @@ type ActivityBannerContext = {
 
 type BannerActivityType = Exclude<Activity["type"], "post">;
 
+const ClickableName = ({ username, label }: { username?: string; label: string }) => {
+  if (username) {
+    return (
+      <ProfileLink username={username}>
+        <Text style={styles.bannerName}>{label}</Text>
+      </ProfileLink>
+    );
+  }
+
+  return <Text style={styles.bannerName}>{label}</Text>;
+};
+
+//Lookup table mapping each BannerActivityType to its banner sentence template. Replaces a switch with a declarative activity type → JSX mapping.
 const actionContentByType: Record<BannerActivityType, (ctx: ActivityBannerContext) => React.ReactNode> = {
   comment: (ctx) => (
     <>
@@ -107,6 +177,7 @@ const actionContentByType: Record<BannerActivityType, (ctx: ActivityBannerContex
       <ClickableName username={ctx.targetUsername} label={ctx.targetLabel} />
     </>
   ),
+  //shares are not implemented yet
   share: (ctx) => (
     <>
       <ClickableName username={ctx.actorUsername} label={ctx.actorLabel} />
@@ -117,17 +188,6 @@ const actionContentByType: Record<BannerActivityType, (ctx: ActivityBannerContex
   ),
 };
 
-const ClickableName = ({ username, label }: { username?: string; label: string }) => {
-  if (username) {
-    return (
-      <ProfileLink username={username}>
-        <Text style={styles.bannerName}>{label}</Text>
-      </ProfileLink>
-    );
-  }
-
-  return <Text style={styles.bannerName}>{label}</Text>;
-};
 
 // ─────────────────────────────────────────────
 // DateToggleText
@@ -148,6 +208,8 @@ const DateToggleText = ({ date }: { date: string }) => {
 // ActivityBanner
 // ─────────────────────────────────────────────
 
+
+//inline this
 type ActivityBannerProps = {
   activity: Activity;
 };

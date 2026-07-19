@@ -1,3 +1,44 @@
+/*
+Kind:
+Component
+
+Role:
+User profile
+
+Responsibility:
+- Display user profile
+- Display and own switchable tabs(post/like/following/followers)
+- Display feed-lings for post/like
+- Display user lists for following/followers
+- Delegate feed logic and rendering
+- Delegate user list logic and rendering
+
+Owns:
+- Profile meta
+- Current tab info
+- Followers/following info
+
+Delegates:
+- Auth state → useAuth
+- Layout → PageShell
+- Feed state → useActivities
+- Activity rendering → ActivityList
+- User(not user list) rendering → UserRow
+
+Used by:
+- Expo Router
+
+TODO:
+change the shape to 
+->
+profile info stays. there isnt anything to handle anyway
+keep a tab state
+if tab is posts: call activitylist with types as post
+if tab is likes: call activitylist with types as likes
+if tab is followers: call a useFollow , call a userList(list=usefollow.followers)
+if tab is followers: call a useFollow , call a userList(list=usefollow.following)
+*/
+
 import React, { useState, useMemo, useEffect } from "react";
 import {
   View,

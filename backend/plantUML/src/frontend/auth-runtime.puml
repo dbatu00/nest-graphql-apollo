@@ -1,0 +1,41 @@
+@startuml Authentication Runtime Flow
+title Authentication Runtime Flow
+
+start
+
+:AuthProvider mounts;
+:refreshAuth();
+
+:Get stored token;
+
+if (Token exists?) then (yes)
+
+  :getCurrentUser();
+
+  if (Network error?) then (yes)
+    :Return current user from userRef;
+  else (no)
+    if (User returned?) then (yes)
+      :Build AuthUser;
+      :setUser(user);
+    else (no)
+      :clearToken();
+      :setUser(null);
+    endif
+  endif
+
+else (no)
+
+  :setUser(null);
+
+endif
+
+:setLoading(false);
+
+:AuthProvider rerenders;
+:Context value updates;
+:All useAuth() consumers rerender;
+
+stop
+
+@enduml
