@@ -1,19 +1,29 @@
 import React, { useEffect, useState } from "react";
 import {
-  Dimensions, View, Text, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Platform, Modal, Image, Animated,
+  Dimensions,
+  View,
+  Text,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Platform,
+  Modal,
+  Image,
+  Animated,
+  StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles/common";
 import {
   changeMyEmail,
   changeMyPassword,
-  getMyProfile,
   isEmailUsed,
   updateMyProfile,
 } from "@/graphql/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useProfileMeta } from "@/hooks/useProfileMeta";
 import { FeedHeader } from "@/components/layout/FeedHeader";
 import { PageShell } from "@/components/layout/PageShell";
 
@@ -39,51 +49,120 @@ const TABS = [
   { key: "account", label: "Account Details" },
 ];
 
+const GRADIENT_COLORS: [string, string, string, string, string, string] = [
+  "rgba(0,0,0,1)",
+  "rgba(0,0,0,0.85)",
+  "rgba(0,0,0,0.5)",
+  "rgba(0,0,0,0.25)",
+  "rgba(0,0,0,0.1)",
+  "transparent",
+];
+const GRADIENT_LOCATIONS: [number, number, number, number, number, number] = [
+  0, 0.2, 0.4, 0.55, 0.65, 0.8,
+];
+
+type About = {
+  displayName: string;
+  bio: string;
+  avatarUrl: string;
+  coverUrl: string;
+};
+
+type EmailForm = {
+  newEmail: string;
+  confirmNewEmail: string;
+  currentPassword: string;
+};
+
+type PasswordForm = {
+  newPassword: string;
+  confirmNewPassword: string;
+  currentPassword: string;
+};
+
+type AccountForm = {
+  email: EmailForm;
+  password: PasswordForm;
+};
+
 export default function ProfileSettingsScreen() {
-  const [activeTab, setActiveTab] = useState<"about" | "account">("about");
   const screenWidth = Dimensions.get("window").width;
   const screenHeight = Dimensions.get("window").height;
-  const coverHeight = 240;
-  const { username } = useLocalSearchParams<{ username: string | string[] }>();
+
   const router = useRouter();
-  const { user, loading: authLoading, refreshAuth } = useAuth();
-  const resolvedUsername = Array.isArray(username) ? username[0] : username;
 
-  // About you state
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [initialDisplayName, setInitialDisplayName] = useState("");
-  const [initialBio, setInitialBio] = useState("");
-  const [initialAvatarUri, setInitialAvatarUri] = useState(avatarOptions[0]);
-  const [initialCoverUri, setInitialCoverUri] = useState(coverOptions[0]);
+  const { profileMeta, loading, refreshProfileMeta } = useProfileMeta();
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [selectedCoverUri, setSelectedCoverUri] = useState(coverOptions[0]);
-  const [selectedAvatarUri, setSelectedAvatarUri] = useState(avatarOptions[0]);
+  const [activeTab, setActiveTab] = useState<"about" | "account">("about");
   const [pickerType, setPickerType] = useState<"cover" | "avatar" | null>(null);
+  const [aboutDraft, setAboutDraft] = useState<About>(() => ({
+    displayName: profileMeta?.displayName ?? "",
+    bio: profileMeta?.bio ?? "",
+    avatarUrl: profileMeta?.avatarUrl ?? "",
+    coverUrl: profileMeta?.coverUrl ?? "",
+  }));
 
-  // Account details state
-  const [currentEmail, setCurrentEmail] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [confirmNewEmail, setConfirmNewEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [currentPasswordForPassword, setCurrentPasswordForPassword] = useState("");
-  const [showEmailCurrentPassword, setShowEmailCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
-  const [showCurrentPasswordForPassword, setShowCurrentPasswordForPassword] = useState(false);
+  const [accountForm, setAccountForm] = useState<AccountForm>({
+    email: {
+      newEmail: "",
+      confirmNewEmail: "",
+      currentPassword: "",
+    },
+    password: {
+      newPassword: "",
+      confirmNewPassword: "",
+      currentPassword: "",
+    },
+  });
 
-  // Per-section error/success for Account tab
+  //email and password change sections have their own current password input fields for better ux
+  const [accountUi, setAccountUi] = useState({
+    showCurrentPasswordForEmailChange: false, // user's current pw
+    showCurrentPasswordForPasswordChange: false, // user's current pw
+    showNewPassword: false,
+    showConfirmNewPassword: false,
+  });
+
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [successNoticeVisible, setSuccessNoticeVisible] = useState(false);
   const [successNoticeMessage, setSuccessNoticeMessage] = useState("");
   const successNoticeY = React.useRef(new Animated.Value(-80)).current;
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const updateAccountForm = (section: keyof AccountForm, field: string, value: string) => {
+    setAccountForm(prev => ({
+      ...prev,
+      [section]: { ...prev[section], [field]: value },
+    }));
+  };
+
+  const closePicker = () => setPickerType(null);
+
+  const validateEmailChange = (email: string, confirm: string, password: string): string | null => {
+    if (!email && !confirm && !password) return "Please fill in the fields to change your email.";
+    if (!email) return "Please enter a new email.";
+    if (!confirm) return "Please confirm your new email.";
+    if (!password) return "Please enter your current password.";
+    if (password.length < 8) return "Current password must be at least 8 characters.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Please enter a valid email address.";
+    if (email !== confirm) return "Email and confirmation do not match.";
+    if (email === profileMeta?.email) return "This is already your current email."; //profileMeta exists before exec comes here
+    return null;
+  };
+
+  const validatePasswordChange = (newPassword: string, confirmPassword: string, currentPassword: string): string | null => {
+    if (!newPassword || !confirmPassword) return "Please enter and confirm your new password.";
+    if (newPassword !== confirmPassword) return "New password and confirmation do not match.";
+    if (newPassword.length < 8) return "Password must be at least 8 characters.";
+    if (!currentPassword) return "Current password is required to change password.";
+    if (currentPassword === newPassword) return "The new password and current password you entered are the same.";
+    if (currentPassword.length < 8) return "Password must be at least 8 characters.";
+    return null;
+  };
 
   const showSuccessNotice = (message: string) => {
     setSuccessNoticeMessage(message);
@@ -96,109 +175,81 @@ export default function ProfileSettingsScreen() {
     }).start();
   };
 
-  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const hideSuccessNotice = () => {
+    Animated.timing(successNoticeY, {
+      toValue: -80,
+      duration: 220,
+      useNativeDriver: true,
+    }).start(() => {
+      setSuccessNoticeVisible(false);
+      setSuccessNoticeMessage("");
+    });
+  };
 
+  //hide success notice on timeout
   useEffect(() => {
     if (!successNoticeVisible) {
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      Animated.timing(successNoticeY, {
-        toValue: -80,
-        duration: 220,
-        useNativeDriver: true,
-      }).start(() => {
-        setSuccessNoticeVisible(false);
-        setSuccessNoticeMessage("");
-      });
-    }, 1600);
+    const timeoutId = setTimeout(hideSuccessNotice, 1600);
 
     return () => clearTimeout(timeoutId);
-  }, [successNoticeVisible, successNoticeY]);
+  }, [successNoticeVisible]);
 
+  //hydrate about tab's fields with profile meta
   useEffect(() => {
-    if (authLoading) {
-      return;
+    if (!profileMeta) return;
+
+    setAboutDraft({
+      displayName: profileMeta.displayName,
+      bio: profileMeta.bio,
+      avatarUrl: profileMeta.avatarUrl,
+      coverUrl: profileMeta.coverUrl,
+    });
+  }, [profileMeta]);
+
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  if (!profileMeta) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  const handleSelectImage = (uri: string) => {
+    if (pickerType === "cover") {
+      setAboutDraft({ ...aboutDraft, coverUrl: uri });
     }
 
-    if (!user) {
-      router.replace("/(auth)/login");
-      return;
+    if (pickerType === "avatar") {
+      setAboutDraft({ ...aboutDraft, avatarUrl: uri });
     }
 
-    if (resolvedUsername && user.username !== resolvedUsername) {
-      router.replace({
-        pathname: "/profile/[username]",
-        params: { username: resolvedUsername },
-      });
-      return;
-    }
-
-    let cancelled = false;
-
-    async function load() {
-      if (!user?.username) {
-        setLoading(false);
-        setError("Missing username");
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      try {
-        const me = await getMyProfile();
-
-        if (cancelled) {
-          return;
-        }
-
-        const loadedDisplayName = (me.displayName ?? "").trim();
-        const loadedBio = (me.bio ?? "").trim();
-        const loadedAvatarUri = (me.avatarUrl ?? "").trim();
-        const loadedCoverUri = (me.coverUrl ?? "").trim();
-        const loadedEmail = (me.email ?? "").trim();
-
-        setDisplayName(loadedDisplayName);
-        setBio(loadedBio);
-        setSelectedAvatarUri(loadedAvatarUri);
-        setSelectedCoverUri(loadedCoverUri);
-        setInitialDisplayName(loadedDisplayName);
-        setInitialBio(loadedBio);
-        setInitialAvatarUri(loadedAvatarUri);
-        setInitialCoverUri(loadedCoverUri);
-        setCurrentEmail(loadedEmail);
-      } catch (err: unknown) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load profile");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [authLoading, user, resolvedUsername, router]);
+    setPickerType(null);
+  };
 
   const handleSave = async () => {
-    if (!user?.username || saving) {
+    if (saving) {
       return;
     }
 
-    const noChanges =
-      displayName.trim() === initialDisplayName.trim() &&
-      bio.trim() === initialBio.trim() &&
-      selectedAvatarUri === initialAvatarUri &&
-      selectedCoverUri === initialCoverUri;
+    const aboutDraftChanged =
+      aboutDraft.displayName !== profileMeta.displayName ||
+      aboutDraft.bio !== profileMeta.bio ||
+      aboutDraft.avatarUrl !== profileMeta.avatarUrl ||
+      aboutDraft.coverUrl !== profileMeta.coverUrl;
 
-    if (noChanges) {
+    if (!aboutDraftChanged) {
       setError(null);
       setSuccess("There are no changes to update.");
       return;
@@ -209,19 +260,15 @@ export default function ProfileSettingsScreen() {
     setSuccess(null);
 
     try {
-      const updatedProfile = await updateMyProfile({
-        displayName,
-        bio,
-        avatarUrl: selectedAvatarUri,
-        coverUrl: selectedCoverUri,
+      await updateMyProfile({
+        displayName: aboutDraft.displayName,
+        bio: aboutDraft.bio,
+        avatarUrl: aboutDraft.avatarUrl,
+        coverUrl: aboutDraft.coverUrl,
       });
 
-      setDisplayName((updatedProfile.displayName ?? "").trim());
-      setBio((updatedProfile.bio ?? "").trim());
-      setSelectedAvatarUri((updatedProfile.avatarUrl ?? "").trim());
-      setSelectedCoverUri((updatedProfile.coverUrl ?? "").trim());
+      await refreshProfileMeta();
       setSuccess("Profile updated");
-      await refreshAuth();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
@@ -232,49 +279,13 @@ export default function ProfileSettingsScreen() {
   const handleChangeEmail = async () => {
     setEmailError(null);
 
-    const email = newEmail.trim();
-    const confirm = confirmNewEmail.trim();
-    const password = currentPassword.trim();
+    const email = accountForm.email.newEmail.trim();
+    const confirm = accountForm.email.confirmNewEmail.trim();
+    const password = accountForm.email.currentPassword.trim();
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!email && !confirm && !password) {
-      setEmailError("Please fill in the fields to change your email.");
-      return;
-    }
-
-    if (!email) {
-      setEmailError("Please enter a new email.");
-      return;
-    }
-
-    if (!confirm) {
-      setEmailError("Please confirm your new email.");
-      return;
-    }
-
-    if (!password) {
-      setEmailError("Please enter your current password.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setEmailError("Current password must be at least 8 characters.");
-      return;
-    }
-
-    if (!emailRegex.test(email)) {
-      setEmailError("Please enter a valid email address.");
-      return;
-    }
-
-    if (email !== confirm) {
-      setEmailError("Email and confirmation do not match.");
-      return;
-    }
-
-    if (email === currentEmail) {
-      setEmailError("This is already your current email.");
+    const validationError = validateEmailChange(email, confirm, password);
+    if (validationError) {
+      setEmailError(validationError);
       return;
     }
 
@@ -282,30 +293,21 @@ export default function ProfileSettingsScreen() {
 
     try {
       const emailAlreadyUsed = await isEmailUsed(email);
-
       if (emailAlreadyUsed) {
         setEmailError("This email address is already in use.");
         return;
       }
 
-      //fail routes throw errors that propagate so no need for extra checks
       await changeMyEmail(password, email);
-
-      setCurrentEmail(email);
-      setNewEmail("");
-      setConfirmNewEmail("");
-      setCurrentPassword("");
-      await refreshAuth();
       showSuccessNotice("Email changed successfully. Redirecting...");
-      await wait(2000);
+      await new Promise(resolve => setTimeout(resolve, 2000));
       router.replace("/(auth)/verify-mail");
-
     } catch (err) {
       if (err instanceof Error && err.message === "Too Many Requests") {
         setEmailError("Too many verification emails sent. Please wait before trying again.");
-        return;
+      } else {
+        setEmailError(err instanceof Error ? err.message : "Failed to change email.");
       }
-      setEmailError(err instanceof Error ? err.message : "Failed to change email.");
     } finally {
       setSaving(false);
     }
@@ -314,38 +316,28 @@ export default function ProfileSettingsScreen() {
   const handleChangePassword = async () => {
     setPasswordError(null);
 
-    if (!newPassword.trim() || !confirmNewPassword.trim()) {
-      setPasswordError("Please enter and confirm your new password.");
+    const newPassword = accountForm.password.newPassword.trim();
+    const confirmPassword = accountForm.password.confirmNewPassword.trim();
+    const currentPassword = accountForm.password.currentPassword.trim();
+
+    const validationError = validatePasswordChange(newPassword, confirmPassword, currentPassword);
+    if (validationError) {
+      setPasswordError(validationError);
       return;
     }
-    if (newPassword.trim() !== confirmNewPassword.trim()) {
-      setPasswordError("New password and confirmation do not match.");
-      return;
-    }
-    if (newPassword.trim().length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
-      return;
-    }
-    const currentPasswordValue = currentPasswordForPassword.trim();
-    if (!currentPasswordValue) {
-      setPasswordError("Current password is required to change password.");
-      return;
-    }
-    if (currentPasswordValue === newPassword.trim()) {
-      setPasswordError("The new password and current password you entered are the same.");
-      return;
-    }
-    if (currentPasswordForPassword.trim().length < 8) {
-      setPasswordError("Password must be at least 8 characters.");
-      return;
-    }
+
     setSaving(true);
     try {
-      const changed = await changeMyPassword(currentPasswordValue, newPassword.trim());
+      const changed = await changeMyPassword(currentPassword, newPassword);
       if (changed) {
-        setNewPassword("");
-        setConfirmNewPassword("");
-        setCurrentPasswordForPassword("");
+        setAccountForm(prev => ({
+          ...prev,
+          password: {
+            newPassword: "",
+            confirmNewPassword: "",
+            currentPassword: "",
+          },
+        }));
         showSuccessNotice("Password changed successfully.");
       } else {
         setPasswordError("Failed to change password.");
@@ -357,29 +349,6 @@ export default function ProfileSettingsScreen() {
     }
   };
 
-  const closePicker = () => setPickerType(null);
-
-  const handleSelectImage = (uri: string) => {
-    if (pickerType === "cover") {
-      setSelectedCoverUri(uri);
-    }
-
-    if (pickerType === "avatar") {
-      setSelectedAvatarUri(uri);
-    }
-
-    setPickerType(null);
-  };
-
-
-  if (loading) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
-
   return (
     <PageShell
       header={<FeedHeader title="BookBook" />}
@@ -387,89 +356,41 @@ export default function ProfileSettingsScreen() {
     >
       {successNoticeVisible && (
         <Animated.View
-          style={{
-            position: "absolute",
-            top: 12,
-            left: 16,
-            right: 16,
-            zIndex: 20,
-            backgroundColor: "#ecfdf5",
-            borderColor: "#86efac",
-            borderWidth: 1,
-            borderRadius: 12,
-            paddingVertical: 10,
-            paddingHorizontal: 12,
-            flexDirection: "row",
-            alignItems: "center",
-            transform: [{ translateY: successNoticeY }],
-          }}
+          style={[local.successNotice, { transform: [{ translateY: successNoticeY }] }]}
         >
           <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
-          <Text style={{ color: "#166534", fontWeight: "600", marginLeft: 8 }}>
-            {successNoticeMessage}
-          </Text>
+          <Text style={local.successNoticeText}>{successNoticeMessage}</Text>
         </Animated.View>
       )}
 
-      <View style={{ flex: 1 }}>
-
+      <View style={local.flex1}>
         {/* Tabs */}
-        <View style={{ flexDirection: "row", marginTop: 8, marginBottom: 8, paddingHorizontal: 0 }}>
+        <View style={local.tabsRow}>
           {TABS.map(tab => (
             <TouchableOpacity
               key={tab.key}
               onPress={() => setActiveTab(tab.key as "about" | "account")}
-              style={{
-                flex: 1,
-                paddingVertical: 10,
-                borderBottomWidth: 2,
-                borderBottomColor: activeTab === tab.key ? "#2563eb" : "#e5e7eb",
-                alignItems: "center",
-              }}
+              style={[
+                local.tabButton,
+                activeTab === tab.key ? local.tabButtonActive : local.tabButtonInactive,
+              ]}
             >
-              <Text style={{
-                color: activeTab === tab.key ? "#2563eb" : "#6b7280",
-                fontWeight: activeTab === tab.key ? "700" : "500",
-                fontSize: 15,
-              }}>{tab.label}</Text>
+              <Text style={activeTab === tab.key ? local.tabLabelActive : local.tabLabelInactive}>
+                {tab.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {activeTab === "about" && (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 12, paddingBottom: 24 }}>
-            <View
-              style={{
-                height: coverHeight,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: "#bfdbfe",
-                backgroundColor: "#eff6ff",
-                marginBottom: 16,
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
-              <TouchableOpacity
-                activeOpacity={1}
-                style={{ flex: 1 }}
-                disabled={true}
-              >
-                <Image
-                  source={{ uri: selectedCoverUri }}
-                  style={{ width: "100%", height: "100%" }}
-                  resizeMode="cover"
-                />
+          <ScrollView style={local.flex1} contentContainerStyle={local.aboutScrollContent}>
+            <View style={local.coverContainer}>
+              <TouchableOpacity activeOpacity={1} style={local.flex1} disabled={true}>
+                <Image source={{ uri: aboutDraft.coverUrl }} style={local.coverImage} resizeMode="cover" />
                 <LinearGradient
-                  colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.1)", "transparent"]}
-                  locations={[0, 0.2, 0.4, 0.55, 0.65, 0.8]}
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: "100%",
-                  }}
+                  colors={GRADIENT_COLORS}
+                  locations={GRADIENT_LOCATIONS}
+                  style={local.coverGradient}
                   start={{ x: 0.5, y: 1 }}
                   end={{ x: 0.5, y: 0 }}
                 />
@@ -477,157 +398,71 @@ export default function ProfileSettingsScreen() {
 
               <TouchableOpacity
                 activeOpacity={1}
-                style={{
-                  position: "absolute",
-                  right: 14,
-                  top: 14,
-                  backgroundColor: "rgba(0,0,0,0.55)",
-                  borderRadius: 16,
-                  padding: 6,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                style={local.coverEditButton}
                 onPress={() => setPickerType("cover")}
               >
                 <Ionicons name="pencil" size={18} color="#fff" />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                activeOpacity={1}
-                style={{
-                  position: "absolute",
-                  left: 14,
-                  bottom: 12,
-                  width: 84,
-                  height: 84,
-                  borderRadius: 42,
-                  borderWidth: 3,
-                  borderColor: "#fff",
-                  backgroundColor: "#dbeafe",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  zIndex: 2,
-                  elevation: 6,
-                }}
-                disabled={true}
-              >
-                <Image
-                  source={{ uri: selectedAvatarUri }}
-                  style={{ width: "100%", height: "100%" }}
-                  resizeMode="cover"
-                />
+              <TouchableOpacity activeOpacity={1} style={local.avatarWrapper} disabled={true}>
+                <Image source={{ uri: aboutDraft.avatarUrl }} style={local.avatarImage} resizeMode="cover" />
                 <LinearGradient
-                  colors={["rgba(0,0,0,1)", "rgba(0,0,0,0.85)", "rgba(0,0,0,0.5)", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.1)", "transparent"]}
-                  locations={[0, 0.2, 0.4, 0.55, 0.65, 0.8]}
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: "100%",
-                    borderBottomLeftRadius: 42,
-                    borderBottomRightRadius: 42,
-                  }}
+                  colors={GRADIENT_COLORS}
+                  locations={GRADIENT_LOCATIONS}
+                  style={local.avatarGradient}
                   start={{ x: 0.5, y: 1 }}
                   end={{ x: 0.5, y: 0 }}
                 />
-                <TouchableOpacity
-                  onPress={() => setPickerType("avatar")}
-                  style={{
-                    position: "absolute",
-                    right: 8,
-                    bottom: 8,
-                    backgroundColor: "rgba(0,0,0,0.55)",
-                    borderRadius: 14,
-                    padding: 5,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+                <TouchableOpacity onPress={() => setPickerType("avatar")} style={local.avatarEditButton}>
                   <Ionicons name="pencil" size={16} color="#fff" />
                 </TouchableOpacity>
               </TouchableOpacity>
             </View>
 
-            <View
-              style={{
-                backgroundColor: "#fff",
-                borderRadius: 12,
-                padding: 16,
-                ...Platform.select({
-                  ios: {
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.04,
-                    shadowRadius: 3,
-                  },
-                  android: { elevation: 1 },
-                }),
-              }}
-            >
-              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 8 }}>Display name</Text>
+            <View style={local.card}>
+              <Text style={local.fieldLabel}>Display name</Text>
               <TextInput
-                value={displayName}
-                onChangeText={setDisplayName}
+                value={aboutDraft.displayName}
+                onChangeText={displayName => setAboutDraft({ ...aboutDraft, displayName })}
                 placeholder="Display name"
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#d1d5db",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  backgroundColor: "#fff",
-                  marginBottom: 14,
-                }}
+                style={local.textInput}
                 maxLength={50}
               />
 
-              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 8 }}>Bio</Text>
+              <Text style={local.fieldLabel}>Bio</Text>
               <TextInput
-                value={bio}
-                onChangeText={setBio}
+                value={aboutDraft.bio}
+                onChangeText={bio => setAboutDraft({ ...aboutDraft, bio })}
                 placeholder="Tell people a bit about yourself"
                 placeholderTextColor="#9ca3af"
                 multiline
                 textAlignVertical="top"
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#d1d5db",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  minHeight: 120,
-                  backgroundColor: "#fff",
-                }}
+                style={local.bioInput}
                 maxLength={160}
               />
 
-              {!!error && (
-                <Text style={{ color: "#dc2626", marginTop: 12 }}>{error}</Text>
-              )}
+              {!!error && <Text style={local.errorText}>{error}</Text>}
 
               {!!success && (
-                <Text style={{ color: success === "Profile updated" ? "#16a34a" : "#fbbf24", marginTop: 12 }}>{success}</Text>
+                <Text
+                  style={[
+                    local.successText,
+                    { color: success === "Profile updated" ? "#16a34a" : "#fbbf24" },
+                  ]}
+                >
+                  {success}
+                </Text>
               )}
 
               <TouchableOpacity
                 onPress={handleSave}
                 disabled={saving}
-                style={{
-                  marginTop: 16,
-                  backgroundColor: "#2563eb",
-                  borderRadius: 10,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingVertical: 12,
-                  opacity: saving ? 0.7 : 1,
-                }}
+                style={[local.primaryButton, local.saveButton, saving && local.buttonSaving]}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Save changes</Text>
+                  <Text style={local.primaryButtonText}>Save changes</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -635,287 +470,225 @@ export default function ProfileSettingsScreen() {
         )}
 
         {activeTab === "account" && (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 20, paddingBottom: 24 }}>
-            <View style={{
-              backgroundColor: "#fff", borderRadius: 12, padding: 16, marginBottom: 18,
-              ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3 }, android: { elevation: 1 } })
-            }}>
-
+          <ScrollView style={local.flex1} contentContainerStyle={local.accountScrollContent}>
+            <View style={local.accountCard}>
               {/* Username (not editable) */}
-              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Username</Text>
-              <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 2 }}>{user?.username || "-"}</Text>
-              <Text style={{ color: "#6b7280", fontSize: 12, marginBottom: 18 }}>
-                Your username is not changeable.
-              </Text>
+              <Text style={local.fieldLabel}>Username</Text>
+              <Text style={local.usernameValue}>{profileMeta.username}</Text>
+              <Text style={local.usernameHint}>Your username is not changeable.</Text>
 
               {/* ── Email section ── */}
-              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 2 }}>Current Email</Text>
-              <Text style={{ fontSize: 16, color: "#1e293b", fontWeight: "700", marginBottom: 18 }}>{currentEmail || "-"}</Text>
+              <Text style={local.fieldLabel}>Current Email</Text>
+              <Text style={local.currentEmailValue}>{profileMeta.email}</Text>
 
-              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Email</Text>
+              <Text style={local.fieldLabelTight}>New Email</Text>
               <TextInput
-                value={newEmail}
-                onChangeText={setNewEmail}
+                value={accountForm.email.newEmail}
+                onChangeText={(val) => updateAccountForm("email", "newEmail", val)}
                 placeholder="Enter new email"
                 autoCapitalize="none"
                 keyboardType="email-address"
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#d1d5db",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  backgroundColor: "#fff",
-                  color: newEmail ? "#1e293b" : "#9ca3af",
-                  marginBottom: 8,
-                }}
+                style={[
+                  local.accountInput,
+                  { color: accountForm.email.newEmail ? "#1e293b" : "#9ca3af" },
+                ]}
                 placeholderTextColor="#9ca3af"
               />
               <TextInput
-                value={confirmNewEmail}
-                onChangeText={setConfirmNewEmail}
+                value={accountForm.email.confirmNewEmail}
+                onChangeText={(val) => updateAccountForm("email", "confirmNewEmail", val)}
                 placeholder="Confirm new email"
                 autoCapitalize="none"
                 keyboardType="email-address"
-                style={{
-                  borderWidth: 1,
-                  borderColor: "#d1d5db",
-                  borderRadius: 10,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  backgroundColor: "#fff",
-                  color: confirmNewEmail ? "#1e293b" : "#9ca3af",
-                  marginBottom: 8,
-                }}
+                style={[
+                  local.accountInput,
+                  { color: accountForm.email.confirmNewEmail ? "#1e293b" : "#9ca3af" },
+                ]}
                 placeholderTextColor="#9ca3af"
               />
-              <View style={{ position: "relative", marginBottom: 8 }}>
+              <View style={local.passwordFieldWrapper}>
                 <TextInput
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
+                  value={accountForm.email.currentPassword}
+                  onChangeText={(val) => updateAccountForm("email", "currentPassword", val)}
                   placeholder="Current password"
-                  secureTextEntry={!showEmailCurrentPassword}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#d1d5db",
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    paddingRight: 44,
-                    backgroundColor: "#fff",
-                    color: currentPassword ? "#1e293b" : "#9ca3af",
-                  }}
+                  secureTextEntry={!accountUi.showCurrentPasswordForEmailChange}
+                  style={[
+                    local.accountInput,
+                    local.passwordInput,
+                    { color: accountForm.email.currentPassword ? "#1e293b" : "#9ca3af" },
+                  ]}
                   placeholderTextColor="#9ca3af"
                 />
                 <TouchableOpacity
-                  onPress={() => setShowEmailCurrentPassword(prev => !prev)}
-                  style={{ position: "absolute", right: 12, top: 10 }}
+                  onPress={() =>
+                    setAccountUi(prev => ({
+                      ...prev,
+                      showCurrentPasswordForEmailChange: !prev.showCurrentPasswordForEmailChange,
+                    }))
+                  }
+                  style={local.eyeButton}
                 >
-                  <Ionicons name={showEmailCurrentPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                  <Ionicons
+                    name={accountUi.showCurrentPasswordForEmailChange ? "eye-off" : "eye"}
+                    size={20}
+                    color="#6b7280"
+                  />
                 </TouchableOpacity>
               </View>
 
-              {!!emailError && (
-                <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{emailError}</Text>
-              )}
+              {!!emailError && <Text style={local.errorTextSmall}>{emailError}</Text>}
 
               <TouchableOpacity
                 onPress={handleChangeEmail}
                 disabled={saving}
-                style={{
-                  backgroundColor: "#2563eb",
-                  borderRadius: 10,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingVertical: 12,
-                  opacity: saving ? 0.7 : 1,
-                  marginBottom: 24,
-                }}
+                style={[local.primaryButton, local.changeEmailButton, saving && local.buttonSaving]}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Email</Text>
+                  <Text style={local.primaryButtonText}>Change Email</Text>
                 )}
               </TouchableOpacity>
 
               {/* ── Password section ── */}
-              <Text style={{ fontWeight: "600", color: "#374151", marginBottom: 4 }}>New Password</Text>
-              <View style={{ position: "relative", marginBottom: 8 }}>
+              <Text style={local.fieldLabelTight}>New Password</Text>
+              <View style={local.passwordFieldWrapper}>
                 <TextInput
-                  value={newPassword}
-                  onChangeText={setNewPassword}
+                  value={accountForm.password.newPassword}
+                  onChangeText={(val) => updateAccountForm("password", "newPassword", val)}
                   placeholder="Enter new password"
-                  secureTextEntry={!showNewPassword}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#d1d5db",
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    paddingRight: 44,
-                    backgroundColor: "#fff",
-                    color: newPassword ? "#1e293b" : "#9ca3af",
-                  }}
+                  secureTextEntry={!accountUi.showNewPassword}
+                  style={[
+                    local.accountInput,
+                    local.passwordInput,
+                    { color: accountForm.password.newPassword ? "#1e293b" : "#9ca3af" },
+                  ]}
                   placeholderTextColor="#9ca3af"
                 />
                 <TouchableOpacity
-                  onPress={() => setShowNewPassword(prev => !prev)}
-                  style={{ position: "absolute", right: 12, top: 10 }}
+                  onPress={() => setAccountUi(prev => ({ ...prev, showNewPassword: !prev.showNewPassword }))}
+                  style={local.eyeButton}
                 >
-                  <Ionicons name={showNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                  <Ionicons name={accountUi.showNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
                 </TouchableOpacity>
               </View>
-              <View style={{ position: "relative", marginBottom: 8 }}>
+              <View style={local.passwordFieldWrapper}>
                 <TextInput
-                  value={confirmNewPassword}
-                  onChangeText={setConfirmNewPassword}
+                  value={accountForm.password.confirmNewPassword}
+                  onChangeText={(val) => updateAccountForm("password", "confirmNewPassword", val)}
                   placeholder="Confirm new password"
-                  secureTextEntry={!showConfirmNewPassword}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#d1d5db",
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    paddingRight: 44,
-                    backgroundColor: "#fff",
-                    color: confirmNewPassword ? "#1e293b" : "#9ca3af",
-                  }}
+                  secureTextEntry={!accountUi.showConfirmNewPassword}
+                  style={[
+                    local.accountInput,
+                    local.passwordInput,
+                    { color: accountForm.password.confirmNewPassword ? "#1e293b" : "#9ca3af" },
+                  ]}
                   placeholderTextColor="#9ca3af"
                 />
                 <TouchableOpacity
-                  onPress={() => setShowConfirmNewPassword(prev => !prev)}
-                  style={{ position: "absolute", right: 12, top: 10 }}
+                  onPress={() =>
+                    setAccountUi(prev => ({ ...prev, showConfirmNewPassword: !prev.showConfirmNewPassword }))
+                  }
+                  style={local.eyeButton}
                 >
-                  <Ionicons name={showConfirmNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                  <Ionicons name={accountUi.showConfirmNewPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
                 </TouchableOpacity>
               </View>
-              <View style={{ position: "relative", marginBottom: 8 }}>
+              <View style={local.passwordFieldWrapper}>
                 <TextInput
-                  value={currentPasswordForPassword}
-                  onChangeText={setCurrentPasswordForPassword}
+                  value={accountForm.password.currentPassword}
+                  onChangeText={(val) => updateAccountForm("password", "currentPassword", val)}
                   placeholder="Current password"
-                  secureTextEntry={!showCurrentPasswordForPassword}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: "#d1d5db",
-                    borderRadius: 10,
-                    paddingHorizontal: 12,
-                    paddingVertical: 10,
-                    paddingRight: 44,
-                    backgroundColor: "#fff",
-                    color: currentPasswordForPassword ? "#1e293b" : "#9ca3af",
-                  }}
+                  secureTextEntry={!accountUi.showCurrentPasswordForPasswordChange}
+                  style={[
+                    local.accountInput,
+                    local.passwordInput,
+                    { color: accountForm.password.currentPassword ? "#1e293b" : "#9ca3af" },
+                  ]}
                   placeholderTextColor="#9ca3af"
                 />
                 <TouchableOpacity
-                  onPress={() => setShowCurrentPasswordForPassword(prev => !prev)}
-                  style={{ position: "absolute", right: 12, top: 10 }}
+                  onPress={() =>
+                    setAccountUi(prev => ({
+                      ...prev,
+                      showCurrentPasswordForPasswordChange: !prev.showCurrentPasswordForPasswordChange,
+                    }))
+                  }
+                  style={local.eyeButton}
                 >
-                  <Ionicons name={showCurrentPasswordForPassword ? "eye-off" : "eye"} size={20} color="#6b7280" />
+                  <Ionicons
+                    name={accountUi.showCurrentPasswordForPasswordChange ? "eye-off" : "eye"}
+                    size={20}
+                    color="#6b7280"
+                  />
                 </TouchableOpacity>
               </View>
 
-              {!!passwordError && (
-                <Text style={{ color: "#dc2626", fontSize: 13, marginBottom: 8 }}>{passwordError}</Text>
-              )}
+              {!!passwordError && <Text style={local.errorTextSmall}>{passwordError}</Text>}
 
               <TouchableOpacity
                 onPress={handleChangePassword}
                 disabled={saving}
-                style={{
-                  backgroundColor: "#2563eb",
-                  borderRadius: 10,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingVertical: 12,
-                  opacity: saving ? 0.7 : 1,
-                }}
+                style={[local.primaryButton, saving && local.buttonSaving]}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Change Password</Text>
+                  <Text style={local.primaryButtonText}>Change Password</Text>
                 )}
               </TouchableOpacity>
             </View>
           </ScrollView>
         )}
-
       </View>
 
-      <Modal
-        visible={pickerType !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={closePicker}
-      >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.45)",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
+      <Modal visible={pickerType !== null} transparent animationType="fade" onRequestClose={closePicker}>
+        <View style={local.modalOverlay}>
           <View
-            style={{
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              padding: 14,
-              maxWidth: Math.round(screenWidth * 0.85),
-              width: Math.round(screenWidth * 0.85),
-              maxHeight: Math.round(screenHeight * 0.7),
-            }}
+            style={[
+              local.modalCard,
+              {
+                maxWidth: Math.round(screenWidth * 0.85),
+                width: Math.round(screenWidth * 0.85),
+                maxHeight: Math.round(screenHeight * 0.7),
+              },
+            ]}
           >
-            <Text style={{ fontSize: 16, fontWeight: "700", color: "#111827", marginBottom: 10 }}>
+            <Text style={local.modalTitle}>
               {pickerType === "cover" ? "Pick a cover" : "Pick a profile photo"}
             </Text>
 
-            <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+            <View style={local.modalGrid}>
               {(pickerType === "cover" ? coverOptions : avatarOptions).map(uri => {
                 const selected =
-                  pickerType === "cover"
-                    ? selectedCoverUri === uri
-                    : selectedAvatarUri === uri;
+                  pickerType === "cover" ? aboutDraft.coverUrl === uri : aboutDraft.avatarUrl === uri;
 
-                const imageSize = pickerType === "cover"
-                  ? Math.round(screenWidth * 0.22)
-                  : Math.round(screenWidth * 0.16);
+                const imageSize =
+                  pickerType === "cover" ? Math.round(screenWidth * 0.22) : Math.round(screenWidth * 0.16);
 
                 return (
                   <TouchableOpacity
                     key={uri}
                     onPress={() => handleSelectImage(uri)}
-                    style={{
-                      width: imageSize,
-                      height: pickerType === "cover" ? Math.round(imageSize * 9 / 16) : imageSize,
-                      borderRadius: pickerType === "cover" ? 8 : 999,
-                      overflow: "hidden",
-                      borderWidth: selected ? 2 : 1,
-                      borderColor: selected ? "#2563eb" : "#d1d5db",
-                      marginBottom: 10,
-                    }}
+                    style={[
+                      local.pickerItem,
+                      {
+                        width: imageSize,
+                        height: pickerType === "cover" ? Math.round((imageSize * 9) / 16) : imageSize,
+                        borderRadius: pickerType === "cover" ? 8 : 999,
+                        borderWidth: selected ? 2 : 1,
+                        borderColor: selected ? "#2563eb" : "#d1d5db",
+                      },
+                    ]}
                   >
-                    <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                    <Image source={{ uri }} style={local.pickerItemImage} resizeMode="cover" />
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            <TouchableOpacity
-              onPress={closePicker}
-              style={{
-                alignSelf: "flex-end",
-                marginTop: 4,
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 8,
-                backgroundColor: "#f3f4f6",
-              }}
-            >
-              <Text style={{ color: "#374151", fontWeight: "600" }}>Close</Text>
+            <TouchableOpacity onPress={closePicker} style={local.modalCloseButton}>
+              <Text style={local.modalCloseText}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -923,3 +696,324 @@ export default function ProfileSettingsScreen() {
     </PageShell>
   );
 }
+
+const COVER_HEIGHT = 240;
+
+const local = StyleSheet.create({
+  flex1: {
+    flex: 1,
+  },
+  loadErrorText: {
+    color: "#dc2626",
+  },
+
+  // Success notice banner
+  successNotice: {
+    position: "absolute",
+    top: 12,
+    left: 16,
+    right: 16,
+    zIndex: 20,
+    backgroundColor: "#ecfdf5",
+    borderColor: "#86efac",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  successNoticeText: {
+    color: "#166534",
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+
+  // Tabs
+  tabsRow: {
+    flexDirection: "row",
+    marginTop: 8,
+    marginBottom: 8,
+    paddingHorizontal: 0,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    alignItems: "center",
+  },
+  tabButtonActive: {
+    borderBottomColor: "#2563eb",
+  },
+  tabButtonInactive: {
+    borderBottomColor: "#e5e7eb",
+  },
+  tabLabelActive: {
+    color: "#2563eb",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  tabLabelInactive: {
+    color: "#6b7280",
+    fontWeight: "500",
+    fontSize: 15,
+  },
+
+  // About tab
+  aboutScrollContent: {
+    paddingHorizontal: 0,
+    paddingTop: 12,
+    paddingBottom: 24,
+  },
+  coverContainer: {
+    height: COVER_HEIGHT,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+    marginBottom: 16,
+    position: "relative",
+    overflow: "hidden",
+  },
+  coverImage: {
+    width: "100%",
+    height: "100%",
+  },
+  coverGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "100%",
+  },
+  coverEditButton: {
+    position: "absolute",
+    right: 14,
+    top: 14,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 16,
+    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarWrapper: {
+    position: "absolute",
+    left: 14,
+    bottom: 12,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3,
+    borderColor: "#fff",
+    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    zIndex: 2,
+    elevation: 6,
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarGradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: "100%",
+    borderBottomLeftRadius: 42,
+    borderBottomRightRadius: 42,
+  },
+  avatarEditButton: {
+    position: "absolute",
+    right: 8,
+    bottom: 8,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: 14,
+    padding: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+  fieldLabel: {
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+  },
+  fieldLabelTight: {
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 4,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    marginBottom: 14,
+  },
+  bioInput: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 120,
+    backgroundColor: "#fff",
+  },
+  errorText: {
+    color: "#dc2626",
+    marginTop: 12,
+  },
+  errorTextSmall: {
+    color: "#dc2626",
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  successText: {
+    marginTop: 12,
+  },
+
+  primaryButton: {
+    backgroundColor: "#2563eb",
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  primaryButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  buttonSaving: {
+    opacity: 0.7,
+  },
+  saveButton: {
+    marginTop: 16,
+  },
+
+  // Account tab
+  accountScrollContent: {
+    paddingHorizontal: 0,
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  accountCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 18,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+  usernameValue: {
+    fontSize: 16,
+    color: "#1e293b",
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  usernameHint: {
+    color: "#6b7280",
+    fontSize: 12,
+    marginBottom: 18,
+  },
+  currentEmailValue: {
+    fontSize: 16,
+    color: "#1e293b",
+    fontWeight: "700",
+    marginBottom: 18,
+  },
+  accountInput: {
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    marginBottom: 8,
+  },
+  passwordFieldWrapper: {
+    position: "relative",
+    marginBottom: 8,
+  },
+  passwordInput: {
+    paddingRight: 44,
+  },
+  eyeButton: {
+    position: "absolute",
+    right: 12,
+    top: 10,
+  },
+  changeEmailButton: {
+    marginBottom: 24,
+  },
+
+  // Modal / image picker
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 10,
+  },
+  modalGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  pickerItem: {
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  pickerItemImage: {
+    width: "100%",
+    height: "100%",
+  },
+  modalCloseButton: {
+    alignSelf: "flex-end",
+    marginTop: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#f3f4f6",
+  },
+  modalCloseText: {
+    color: "#374151",
+    fontWeight: "600",
+  },
+});

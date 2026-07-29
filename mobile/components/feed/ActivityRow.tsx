@@ -71,6 +71,8 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfileMeta } from "@/hooks/useProfileMeta";
 import { Activity } from "@/types/Activity";
 import { Comment } from "@/types/Comment";
 import {
@@ -118,9 +120,6 @@ const space = {
 
 type Props = {
   activity: Activity;
-  currentUserId?: number;
-  currentUserAvatarUrl?: string;
-  currentUserLabel?: string;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
@@ -619,9 +618,6 @@ const LikedUsersModal = ({
 
 export const ActivityRow = ({
   activity,
-  currentUserId,
-  currentUserAvatarUrl,
-  currentUserLabel,
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
@@ -630,6 +626,11 @@ export const ActivityRow = ({
   onAddComment,
 }: Props) => {
   const { targetPost } = activity;
+  const { user } = useAuth();
+  const { profileMeta } = useProfileMeta();
+  const currentUserId = user?.id;
+  const currentUserAvatarUrl = profileMeta?.avatarUrl;
+  const currentUserLabel = profileMeta?.displayName;
 
   const {
     likedUsers,

@@ -31,7 +31,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Activity } from "@/types/Activity";
 import {
   addPost,
-  getMyProfile,
   deleteComment as deleteCommentMutation,
   deletePost as deletePostMutation,
   fetchFeed,
@@ -49,30 +48,16 @@ type Params = {
   types?: string[];
 };
 
+
+
 export function useActivities(params: Params = {}) {
   const { username, types } = params;
+
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [currentUserAvatarUrl, setCurrentUserAvatarUrl] = useState<string | null>(null);
-  const [currentUserLabel, setCurrentUserLabel] = useState<string | null>(null);
 
-  useEffect(() => {
-    getMyProfile()
-      .then(user => {
-        setCurrentUserId(user?.id ?? null);
-        setCurrentUserAvatarUrl(user?.avatarUrl?.trim() || null);
-        setCurrentUserLabel(user?.displayName?.trim() || user?.username?.trim() || null);
-      })
-      .catch((err: unknown) => {
-        console.warn("[useActivities] failed to resolve current user", err);
-        setCurrentUserId(null);
-        setCurrentUserAvatarUrl(null);
-        setCurrentUserLabel(null);
-      });
-  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -359,9 +344,6 @@ export function useActivities(params: Params = {}) {
     loading,
     error,
     refresh,
-    currentUserId,
-    currentUserAvatarUrl,
-    currentUserLabel,
     toggleFollow,
     togglePostLike,
     toggleCommentLike,

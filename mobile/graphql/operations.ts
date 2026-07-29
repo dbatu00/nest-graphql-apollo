@@ -115,7 +115,7 @@ export const FOLLOWING_WITH_FOLLOW_STATE_QUERY = `
   }
 `;
 
-export const ME_QUERY = `
+export const GET_ME_QUERY = `
   query {
     me {
       id
@@ -130,17 +130,6 @@ export const ME_QUERY = `
   }
 `;
 
-export const AUTH_ME_QUERY = `
-  query {
-    me {
-      id
-      username
-      displayName
-      emailVerified
-    }
-  }
-`;
-
 export const LOGIN_MUTATION = `
   mutation Login($identifier: String!, $password: String!) {
     login(identifier: $identifier, password: $password) {
@@ -150,6 +139,11 @@ export const LOGIN_MUTATION = `
         id
         username
         displayName
+        bio
+        avatarUrl
+        coverUrl
+        emailVerified
+        email
       }
     }
   }
@@ -163,6 +157,11 @@ export const SIGNUP_MUTATION = `
         id
         username
         displayName
+        bio
+        avatarUrl
+        coverUrl
+        emailVerified
+        email
       }
       emailVerified
     }
@@ -275,6 +274,8 @@ export const UPDATE_MY_PROFILE_MUTATION = `
       bio
       avatarUrl
       coverUrl
+      emailVerified
+      email
     }
   }
 `;
