@@ -21,9 +21,6 @@ export function ActivityList({ feed, filter }: Props) {
                 <ActivityRow
                     key={activity.id}
                     activity={activity}
-                    currentUserId={feed.currentUserId ?? undefined}
-                    currentUserAvatarUrl={feed.currentUserAvatarUrl ?? undefined}
-                    currentUserLabel={feed.currentUserLabel ?? undefined}
                     onToggleFollow={feed.toggleFollow}
                     onDeletePost={feed.deletePost}
                     onTogglePostLike={feed.togglePostLike}

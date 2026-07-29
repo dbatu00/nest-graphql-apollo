@@ -1,5 +1,4 @@
 # TODO Roadmap (Active Only)
-
 This file tracks only open work. Completed items are intentionally removed.
 
 
@@ -180,3 +179,18 @@ type ActivityBannerProps = {
     -Dead code: targetVerb
   -Likely no-op style
 commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+
+settings.tsx:
+/*TODO:
+//might be able to eliminate these checks
+  if (!profileMeta || !aboutDraft) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+*/
+
+check nullabilities and fallbacks app wide

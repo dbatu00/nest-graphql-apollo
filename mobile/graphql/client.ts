@@ -1,7 +1,6 @@
 import {
     ADD_POST_MUTATION,
     ADD_COMMENT_MUTATION,
-    AUTH_ME_QUERY,
     CHANGE_MY_EMAIL_MUTATION,
     CHANGE_MY_PASSWORD_MUTATION,
     DELETE_COMMENT_MUTATION,
@@ -17,7 +16,7 @@ import {
     IS_EMAIL_USED_QUERY,
     LIKED_POSTS_QUERY,
     LOGIN_MUTATION,
-    ME_QUERY,
+    GET_ME_QUERY,
     RESEND_VERIFICATION_EMAIL_MUTATION,
     SIGNUP_MUTATION,
     UNFOLLOW_USER_MUTATION,
@@ -33,11 +32,18 @@ import { Activity } from "@/types/Activity";
 import { Post } from "@/types/Post";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 
-export type SessionUser = {
+export type MeData = {
     id: number;
     username: string;
-    displayName?: string;
+    displayName: string;
+    bio: string;
+    avatarUrl: string;
+    coverUrl: string;
+    emailVerified: boolean;
+    email: string;
 };
+
+export type SessionUser = MeData;
 
 export type AuthPayload = {
     token: string;
@@ -57,12 +63,7 @@ export type ProfileData = {
     posts: Post[];
 };
 
-export type ProfileMetaData = {
-    displayName?: string;
-    bio?: string;
-    avatarUrl?: string;
-    coverUrl?: string;
-};
+export type ProfileMetaData = Omit<MeData, "emailVerified">;
 
 export type FollowUser = {
     id: number;
@@ -87,32 +88,8 @@ export async function signUp(username: string, email: string, password: string):
     return data.signUp;
 }
 
-export async function getAuthMe() {
-    const data = await graphqlFetch<{
-        me: {
-            id: number;
-            username: string;
-            displayName?: string;
-            emailVerified: boolean;
-        };
-    }>(AUTH_ME_QUERY);
-
-    return data.me;
-}
-
-export async function getMyProfile() {
-    const data = await graphqlFetch<{
-        me: {
-            id: number;
-            username: string;
-            displayName?: string;
-            bio?: string;
-            avatarUrl?: string;
-            coverUrl?: string;
-            email: string;
-        };
-    }>(ME_QUERY);
-
+export async function getMe(): Promise<MeData> {
+    const data = await graphqlFetch<{ me: MeData }>(GET_ME_QUERY);
     return data.me;
 }
 
@@ -121,15 +98,16 @@ export async function updateMyProfile(input: {
     bio?: string;
     avatarUrl?: string;
     coverUrl?: string;
-}) {
+}): Promise<MeData> {
     const data = await graphqlFetch<{
         updateMyProfile: {
             id: number;
             username: string;
-            displayName?: string;
-            bio?: string;
-            avatarUrl?: string;
-            coverUrl?: string;
+            displayName: string;
+            bio: string;
+            avatarUrl: string;
+            coverUrl: string;
+            emailVerified: boolean;
             email: string;
         };
     }>(UPDATE_MY_PROFILE_MUTATION, input);

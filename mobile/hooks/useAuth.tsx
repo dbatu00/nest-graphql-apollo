@@ -73,14 +73,10 @@ import {
 
 import { getCurrentUser } from "@/utils/currentUser";
 import { clearToken, getToken, saveToken } from "@/utils/token";
+import type { MeData } from "@/graphql/client";
 
 //AuthUser is the shape this app uses internally to represent an authenticated user.
-export type AuthUser = {
-  id: number;
-  username: string;
-  displayName?: string;
-  emailVerified: boolean;
-};
+export type AuthUser = MeData;
 
 //Contract between AuthProvider and every useAuth() consumer.
 type AuthContextValue = {
@@ -98,7 +94,11 @@ type AuthContextValue = {
     user: {
       id: number;
       username: string;
-      displayName?: string;
+      displayName: string;
+      bio: string;
+      avatarUrl: string;
+      coverUrl: string;
+      email: string;
     };
     emailVerified: boolean;
   }) => Promise<void>;
@@ -272,7 +272,11 @@ means this callback never needs to be recreated because it doesn't capture any c
         id: currentUser.id,
         username: currentUser.username,
         displayName: currentUser.displayName,
+        bio: currentUser.bio,
+        avatarUrl: currentUser.avatarUrl,
+        coverUrl: currentUser.coverUrl,
         emailVerified: currentUser.emailVerified,
+        email: currentUser.email,
       };
 
       /*
@@ -304,7 +308,11 @@ means this callback never needs to be recreated because it doesn't capture any c
     user: {
       id: number;
       username: string;
-      displayName?: string;
+      displayName: string;
+      bio: string;
+      avatarUrl: string;
+      coverUrl: string;
+      email: string;
     };
     emailVerified: boolean;
   }) => {
@@ -321,6 +329,10 @@ means this callback never needs to be recreated because it doesn't capture any c
       id: args.user.id,
       username: args.user.username,
       displayName: args.user.displayName,
+      bio: args.user.bio,
+      avatarUrl: args.user.avatarUrl,
+      coverUrl: args.user.coverUrl,
+      email: args.user.email,
       emailVerified: args.emailVerified,
     });
 
