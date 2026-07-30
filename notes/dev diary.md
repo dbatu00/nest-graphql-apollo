@@ -491,3 +491,13 @@ repo.exists({ where: { targetType, targetId, userId, active: true } })
 Rather than "give me a row but only the id field," it says "I only want to know if this row exists."
 
 **Decision:** later
+
+
+29.07.2026
+
+Decided not to extract the shared logic between likeComment and unlikeComment. Although the methods are structurally similar, they represent distinct business operations. Extracting the common code would reduce a small amount of duplication at the cost of readability and would not eliminate the need to update both methods when their behavior diverges. Chose explicitness over strict DRY.
+
+
+29.07.2026
+
+Reviewed authentication strategy. Considered switching to a global GqlAuthGuard with a @Public() decorator since most operations currently require authentication. Decided against refactoring for now because the long-term visibility model is still undecided. If the application later adopts Instagram/Twitter-style public profiles and posts, many currently protected queries may become public. Deferred the change until the product's access model is finalized.

@@ -2,26 +2,14 @@
 This file tracks only open work. Completed items are intentionally removed.
 
 
-
----
-
-# P0 — Critical Fixes (Correctness + Data Integrity + Config)
-
-- DB indexing
-
----
-
 # P1 — Core System Consistency (Auth + Backend Rules)
 
 ## Auth State
 
-- Audit all `await` calls for error handling and safe state ordering
+
 - Fix `useAuth.setSession`:
   - set user state first (sync)
   - then persist token (async)
-- Remove `getMyProfile` fetch from `useActivities`
-  - source identity from `useAuth`
-- Make mobile auth state single source of truth
 - Keep `me.emailVerified` consistent across hydration + routing
 - Remove redundant manual redirects → route guards handle navigation
 - Handle deleted-user session gracefully
@@ -194,3 +182,42 @@ settings.tsx:
 */
 
 check nullabilities and fallbacks app wide
+
+
+
+### TODO: Handle email send failure after token creation
+
+The verification token is committed before the email is sent. If SMTP fails, the user may be throttled despite never receiving the email.
+
+Possible solutions:
+- Accept this tradeoff (current behavior).
+- Use an outbox pattern with retries.
+- Invalidate the new token if sending fails.
+- Throttle based on successful sends instead of token creation.
+
+
+async likeComment(userId: number, commentId: number): Promise<boolean> {
+        try {
+            return await this.commentsRepo.manager.transaction(async manager => {
+                const userExists = await manager.exists(User, { where: { id: userId } });
+                const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
+                const postExists = await manager.exists(Post, { where: { id: comment?.postId } });
+
+                postexists probabaly redundant due to fk coınstraint on comment which gets locked
+
+
+lightweight client validation for signup fields
+
+ getDisplayLabel(post.user); the hell is this? activityrow.tsx
+
+ rename: useactivityrow -> useactivityinteractions
+
+ why a feedheader.tsx and a header.tsx?
+
+ unify patterns in client.ts
+
+ audit graphgqlfetch.tsx
+
+ audit token.tsx
+
+ fetchgetProfileFollowersView fix/change naming. client.ts

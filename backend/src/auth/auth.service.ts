@@ -146,12 +146,18 @@ export class AuthService {
     //------------------------------------------------
 
     async login(identifier: string, password: string): Promise<AuthPayload> {
+        const normalizedIdentifier = identifier.trim().toLowerCase();
+
         const credential = await this.authRepo
             .createQueryBuilder("auth")
             .innerJoinAndSelect("auth.user", "user")
-            .where("user.username = :id OR LOWER(user.email) = LOWER(:id)", {
-                id: identifier
-            })
+            .where(
+                "user.username = :identifier OR LOWER(user.email) = :normalizedIdentifier",
+                {
+                    identifier,
+                    normalizedIdentifier
+                }
+            )
             .getOne();
 
         // Prevents timing attacks by always running argon2.verify even when the user doesn't exist 
