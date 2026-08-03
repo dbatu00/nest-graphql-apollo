@@ -31,16 +31,9 @@ Used by:
 - ActivityList
 
 TODO:
-- Remove current user identity props once useAuth (or a dedicated identity hook)
-  becomes the source of truth
 - Consider extracting remaining self-contained UI concepts only if they reduce
   mental load rather than merely moving JSX into new files *
   currently favoring this because i would like to open activityrow.tsx and see logic only
-- Date getting stuff is too defensive
--inline this
-type ActivityBannerProps = {
-  activity: Activity;
-};
 - - Remove unjustified defensive chaining on fields the schema guarantees
   non-null/non-empty: actor.username, targetUser.username (once targetUser
   itself is confirmed present), targetPost.user.username (pending
@@ -48,11 +41,8 @@ type ActivityBannerProps = {
   (unique, non-nullable), not just the TS type level. Keep only the
   genuinely optional checks: targetUser existing at all, targetPost
   existing at all.
-- Remove .trim() calls on username fields — usernames should be validated/
-  normalized at signup, not defensively re-cleaned on every render.
-  -Dead code: targetVerb
-  -Likely no-op style
-commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+
+-commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
 */
 
 import React from "react";
@@ -72,14 +62,10 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfileMeta } from "@/hooks/useProfileMeta";
 import { Activity } from "@/types/Activity";
 import { Comment } from "@/types/Comment";
 import {
-  getAbsoluteDateLabel,
-  getDisplayLabel,
   getRelativeDateLabel,
-  isSameId,
   resolveAvatarUri,
 } from "@/utils/activityHelpers";
 import { LikedUser, useActivityRow } from "./useActivityRow";
@@ -128,78 +114,16 @@ type Props = {
   onAddComment?: (postId: number, content: string) => Promise<void>;
 };
 
-type ActivityBannerContext = {
-  actorLabel: string;
-  actorUsername?: string;
-  targetLabel: string;
-  targetUsername?: string;
-  targetVerb: string;
-  targetNoun: string;
-};
-
-type BannerActivityType = Exclude<Activity["type"], "post">;
-
-const ClickableName = ({ username, label }: { username?: string; label: string }) => {
-  if (username) {
-    return (
-      <ProfileLink username={username}>
-        <Text style={styles.bannerName}>{label}</Text>
-      </ProfileLink>
-    );
-  }
-
-  return <Text style={styles.bannerName}>{label}</Text>;
-};
-
-//Lookup table mapping each BannerActivityType to its banner sentence template. Replaces a switch with a declarative activity type → JSX mapping.
-const actionContentByType: Record<BannerActivityType, (ctx: ActivityBannerContext) => React.ReactNode> = {
-  comment: (ctx) => (
-    <>
-      <ClickableName username={ctx.actorUsername} label={ctx.actorLabel} />
-      <Text> commented on </Text>
-      <ClickableName username={ctx.targetUsername} label={ctx.targetLabel} />
-      <Text>{ctx.targetNoun}</Text>
-    </>
-  ),
-  like: (ctx) => (
-    <>
-      <ClickableName username={ctx.actorUsername} label={ctx.actorLabel} />
-      <Text> liked </Text>
-      <ClickableName username={ctx.targetUsername} label={ctx.targetLabel} />
-      <Text>{ctx.targetNoun}</Text>
-    </>
-  ),
-  follow: (ctx) => (
-    <>
-      <ClickableName username={ctx.actorUsername} label={ctx.actorLabel} />
-      <Text> followed </Text>
-      <ClickableName username={ctx.targetUsername} label={ctx.targetLabel} />
-    </>
-  ),
-  //shares are not implemented yet
-  share: (ctx) => (
-    <>
-      <ClickableName username={ctx.actorUsername} label={ctx.actorLabel} />
-      <Text> shared </Text>
-      <ClickableName username={ctx.targetUsername} label={ctx.targetLabel} />
-      <Text>{ctx.targetNoun}</Text>
-    </>
-  ),
-};
-
 
 // ─────────────────────────────────────────────
-// DateToggleText
+// ActivityBanner
 // ─────────────────────────────────────────────
 
-const DateToggleText = ({ date }: { date: string }) => {
-  const [showAbsolute, setShowAbsolute] = React.useState(false);
-  const label = showAbsolute ? getAbsoluteDateLabel(date) : getRelativeDateLabel(date);
-  if (!label) return null;
+const ClickableName = (username: string, label: string) => {
   return (
-    <TouchableOpacity onPress={() => setShowAbsolute(p => !p)} style={styles.dateToggleTouch}>
-      <Text style={styles.dateText}>{label}</Text>
-    </TouchableOpacity>
+    <ProfileLink username={username}>
+      <Text style={styles.bannerName}>{label}</Text>
+    </ProfileLink>
   );
 };
 
@@ -207,70 +131,59 @@ const DateToggleText = ({ date }: { date: string }) => {
 // ActivityBanner
 // ─────────────────────────────────────────────
 
+const ActivityBanner = ({ activity }: { activity: Activity }) => {
+  const { type, actor, targetPost, createdAt } = activity;
 
-//inline this
-type ActivityBannerProps = {
-  activity: Activity;
-};
+  const actorAvatarUri = resolveAvatarUri(activity.actor.displayName, activity.actor.avatarUrl);
 
-const ActivityBanner = ({ activity }: ActivityBannerProps) => {
-  const { type, actor, targetUser, targetPost, createdAt } = activity;
+  let verb = "";
+  let noun = "";
+  let targetUser = activity.targetUser;
+
   if (type === "post") return null;
+  else if (targetPost) {
+    targetUser = targetPost.user!;
+    if (type === "comment") {
+      verb = "commented on";
+      noun = "'s post";
+    } else if (type === "share") {
+      verb = "shared";
+      noun = "'s post";
+    } else if (type === "like") {
+      verb = "liked";
+      noun = "'s post";
+    }
+  }
+  else if (type === "follow") {
+    verb = "followed";
+    noun = "";
+  }
+  else {
+    console.error(`ActivityBanner: unhandled activity type "${type}"`);
+    return null;
+  }
 
-  const actorLabel = getDisplayLabel(actor);
-  const actorUsername = actor.username?.trim();
-  const targetUserLabel = getDisplayLabel(targetUser);
-  const postOwnerLabel = getDisplayLabel(targetPost?.user);
-  const postOwnerUsername = targetPost?.user?.username?.trim();
-
-  const targetVerb =
-    type === "follow"
-      ? "followed"
-      : type === "comment"
-        ? "commented on"
-        : type === "share"
-          ? "shared"
-          : "liked";
-
-  const targetNoun = type === "follow" ? "" : "'s post";
-
-  const targetLabel = type === "follow" ? targetUserLabel : postOwnerLabel;
-  const targetUsername = type === "follow" ? targetUser?.username?.trim() : postOwnerUsername;
-
-  const context: ActivityBannerContext = {
-    actorLabel,
-    actorUsername,
-    targetLabel,
-    targetUsername,
-    targetVerb,
-    targetNoun,
-  };
-
-  const actorAvatarUri = resolveAvatarUri(actor.avatarUrl, actorLabel, 128);
-  const targetAvatarUrl = type === "follow" ? targetUser?.avatarUrl : targetPost?.user?.avatarUrl;
-  const targetAvatarUri = resolveAvatarUri(targetAvatarUrl, targetLabel, 64);
+  const targetAvatarUri = resolveAvatarUri(targetUser.displayName, targetUser.avatarUrl);
 
   return (
     <View style={styles.activityBanner}>
-      {actorUsername ? (
-        <ProfileLink username={actorUsername}>
-          <Image source={{ uri: actorAvatarUri }} style={styles.avatarMd} />
-        </ProfileLink>
-      ) : (
+      <ProfileLink username={actor.username}>
         <Image source={{ uri: actorAvatarUri }} style={styles.avatarMd} />
-      )}
+      </ProfileLink>
+
       <View style={styles.bannerContent}>
-        <Text style={styles.bannerText}>{actionContentByType[type](context)}</Text>
+        <Text style={styles.bannerText}>
+          {ClickableName(actor.username, actor.displayName)}
+          <Text> {verb} </Text>
+          {ClickableName(targetUser.username, targetUser.displayName)}
+          <Text>{noun}</Text>
+        </Text>
         <DateToggleText date={createdAt} />
       </View>
-      {targetUsername && (
-        <ProfileLink username={targetUsername}>
-          <Image source={{ uri: targetAvatarUri }} style={styles.followBannerAvatar} />
-        </ProfileLink>
-      )}
-      {!targetUsername && (
+
+      <ProfileLink username={targetUser.username}>
         <Image source={{ uri: targetAvatarUri }} style={styles.followBannerAvatar} />
-      )}
+      </ProfileLink>
     </View>
   );
 };
@@ -282,7 +195,6 @@ const ActivityBanner = ({ activity }: ActivityBannerProps) => {
 type CommentRowProps = {
   comment: Comment;
   postId: number;
-  currentUserId?: number;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
   onToggleCommentLike?: (commentId: number, postId: number, currentlyLiked: boolean) => Promise<void>;
   onOpenCommentLikes: (commentId: number) => void;
@@ -291,18 +203,19 @@ type CommentRowProps = {
 const CommentRow = ({
   comment,
   postId,
-  currentUserId,
   onDeleteComment,
   onToggleCommentLike,
   onOpenCommentLikes,
 }: CommentRowProps) => {
   const [optionsOpen, setOptionsOpen] = React.useState(false);
 
-  const author = getDisplayLabel(comment.user);
-  const avatarUri = resolveAvatarUri(comment.user.avatarUrl, author, 64);
-  const canDelete = !!onDeleteComment && currentUserId != null && isSameId(currentUserId, comment.user.id);
-  const likedByMe = comment.likedByMe ?? false;
-  const likesCount = comment.likesCount ?? 0;
+  const { user } = useAuth();
+  if (!user) return null;
+
+  const avatarUri = resolveAvatarUri(comment.user.displayName, comment.user.avatarUrl);
+  const canDelete = (user.id === comment.user.id)
+  const likedByMe = comment.likedByMe;
+  const likesCount = comment.likesCount;
 
   return (
     <View style={styles.commentRow}>
@@ -316,7 +229,7 @@ const CommentRow = ({
             <View style={styles.commentBubbleRow}>
               <View style={styles.commentBubble}>
                 <ProfileLink username={comment.user.username}>
-                  <Text style={styles.commentAuthor}>{author}</Text>
+                  <Text style={styles.commentAuthor}>{comment.user.displayName}</Text>
                 </ProfileLink>
                 <Text style={styles.commentContent}>{comment.content}</Text>
               </View>
@@ -394,9 +307,6 @@ const CommentRow = ({
 
 type PostCardProps = {
   post: NonNullable<Activity["targetPost"]>;
-  currentUserId?: number;
-  currentUserAvatarUrl?: string;
-  currentUserLabel?: string;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
@@ -414,9 +324,6 @@ type PostCardProps = {
 
 const PostCard = ({
   post,
-  currentUserId,
-  currentUserAvatarUrl,
-  currentUserLabel,
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
@@ -431,13 +338,16 @@ const PostCard = ({
   onSubmitComment,
 }: PostCardProps) => {
   const [commentInputFocused, setCommentInputFocused] = React.useState(false);
-  const authorLabel = getDisplayLabel(post.user);
-  const authorAvatarUri = resolveAvatarUri(post.user.avatarUrl, authorLabel, 128);
-  const currentUserAvatarUri = resolveAvatarUri(currentUserAvatarUrl, currentUserLabel?.trim() || "You", 64);
-  const isOwner = isSameId(currentUserId, post.user.id);
-  const likedByMe = post.likedByMe ?? false;
-  const likesCount = post.likesCount ?? 0;
-  const hasComments = (post.comments?.length ?? 0) > 0;
+
+  const { user } = useAuth();
+  if (!user || !post?.user) return null;
+
+  const currentUserAvatarUri = resolveAvatarUri(user!.displayName, user!.avatarUrl);
+  const authorAvatarUri = resolveAvatarUri(post.user.displayName, post.user.avatarUrl);
+  const isOwner = (user!.id === post.user.id);
+  const likedByMe = post.likedByMe;
+  const likesCount = post.likesCount;
+  const hasComments = post.comments!.length > 0;
 
   const headerActions = () => {
     if (!isOwner && onToggleFollow) {
@@ -470,7 +380,7 @@ const PostCard = ({
         </ProfileLink>
         <View style={styles.postHeaderContent}>
           <ProfileLink username={post.user.username}>
-            <Text style={styles.postAuthorName}>{authorLabel}</Text>
+            <Text style={styles.postAuthorName}>{post.user.displayName}</Text>
           </ProfileLink>
           <DateToggleText date={post.createdAt} />
         </View>
@@ -514,7 +424,6 @@ const PostCard = ({
                   key={comment.id}
                   comment={comment}
                   postId={post.id}
-                  currentUserId={currentUserId}
                   onDeleteComment={onDeleteComment}
                   onToggleCommentLike={onToggleCommentLike}
                   onOpenCommentLikes={onOpenCommentLikes}
@@ -572,7 +481,6 @@ type LikedUsersModalProps = {
   visible: boolean;
   likedUsers: LikedUser[];
   loading: boolean;
-  currentUserId?: number;
   onClose: () => void;
   onToggleFollow: (username: string, shouldFollow: boolean) => void | Promise<void>;
 };
@@ -581,36 +489,56 @@ const LikedUsersModal = ({
   visible,
   likedUsers,
   loading,
-  currentUserId,
   onClose,
   onToggleFollow,
-}: LikedUsersModalProps) => (
-  <Modal visible={visible} animationType="slide">
-    <View style={styles.modalBody}>
-      <View style={styles.modalHeader}>
-        <Text style={styles.modalTitle}>Liked by</Text>
-        <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
-          <Text style={styles.modalCloseBtnText}>Close</Text>
-        </TouchableOpacity>
+}: LikedUsersModalProps) => {
+  const { user } = useAuth();
+  const currentUser = user;
+  if (!currentUser) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide">
+      <View style={styles.modalBody}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Liked by</Text>
+          <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
+            <Text style={styles.modalCloseBtnText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+        {!loading && (
+          <ScrollView style={styles.modalScroll}>
+            {likedUsers.map((user) => (
+              <View key={user.id} style={styles.modalUserRow}>
+                <UserRow
+                  user={user}
+                  currentUserId={currentUser.id}
+                  onToggleFollow={onToggleFollow}
+                  isCompact={false}
+                  onProfileNavigate={onClose}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        )}
       </View>
-      {!loading && (
-        <ScrollView style={styles.modalScroll}>
-          {likedUsers.map((user) => (
-            <View key={user.id} style={styles.modalUserRow}>
-              <UserRow
-                user={user}
-                currentUserId={currentUserId}
-                onToggleFollow={onToggleFollow}
-                isCompact={false}
-                onProfileNavigate={onClose}
-              />
-            </View>
-          ))}
-        </ScrollView>
-      )}
-    </View>
-  </Modal>
-);
+    </Modal>
+  )
+};
+
+// ─────────────────────────────────────────────
+// DateToggleText
+// ─────────────────────────────────────────────
+
+const DateToggleText = ({ date }: { date: string }) => {
+  const [showAbsolute, setShowAbsolute] = React.useState(false);
+  const label = showAbsolute ? date : getRelativeDateLabel(date);
+  return (
+    <TouchableOpacity onPress={() => setShowAbsolute(p => !p)} style={styles.dateToggleTouch}>
+      <Text style={styles.dateText}>{label}</Text>
+    </TouchableOpacity>
+  );
+};
+
 
 // ─────────────────────────────────────────────
 // ActivityRow (root export)
@@ -626,11 +554,6 @@ export const ActivityRow = ({
   onAddComment,
 }: Props) => {
   const { targetPost } = activity;
-  const { user } = useAuth();
-  const { profileMeta } = useProfileMeta();
-  const currentUserId = user?.id;
-  const currentUserAvatarUrl = profileMeta?.avatarUrl;
-  const currentUserLabel = profileMeta?.displayName;
 
   const {
     likedUsers,
@@ -655,9 +578,6 @@ export const ActivityRow = ({
           <View style={styles.postContainer}>
             <PostCard
               post={targetPost}
-              currentUserId={currentUserId}
-              currentUserAvatarUrl={currentUserAvatarUrl}
-              currentUserLabel={currentUserLabel}
               onToggleFollow={onToggleFollow}
               onDeletePost={onDeletePost}
               onDeleteComment={onDeleteComment}
@@ -679,7 +599,6 @@ export const ActivityRow = ({
         visible={likedModalVisible}
         likedUsers={likedUsers}
         loading={likedLoading}
-        currentUserId={currentUserId}
         onClose={closeLikedModal}
         onToggleFollow={handleToggleFollowInModal}
       />

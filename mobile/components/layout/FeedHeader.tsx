@@ -37,7 +37,6 @@ export function FeedHeader({ title = "BookBook", onRefresh, isRefreshing = false
 
   const handleLogout = async () => {
     await logout();
-    router.replace("/(auth)/login");
   };
 
   return (

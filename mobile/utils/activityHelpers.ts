@@ -1,38 +1,12 @@
-//TODO: getabsolutedate and issameid are overkill
-
-type DisplayLabelUser = {
-    displayName?: string;
-    username?: string;
-};
-
-//falls back to unknown user if there is no displayname
-export const getDisplayLabel = (user?: DisplayLabelUser, fallback = "Unknown user") => {
-    const displayName = user?.displayName?.trim();
-    if (displayName) return displayName;
-
-    const username = user?.username?.trim();
-    if (username) return username;
-
-    return fallback;
-};
-
-export const isSameId = (left?: number | string, right?: number | string) => {
-    if (left == null || right == null) return false;
-    return Number(left) === Number(right);
-};
-
-export const resolveAvatarUri = (avatarUrl: string | undefined, label: string, size = 128) => {
+export const resolveAvatarUri = (label: string, avatarUrl?: string, size = 128) => {
+    //show real photo if they have one
     const trimmed = avatarUrl?.trim();
     if (trimmed && /^https?:\/\//i.test(trimmed)) return trimmed;
 
+    //generate placeholder with initials
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(label)}&background=e5e7eb&color=374151&size=${size}`;
 };
 
-export const getAbsoluteDateLabel = (date: string) => {
-    const parsed = new Date(date);
-    if (Number.isNaN(parsed.getTime())) return "";
-    return parsed.toLocaleString();
-};
 
 export const getRelativeDateLabel = (date: string) => {
     const parsed = new Date(date);

@@ -115,7 +115,6 @@ export default function UsernameScreen() {
 
   const handleLogout = async () => {
     await logout();
-    router.replace("/(auth)/login");
   };
 
 

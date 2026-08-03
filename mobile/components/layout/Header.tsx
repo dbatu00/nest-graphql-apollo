@@ -37,7 +37,6 @@ export function Header({ title = "BookBook", onRefresh, isRefreshing = false, ri
 
   const handleLogout = async () => {
     await logout();
-    router.replace("/(auth)/login");
   };
 
   return (

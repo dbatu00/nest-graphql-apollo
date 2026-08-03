@@ -7,11 +7,11 @@ export type Post = {
   user: {
     id: number;
     username: string;
-    displayName?: string;
-    avatarUrl?: string;
+    displayName: string;
+    avatarUrl: string;
     followedByMe: boolean;
   };
-  likedByMe?: boolean; // ✅ optional for activity feed
-  likesCount?: number; // ✅ optional for activity feed
-  comments?: Comment[];
+  likedByMe: boolean; // ✅ optional for activity feed
+  likesCount: number; // ✅ optional for activity feed
+  comments: Comment[];
 };
