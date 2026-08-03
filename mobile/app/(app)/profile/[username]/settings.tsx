@@ -24,7 +24,7 @@ import {
   updateMyProfile,
 } from "@/graphql/client";
 import { useProfileMeta } from "@/hooks/useProfileMeta";
-import { FeedHeader } from "@/components/layout/FeedHeader";
+import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
 
 const coverOptions = [
@@ -351,7 +351,7 @@ export default function ProfileSettingsScreen() {
 
   return (
     <PageShell
-      header={<FeedHeader title="BookBook" />}
+      header={<Header title="BookBook" />}
       contentContainerStyle={{ flexGrow: 1 }}
     >
       {successNoticeVisible && (

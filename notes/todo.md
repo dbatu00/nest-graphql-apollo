@@ -112,7 +112,6 @@ username.tsx:
   - Followers/Following → UserList + useFollow
 
 useActivities.tsx:
-- Move current user identity into useAuth (or another dedicated identity hook)
 - Move relationship logic (follow/unfollow) into useFollow so activity and
   relationship concerns are owned separately (same underlying point as
   username.tsx's last TODO — avoid two independent optimistic-follow
@@ -121,20 +120,12 @@ useActivities.tsx:
   -remove useprofile.tsx(unused)
 
 useAuth.tsx:
-- Don't have logout() rely on each call site to also handle navigation
-  (currently only UsernameScreen's handleLogout does router.replace after
-  logout — a 401 interceptor or any other logout path would forget it)
-- Have routing react to auth state instead: a root-level layout/guard
-  watches `user` going null and redirects to /login, so every logout path
-  (button, interceptor, expiry) gets the redirect for free
 - Extract shared toAuthUser() helper — refreshAuth() and setSession() construct
   the same AuthUser shape manually
 - Wrap clearToken() in try/catch in logout() and refreshAuth()'s
   !currentUser branch so setUser(null) still runs if storage fails
 - Confirm whether refreshAuth()'s !currentUser branch is actually reachable
   given backend auth guards; remove it or document it as defensive-only
-- Move logout navigation into AuthGate by reacting to user becoming null,
-  instead of relying on callers to redirect
 - Consider blocking authenticated route rendering in AuthGate until loading
   resolves to eliminate the cold-start flash
   -- useAuth.tsx:
@@ -146,13 +137,6 @@ useAuth.tsx:
   retry/backoff before giving up) instead of silently falling through to
   logged-out state on the very first failure.
 
-- Date getting stuff is too defensive in activityrow.tsx and actitivtyhelpers.ts
-- in activityrow.tsx : inline this:
-type ActivityBannerProps = {
-  activity: Activity;
-};
-
--in activityhelper.ts getabsolutedate and issameid are overkill
 
 -ActivityRow / ActivityBanner:
 - Remove unjustified defensive chaining on fields the schema guarantees
@@ -162,24 +146,9 @@ type ActivityBannerProps = {
   (unique, non-nullable), not just the TS type level. Keep only the
   genuinely optional checks: targetUser existing at all, targetPost
   existing at all.
-- Remove .trim() calls on username fields — usernames should be validated/
-  normalized at signup, not defensively re-cleaned on every render.
-    -Dead code: targetVerb
-  -Likely no-op style
-commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+-commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
 
-settings.tsx:
-/*TODO:
-//might be able to eliminate these checks
-  if (!profileMeta || !aboutDraft) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
 
-*/
 
 check nullabilities and fallbacks app wide
 
@@ -208,11 +177,8 @@ async likeComment(userId: number, commentId: number): Promise<boolean> {
 
 lightweight client validation for signup fields
 
- getDisplayLabel(post.user); the hell is this? activityrow.tsx
 
  rename: useactivityrow -> useactivityinteractions
-
- why a feedheader.tsx and a header.tsx?
 
  unify patterns in client.ts
 
@@ -221,3 +187,5 @@ lightweight client validation for signup fields
  audit token.tsx
 
  fetchgetProfileFollowersView fix/change naming. client.ts
+
+ unify header styles
