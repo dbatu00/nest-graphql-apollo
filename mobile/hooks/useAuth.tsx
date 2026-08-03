@@ -45,7 +45,6 @@ Context updates
 Consumers rerender
 
 TODO: 
-- Extract shared toAuthUser() helper — refreshAuth() and setSession() construct the same AuthUser shape manually 
 - Wrap clearToken() in try/catch in logout() and refreshAuth()'s !currentUser branch so setUser(null) still runs if storage fails 
 - Confirm whether refreshAuth()'s !currentUser branch is actually reachable given backend auth guards; remove it or document it as defensive-only 
 - Move logout navigation into AuthGate by reacting to user becoming null, instead of relying on callers to redirect 
@@ -78,28 +77,39 @@ import type { MeData } from "@/graphql/client";
 //AuthUser is the shape this app uses internally to represent an authenticated user.
 export type AuthUser = MeData;
 
+//Shape shared by refreshAuth()'s backend result and setSession()'s caller-supplied user.
+//Not exported — internal input contract for toAuthUser(), not a domain type.
+type RawAuthUser = {
+  id: number;
+  username: string;
+  displayName: string;
+  bio: string;
+  avatarUrl: string;
+  coverUrl: string;
+  email: string;
+};
+
+function toAuthUser(raw: RawAuthUser, emailVerified: boolean): AuthUser {
+  return {
+    id: raw.id,
+    username: raw.username,
+    displayName: raw.displayName,
+    bio: raw.bio,
+    avatarUrl: raw.avatarUrl,
+    coverUrl: raw.coverUrl,
+    email: raw.email,
+    emailVerified,
+  };
+}
+
 //Contract between AuthProvider and every useAuth() consumer.
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
 
-  /*
-  setSession(args) returns Promise<void>.
-
-  Promise<void> means the caller can await it, but it
-  doesn't produce a meaningful return value.
-  */
   setSession: (args: {
     token: string;
-    user: {
-      id: number;
-      username: string;
-      displayName: string;
-      bio: string;
-      avatarUrl: string;
-      coverUrl: string;
-      email: string;
-    };
+    user: RawAuthUser;
     emailVerified: boolean;
   }) => Promise<void>;
 
@@ -268,16 +278,7 @@ means this callback never needs to be recreated because it doesn't capture any c
       }
 
       //Convert the backend's user shape into the application'sAuthUser shape.
-      const nextUser: AuthUser = {
-        id: currentUser.id,
-        username: currentUser.username,
-        displayName: currentUser.displayName,
-        bio: currentUser.bio,
-        avatarUrl: currentUser.avatarUrl,
-        coverUrl: currentUser.coverUrl,
-        emailVerified: currentUser.emailVerified,
-        email: currentUser.email,
-      };
+      const nextUser: AuthUser = toAuthUser(currentUser, currentUser.emailVerified);
 
       /*
       Update global auth state.
@@ -305,37 +306,11 @@ means this callback never needs to be recreated because it doesn't capture any c
   */
   const setSession = useCallback(async (args: {
     token: string;
-    user: {
-      id: number;
-      username: string;
-      displayName: string;
-      bio: string;
-      avatarUrl: string;
-      coverUrl: string;
-      email: string;
-    };
+    user: RawAuthUser;
     emailVerified: boolean;
   }) => {
-
-    //Save the authentication token locally so that future app launches can restore the session.
     await saveToken(args.token);
-
-    /*
-    Login already returned the authenticated user as it asked backend for it.
-    Instead of asking the backend "who am I?" again,
-    immediately update Context with the user we already have.  
-    */
-    setUser({
-      id: args.user.id,
-      username: args.user.username,
-      displayName: args.user.displayName,
-      bio: args.user.bio,
-      avatarUrl: args.user.avatarUrl,
-      coverUrl: args.user.coverUrl,
-      email: args.user.email,
-      emailVerified: args.emailVerified,
-    });
-
+    setUser(toAuthUser(args.user, args.emailVerified));
   }, []);
 
   /*

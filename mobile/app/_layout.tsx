@@ -1,13 +1,7 @@
 import { Stack } from "expo-router";
 import { useEffect } from "react";
 import { router, useSegments } from "expo-router";
-import { LogBox } from 'react-native';
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
-
-LogBox.ignoreLogs([
-  'shadow*',
-  'resizeMode',
-]);
 
 export default function Layout() {
   return (

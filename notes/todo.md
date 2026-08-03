@@ -117,11 +117,8 @@ useActivities.tsx:
   username.tsx's last TODO — avoid two independent optimistic-follow
   implementations drifting out of sync)
 
-  -remove useprofile.tsx(unused)
 
 useAuth.tsx:
-- Extract shared toAuthUser() helper — refreshAuth() and setSession() construct
-  the same AuthUser shape manually
 - Wrap clearToken() in try/catch in logout() and refreshAuth()'s
   !currentUser branch so setUser(null) still runs if storage fails
 - Confirm whether refreshAuth()'s !currentUser branch is actually reachable
@@ -189,3 +186,5 @@ lightweight client validation for signup fields
  fetchgetProfileFollowersView fix/change naming. client.ts
 
  unify header styles
+
+ use user type on mobile
