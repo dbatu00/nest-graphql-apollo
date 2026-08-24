@@ -21,7 +21,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # SPA fallback: all routes → index.html
 RUN printf 'server {\n\
-    listen 80;\n\
+    listen ${PORT};\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
     location / {\n\
