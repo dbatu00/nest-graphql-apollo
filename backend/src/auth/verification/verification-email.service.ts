@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import * as nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 // TODO: move transporter creation and config reads to constructor
 @Injectable()
@@ -10,34 +10,25 @@ export class VerificationEmailService {
     constructor(private readonly configService: ConfigService) { }
 
     isConfigured(): boolean {
-        return Boolean(this.configService.get<string>("SMTP_HOST"));
+        return Boolean(this.configService.get<string>("SMTP_PASS"));
     }
 
     async sendVerificationEmail(to: string, token: string, username: string): Promise<void> {
         if (!this.isConfigured()) {
-            this.logger.warn(`SMTP is not configured. Dev token for ${to}: ${token}`);
+            this.logger.warn(`Email is not configured. Dev token for ${to}: ${token}`);
             return;
         }
 
         const appBaseUrl = this.configService.get<string>("APP_BASE_URL") ?? "http://localhost:3000";
         const from = this.configService.get<string>("EMAIL_FROM") ?? "no-reply@local.dev";
-        const host = this.configService.getOrThrow<string>("SMTP_HOST");
-        const port = this.configService.get<number>("SMTP_PORT") ?? 1025;
-        const secure = this.configService.get<boolean>("SMTP_SECURE") ?? false;
-        const user = this.configService.get<string>("SMTP_USER");
-        const pass = this.configService.get<string>("SMTP_PASS");
+        const apiKey = this.configService.getOrThrow<string>("SMTP_PASS");
 
-        const transporter = nodemailer.createTransport({
-            host,
-            port,
-            secure,
-            auth: user && pass ? { user, pass } : undefined,
-        });
+        const resend = new Resend(apiKey);
 
         const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
         const html = this.buildHtmlEmail(username, verifyUrl, token);
 
-        await transporter.sendMail({
+        await resend.emails.send({
             from,
             to,
             subject: "Verify your email",
