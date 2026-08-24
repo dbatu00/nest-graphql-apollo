@@ -1,8 +1,8 @@
 # Deployment Guide
 
-**Stack**: NestJS backend + PostgreSQL → **Railway** | Expo web frontend → **Netlify**
+**Stack**: NestJS backend + PostgreSQL + Expo web frontend → all on **Railway**
 
-Both services have generous free tiers. Railway gives $5 of credit/month on the Hobby plan ($5/month after trial).
+Railway gives $5 of credit/month on the Hobby plan ($5/month). Two small services + one Postgres plugin fit comfortably within that.
 
 ---
 
@@ -52,35 +52,29 @@ Copy the generated public URL (e.g. `https://myapp.up.railway.app`).
 
 ---
 
-## 2 — Deploy the Mobile Web App on Netlify
+## 2 — Deploy the Mobile Web App on Railway
 
-### 2.1 Set the backend URL
-Create `mobile/.env.production` (do **not** commit this):
-```
-EXPO_PUBLIC_API_URL=https://myapp.up.railway.app/graphql
-```
+### 2.1 Add a second service in the same Railway project
+1. In your Railway project dashboard click **+ New** → **GitHub Repo** (same repo)
+2. Set **Root Directory** to `mobile`
+3. Railway picks up `mobile/railway.toml` which points to `mobile/Dockerfile`
 
-Or set it as a **Netlify environment variable** (preferred — see step 2.3).
-
-### 2.2 Connect to Netlify
-1. Go to [netlify.com](https://netlify.com) → **Add new site** → **Import from Git**
-2. Select your repo
-3. Netlify will detect `netlify.toml` in the repo root automatically — no manual config needed
-
-### 2.3 Set environment variable in Netlify
-Site settings → **Environment variables** → add:
+### 2.2 Set the build-time variable
+Go to the mobile service → **Variables** and add:
 
 | Variable | Value |
 |---|---|
-| `EXPO_PUBLIC_API_URL` | `https://myapp.up.railway.app/graphql` |
+| `EXPO_PUBLIC_API_URL` | `https://your-backend.up.railway.app/graphql` |
 
-### 2.4 Deploy
-Click **Deploy site**. Netlify runs `npx expo export --platform web` and hosts the output.
+> This is an `ARG` in the Dockerfile so it gets baked into the static build.
 
-### 2.5 Update CORS on Railway
-Once you have your Netlify URL (e.g. `https://myapp.netlify.app`), go back to Railway and set:
+### 2.3 Deploy
+Click **Deploy**. Railway builds the Expo web export inside Docker and serves it via nginx.  
+Copy the generated public URL (e.g. `https://myapp-web.up.railway.app`).
+
+### 2.4 Update CORS on the backend service
 ```
-CORS_ORIGINS=https://myapp.netlify.app
+CORS_ORIGINS=https://myapp-web.up.railway.app
 ```
 
 ---
@@ -99,7 +93,8 @@ Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_SECURE`, and `EMAI
 
 | Service | Hosts | Cost |
 |---|---|---|
-| Railway | NestJS + PostgreSQL | ~$5/month (Hobby) |
-| Netlify | Expo web app | Free |
+| Railway (backend service) | NestJS | ~$5/month (Hobby, covers both services) |
+| Railway (Postgres plugin) | PostgreSQL | included |
+| Railway (frontend service) | Expo web (nginx) | included |
 
-Total: **~$5/month** (or free during Railway's trial period).
+Total: **~$5/month** (or free during Railway's trial period). One platform, one dashboard.
