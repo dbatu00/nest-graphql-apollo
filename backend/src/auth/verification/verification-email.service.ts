@@ -28,7 +28,7 @@ export class VerificationEmailService {
         const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
         const html = this.buildHtmlEmail(username, verifyUrl, token);
 
-        await resend.emails.send({
+        const { error } = await resend.emails.send({
             from,
             to,
             subject: "Verify your email",
@@ -43,6 +43,10 @@ export class VerificationEmailService {
             ].join("\n"),
             html,
         });
+
+        if (error) {
+            throw new Error(`Resend error: ${error.message}`);
+        }
     }
 
     private buildHtmlEmail(username: string, verifyUrl: string, token: string): string {
