@@ -31,4 +31,6 @@ RUN printf 'server {\n\
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Railway injects $PORT at runtime. envsubst replaces it in the template
+# before nginx starts, so nginx actually listens on the right port.
+CMD ["/bin/sh", "-c", "envsubst '$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"]
