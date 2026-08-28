@@ -45,9 +45,6 @@ Context updates
 Consumers rerender
 
 TODO: 
-- Wrap clearToken() in try/catch in logout() and refreshAuth()'s !currentUser branch so setUser(null) still runs if storage fails 
-- Confirm whether refreshAuth()'s !currentUser branch is actually reachable given backend auth guards; remove it or document it as defensive-only 
-- Move logout navigation into AuthGate by reacting to user becoming null, instead of relying on callers to redirect 
 - Consider blocking authenticated route rendering in AuthGate until loading resolves to eliminate the cold-start flash
 - Cold-start transient-failure gap: if getCurrentUser() fails on the very
   first refreshAuth() call (app launch), userRef.current is still null
@@ -243,21 +240,22 @@ means this callback never needs to be recreated because it doesn't capture any c
       */
       let currentUser: Awaited<ReturnType<typeof getCurrentUser>>;
       try {
-
         //Validate the stored token by asking the backend who the current user is. 
         currentUser = await getCurrentUser();
       } catch (err: unknown) {
-
         /*
         err type is unknown because it is safer than "any".
         TypeScript forces us to inspect the value before assuming what it contains.
 
-        Backend returns proper response when current user's info doesn't pass its checks thus, an error here means its a transient(network etc.) failure
+        getCurrentUser() converts authentication failures into null.
+        Any error reaching this catch is therefore an unexpected/transient
+        failure such as a network or server error.
+
+        Keep the last known authenticated user rather than logging them out
+        when authentication status cannot be determined.
         */
-        console.warn(
-          "[useAuth] refreshAuth transient failure",
-          err
-        );
+
+        console.warn("[useAuth] refreshAuth transient failure", err);
 
         /*
         Return the last known authenticated user and do not log the user out because of a temporary network/server problem.
@@ -270,7 +268,6 @@ means this callback never needs to be recreated because it doesn't capture any c
       }
 
       //backend responded and did not authenticate the user, clear token and logout(setuser(null))
-      //await should be in a try catch: its in todo
       if (!currentUser) {
         await clearToken();
         setUser(null);

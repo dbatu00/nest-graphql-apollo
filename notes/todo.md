@@ -119,13 +119,8 @@ useActivities.tsx:
 
 
 useAuth.tsx:
-- Wrap clearToken() in try/catch in logout() and refreshAuth()'s
-  !currentUser branch so setUser(null) still runs if storage fails
-- Confirm whether refreshAuth()'s !currentUser branch is actually reachable
-  given backend auth guards; remove it or document it as defensive-only
 - Consider blocking authenticated route rendering in AuthGate until loading
   resolves to eliminate the cold-start flash
-  -- useAuth.tsx:
 - Cold-start transient-failure gap: if getCurrentUser() fails on the very
   first refreshAuth() call (app launch), userRef.current is still null
   (no prior session in memory), so a valid stored token gets treated as
@@ -188,3 +183,9 @@ lightweight client validation for signup fields
  unify header styles
 
  use user type on mobile
+
+ check all logout sites
+
+ verify mail exit option
+
+ verify mail what happens if token gets deleted on the page?
