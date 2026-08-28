@@ -118,16 +118,6 @@ useActivities.tsx:
   implementations drifting out of sync)
 
 
-useAuth.tsx:
-- Consider blocking authenticated route rendering in AuthGate until loading
-  resolves to eliminate the cold-start flash
-- Cold-start transient-failure gap: if getCurrentUser() fails on the very
-  first refreshAuth() call (app launch), userRef.current is still null
-  (no prior session in memory), so a valid stored token gets treated as
-  "logged out" even though nothing about the session was actually invalid.
-  Add a retry (e.g. on regaining network connectivity, or a bounded
-  retry/backoff before giving up) instead of silently falling through to
-  logged-out state on the very first failure.
 
 
 -ActivityRow / ActivityBanner:
