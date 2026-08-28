@@ -1,5 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import * as nodemailer from "nodemailer";
 import { Resend } from "resend";
 
 // TODO: move transporter creation and config reads to constructor
@@ -10,7 +11,12 @@ export class VerificationEmailService {
     constructor(private readonly configService: ConfigService) { }
 
     isConfigured(): boolean {
-        return Boolean(this.configService.get<string>("SMTP_PASS"));
+        const smtpHost = this.configService.get<string>("SMTP_HOST");
+        const resendApiKey =
+            this.configService.get<string>("RESEND_API_KEY")
+            ?? this.configService.get<string>("SMTP_PASS");
+
+        return Boolean(smtpHost || resendApiKey);
     }
 
     async sendVerificationEmail(to: string, token: string, username: string): Promise<void> {
@@ -21,26 +27,56 @@ export class VerificationEmailService {
 
         const appBaseUrl = this.configService.get<string>("APP_BASE_URL") ?? "http://localhost:3000";
         const from = this.configService.get<string>("EMAIL_FROM") ?? "no-reply@local.dev";
-        const apiKey = this.configService.getOrThrow<string>("SMTP_PASS");
-
-        const resend = new Resend(apiKey);
+        const smtpHost = this.configService.get<string>("SMTP_HOST");
+        const smtpPort = this.configService.get<number>("SMTP_PORT") ?? 1025;
+        const smtpSecure = this.configService.get<boolean>("SMTP_SECURE") ?? false;
+        const smtpUser = this.configService.get<string>("SMTP_USER");
+        const smtpPass = this.configService.get<string>("SMTP_PASS");
+        const resendApiKey = this.configService.get<string>("RESEND_API_KEY") ?? smtpPass;
 
         const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
         const html = this.buildHtmlEmail(username, verifyUrl, token);
+        const text = [
+            `Hi ${username},`,
+            "",
+            "Please verify your email by opening this link:",
+            verifyUrl,
+            "",
+            "If the link does not open, you can still verify manually with token:",
+            token,
+        ].join("\n");
+
+        if (smtpHost) {
+            const transporter = nodemailer.createTransport({
+                host: smtpHost,
+                port: smtpPort,
+                secure: smtpSecure,
+                auth: smtpUser && smtpPass ? { user: smtpUser, pass: smtpPass } : undefined,
+            });
+
+            await transporter.sendMail({
+                from,
+                to,
+                subject: "Verify your email",
+                text,
+                html,
+            });
+
+            return;
+        }
+
+        if (!resendApiKey) {
+            this.logger.warn(`Email service key is missing. Dev token for ${to}: ${token}`);
+            return;
+        }
+
+        const resend = new Resend(resendApiKey);
 
         const { error } = await resend.emails.send({
             from,
             to,
             subject: "Verify your email",
-            text: [
-                `Hi ${username},`,
-                "",
-                "Please verify your email by opening this link:",
-                verifyUrl,
-                "",
-                "If the link does not open, you can still verify manually with token:",
-                token,
-            ].join("\n"),
+            text,
             html,
         });
 
