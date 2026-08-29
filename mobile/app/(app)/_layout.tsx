@@ -1,6 +1,7 @@
 import { Redirect, Stack } from "expo-router";
 import { ActivityIndicator, Text, View } from "react-native";
 import { useAuth } from "@/hooks/useAuth";
+import { authLoadingStyles as styles } from "@/styles";
 
 export default function RootLayout() {
   const { user, loading } = useAuth();
@@ -28,16 +29,9 @@ export default function RootLayout() {
 
 function AuthLoadingScreen() {
   return (
-    <View
-      style={{
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 24,
-      }}
-    >
+    <View style={styles.container}>
       <ActivityIndicator size="large" />
-      <Text style={{ marginTop: 12, fontSize: 16, color: "#475569" }}>
+      <Text style={styles.text}>
         Loading session...
       </Text>
     </View>

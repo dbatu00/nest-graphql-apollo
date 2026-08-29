@@ -45,9 +45,7 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
   Image,
-  StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -66,6 +64,10 @@ import {
   followUser,
   unfollowUser,
 } from "@/graphql/client";
+import {
+  profileBioColorStyle,
+  profileUsernameStyles as styles,
+} from "@/styles";
 
 type Tab =
   | "posts"
@@ -232,13 +234,13 @@ export default function UsernameScreen() {
                 }}
                 minWidth={70}
                 borderColor="rgba(255, 255, 255, 0.92)"
-                style={{ marginLeft: 8 }}
+                style={styles.actionSpacing}
               />
             )}
 
             <FeedLogoutButton
               onPress={handleLogout}
-              style={{ marginLeft: 8 }}
+              style={styles.actionSpacing}
               minWidth={70}
             />
           </>
@@ -282,7 +284,7 @@ export default function UsernameScreen() {
             @{username}
           </Text>
           <Text
-            style={[styles.bioText, { color: profileBio ? "#374151" : "#9ca3af" }]}
+            style={[styles.bioText, profileBioColorStyle(!!profileBio)]}
             numberOfLines={2}
           >
             {profileBio || "No bio yet"}
@@ -319,14 +321,7 @@ export default function UsernameScreen() {
           {!followLoading && (
             <View style={styles.followListInner}>
               {followUsers.length === 0 ? (
-                <Text
-                  style={{
-                    marginTop: 8,
-                    fontSize: 13,
-                    color: "#9ca3af",
-                    textAlign: "center",
-                  }}
-                >
+                <Text style={styles.emptyText}>
                   Nothing to show yet
                 </Text>
               ) : (
@@ -354,141 +349,3 @@ export default function UsernameScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  profileCard: {
-    paddingHorizontal: 0,
-    paddingTop: 12,
-    borderBottomWidth: 0,
-    marginBottom: 12,
-  },
-  coverContainer: {
-    height: 240,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-    backgroundColor: "#eff6ff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    position: "relative",
-    overflow: "hidden",
-  },
-  fullSize: {
-    width: "100%",
-    height: "100%",
-  },
-  coverPlaceholderText: {
-    marginTop: 6,
-    color: "#60a5fa",
-    fontWeight: "500",
-    fontSize: 12,
-  },
-  avatarContainer: {
-    position: "absolute",
-    left: 14,
-    bottom: 12,
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 3,
-    borderColor: "#fff",
-    backgroundColor: "#dbeafe",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  profileInfo: {
-    paddingHorizontal: 4,
-  },
-  displayName: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#1f2937",
-  },
-  usernameText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: "#6b7280",
-    marginTop: 2,
-  },
-  bioText: {
-    marginTop: 8,
-    fontSize: 13,
-  },
-  tabsContainer: {
-    marginHorizontal: 0,
-    marginBottom: 4,
-    backgroundColor: "#f9fafb",
-    borderRadius: 10,
-    padding: 4,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-      },
-      android: { elevation: 1 },
-    }),
-  },
-  tabsRow: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: "transparent",
-    alignItems: "center",
-  },
-  tabButtonActive: {
-    backgroundColor: "#fff",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#2563eb",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.08,
-        shadowRadius: 2,
-      },
-      android: { elevation: 2 },
-    }),
-  },
-  tabText: {
-    fontWeight: "500",
-    color: "#9ca3af",
-    fontSize: 11,
-    textAlign: "center",
-  },
-  tabTextActive: {
-    fontWeight: "600",
-    color: "#2563eb",
-  },
-  followListContainer: {
-    flex: 1,
-  },
-  followLoadingContainer: {
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: 200,
-  },
-  followListInner: {
-    paddingTop: 8,
-  },
-  followUserCard: {
-    backgroundColor: "#fff",
-    marginHorizontal: 0,
-    marginVertical: 6,
-    borderRadius: 10,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 2,
-      },
-      android: { elevation: 1 },
-    }),
-  },
-});

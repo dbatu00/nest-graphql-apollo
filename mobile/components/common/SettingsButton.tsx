@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { buildSettingsButtonContainerStyle, settingsButtonStyles as styles } from "@/styles";
 
 type Props = {
   onPress: () => void;
@@ -28,22 +29,13 @@ export function UserSettingsButton({
     <TouchableOpacity
       onPress={onPress}
       style={[
-        {
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          borderWidth: 1,
-          borderColor,
-          borderRadius: 8,
-          backgroundColor,
-          minWidth,
-          alignItems: "center",
-        },
+        buildSettingsButtonContainerStyle(minWidth, borderColor, backgroundColor),
         style,
       ]}
     >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <View style={styles.contentRow}>
         <Ionicons name={iconName} size={14} color={iconColor} />
-        <Text style={{ fontWeight: "600", color: textColor, fontSize: 13, marginLeft: 6 }}>
+        <Text style={[styles.text, { color: textColor }]}>
           {label}
         </Text>
       </View>

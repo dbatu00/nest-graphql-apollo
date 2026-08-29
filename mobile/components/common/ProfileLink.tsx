@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity } from "react-native";
 import { useRouter, usePathname } from "expo-router";
+import { profileLinkStyles as styles } from "@/styles";
 
 type Props = {
   username: string;
@@ -33,7 +34,7 @@ export function ProfileLink({ username, children, onNavigate }: Props) {
       {children !== undefined && children !== null ? (
         children
       ) : (
-        <Text style={{ fontWeight: "600" }}>
+        <Text style={styles.defaultText}>
           {`@${username}`}
         </Text>
       )}

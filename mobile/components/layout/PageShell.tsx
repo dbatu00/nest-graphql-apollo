@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Platform, ScrollView, View } from "react-native";
 
-import { commonStyles as styles } from "@/styles/common";
+import { commonStyles as styles, pageShellStyles, pageShellWebScrollbar } from "@/styles";
 
 const FEED_MAX_WIDTH = 960;
 
@@ -16,30 +16,19 @@ export function PageShell({ header, children, contentContainerStyle }: Props) {
         <View style={styles.container}>
             <ScrollView
                 style={[
-                    { flex: 1 },
+                    pageShellStyles.scrollFill,
                     Platform.OS === "web"
-                        ? ({
-                            scrollbarColor: "#bfdbfe #2563eb",
-                            scrollbarWidth: "thin",
-                            scrollbarGutter: "stable",
-                        } as never)
+                        ? (pageShellWebScrollbar as never)
                         : null,
                 ]}
                 stickyHeaderIndices={[0]}
                 contentContainerStyle={[
-                    { paddingBottom: 24 },
+                    pageShellStyles.contentPadding,
                     contentContainerStyle,
                 ]}
             >
                 {header}
-                <View
-                    style={{
-                        width: "100%",
-                        maxWidth: FEED_MAX_WIDTH,
-                        alignSelf: "center",
-                        paddingHorizontal: 16,
-                    }}
-                >
+                <View style={[pageShellStyles.inner, { maxWidth: FEED_MAX_WIDTH }]}>
                     {children}
                 </View>
             </ScrollView>

@@ -29,16 +29,14 @@ TODO:
   so Feed doesn't own feed business logic
 */
 import { useState } from "react";
-import {
-  View,
-  Platform,
-} from "react-native";
+import { View } from "react-native";
 
 import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
 import { Composer } from "@/components/feed/Composer";
 import { useActivities } from "@/hooks/useActivities";
 import { ActivityList } from "@/components/feed/ActivityList";
+import { feedScreenStyles as styles } from "@/styles";
 
 export default function Feed() {
   const feed = useActivities();
@@ -56,26 +54,7 @@ export default function Feed() {
       header={<Header title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />}
     >
       <View
-        style={{
-          minHeight: 200,
-          paddingHorizontal: 12,
-          paddingVertical: 8,
-          backgroundColor: "#fff",
-          marginHorizontal: 0,
-          marginTop: 12,
-          marginBottom: 6,
-          borderRadius: 12,
-          overflow: "hidden",
-          ...Platform.select({
-            ios: {
-              shadowColor: "#3b82f6",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.12,
-              shadowRadius: 4,
-            },
-            android: { elevation: 2 },
-          }),
-        }}
+        style={styles.composerCard}
       >
         <Composer value={content} onChange={setContent} onPublish={handlePublish} />
       </View>

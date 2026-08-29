@@ -5,7 +5,11 @@ import { resendMyVerificationLink } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { EmailSendResult } from "@/types/Auth";
 import { AppLogo } from "@/components/common/AppLogo";
-import { commonStyles } from "@/styles/common";
+import { commonStyles } from "@/styles";
+import {
+  verifyMailStatusColorStyle,
+  verifyMailStyles as styles,
+} from "@/styles";
 
 const MIN_ACTION_MS = 900;
 
@@ -139,31 +143,17 @@ export default function VerifyMail() {
       style={[
         commonStyles.container,
         commonStyles.pageGutter,
-        { backgroundColor: "#f3f4f6", justifyContent: "center" },
+        styles.containerTone,
       ]}
     >
-      <View style={{ alignSelf: "center", width: "100%", maxWidth: 520 }}>
+      <View style={styles.inner}>
         <AppLogo subtitle="One more step" />
 
-        <Text
-          style={{
-            fontSize: 42,
-            fontWeight: "800",
-            color: "#0f172a",
-            marginBottom: 10,
-          }}
-        >
+        <Text style={styles.title}>
           Verify your email
         </Text>
 
-        <Text
-          style={{
-            fontSize: 17,
-            color: "#111827",
-            marginBottom: 28,
-            lineHeight: 24,
-          }}
-        >
+        <Text style={styles.description}>
           Open the verification link we sent to your email. We’ll move you to
           feed once your account is verified.
         </Text>
@@ -171,16 +161,9 @@ export default function VerifyMail() {
         <Pressable
           onPress={checkVerificationStatus}
           disabled={checking}
-          style={{
-            height: 58,
-            borderRadius: 999,
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "#1665d8",
-            marginBottom: 14,
-          }}
+          style={styles.primaryButton}
         >
-          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "700" }}>
+          <Text style={styles.primaryButtonText}>
             {checking ? "Checking..." : "I verified, continue"}
           </Text>
         </Pressable>
@@ -188,43 +171,25 @@ export default function VerifyMail() {
         <Pressable
           onPress={handleResend}
           disabled={resendLoading}
-          style={{
-            height: 58,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "#cbd5e1",
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "#fff",
-          }}
+          style={styles.secondaryButton}
         >
-          <Text style={{ color: "#111827", fontSize: 26, fontWeight: "500" }}>
+          <Text style={styles.secondaryButtonText}>
             {resendLoading ? "Sending..." : "I didn’t get the code"}
           </Text>
         </Pressable>
 
         {error ? (
-          <Text
-            style={{
-              color: "#dc2626",
-              marginTop: 12,
-              textAlign: "center",
-              fontSize: 16,
-            }}
-          >
+          <Text style={[styles.statusText, { color: "#dc2626" }]}>
             {error}
           </Text>
         ) : null}
 
         {info ? (
           <Text
-            style={{
-              color:
-                info === resendSuccessMessage ? "#059669" : "#d97706",
-              marginTop: 12,
-              textAlign: "center",
-              fontSize: 16,
-            }}
+            style={[
+              styles.statusText,
+              verifyMailStatusColorStyle(info === resendSuccessMessage),
+            ]}
           >
             {info}
           </Text>

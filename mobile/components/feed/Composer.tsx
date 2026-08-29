@@ -1,4 +1,5 @@
 import { View, TextInput, TouchableOpacity, Text, Platform } from "react-native";
+import { composerStyles as styles, webNoOutlineStyle } from "@/styles";
 
 type Props = {
   value: string;
@@ -8,13 +9,7 @@ type Props = {
 
 export function Composer({ value, onChange, onPublish }: Props) {
   return (
-    <View
-      style={{
-        flex: 1,
-        paddingTop: 25,
-        paddingBottom: 0,
-      }}
-    >
+    <View style={styles.container}>
       <TextInput
         multiline
         value={value}
@@ -23,46 +18,18 @@ export function Composer({ value, onChange, onPublish }: Props) {
         placeholderTextColor="#d1d5db"
         underlineColorAndroid="transparent"
         style={[
-          {
-            flex: 1,
-            borderWidth: 0,
-            borderColor: "transparent",
-            borderRadius: 8,
-            padding: 10,
-            textAlignVertical: "top",
-            backgroundColor: "#eff6ff",
-            color: "#1f2937",
-            fontSize: 15,
-            ...Platform.select({
-              ios: {
-                shadowColor: "#3b82f6",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.08,
-                shadowRadius: 2,
-              },
-              android: { elevation: 1 },
-            }),
-          },
+          styles.input,
           Platform.OS === "web"
-            ? ({ outlineStyle: "none", outlineWidth: 0 } as never)
+            ? (webNoOutlineStyle as never)
             : null,
         ]}
       />
 
       <TouchableOpacity
         onPress={onPublish}
-        style={{
-          alignSelf: "flex-end",
-          marginTop: 4,
-          paddingHorizontal: 12,
-          paddingVertical: 4,
-          borderWidth: 0,
-          borderColor: "transparent",
-          borderRadius: 8,
-          backgroundColor: "#2563eb",
-        }}
+        style={styles.publishButton}
       >
-        <Text style={{ fontWeight: "600", color: "#fff", fontSize: 12 }}>Publish</Text>
+        <Text style={styles.publishText}>Publish</Text>
       </TouchableOpacity>
     </View>
   );

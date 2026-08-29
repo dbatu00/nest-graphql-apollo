@@ -7,16 +7,14 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Platform,
   Modal,
   Image,
   Animated,
-  StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { commonStyles as styles } from "@/styles/common";
+import { commonStyles as styles } from "@/styles";
 import {
   changeMyEmail,
   changeMyPassword,
@@ -26,6 +24,13 @@ import {
 import { useProfileMeta } from "@/hooks/useProfileMeta";
 import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
+import {
+  profileSettingsAccountInputToneStyle,
+  profileSettingsModalSizeStyle,
+  profileSettingsPickerItemStyle,
+  profileSettingsStyles as local,
+  profileSettingsSuccessToneStyle,
+} from "@/styles";
 
 const coverOptions = [
   "https://picsum.photos/seed/bookbook-cover-1/1200/600",
@@ -352,7 +357,7 @@ export default function ProfileSettingsScreen() {
   return (
     <PageShell
       header={<Header title="BookBook" />}
-      contentContainerStyle={{ flexGrow: 1 }}
+      contentContainerStyle={local.contentFlexGrow}
     >
       {successNoticeVisible && (
         <Animated.View
@@ -447,7 +452,7 @@ export default function ProfileSettingsScreen() {
                 <Text
                   style={[
                     local.successText,
-                    { color: success === "Profile updated" ? "#16a34a" : "#fbbf24" },
+                    profileSettingsSuccessToneStyle(success === "Profile updated"),
                   ]}
                 >
                   {success}
@@ -490,7 +495,7 @@ export default function ProfileSettingsScreen() {
                 keyboardType="email-address"
                 style={[
                   local.accountInput,
-                  { color: accountForm.email.newEmail ? "#1e293b" : "#9ca3af" },
+                  profileSettingsAccountInputToneStyle(!!accountForm.email.newEmail),
                 ]}
                 placeholderTextColor="#9ca3af"
               />
@@ -502,7 +507,7 @@ export default function ProfileSettingsScreen() {
                 keyboardType="email-address"
                 style={[
                   local.accountInput,
-                  { color: accountForm.email.confirmNewEmail ? "#1e293b" : "#9ca3af" },
+                  profileSettingsAccountInputToneStyle(!!accountForm.email.confirmNewEmail),
                 ]}
                 placeholderTextColor="#9ca3af"
               />
@@ -515,7 +520,7 @@ export default function ProfileSettingsScreen() {
                   style={[
                     local.accountInput,
                     local.passwordInput,
-                    { color: accountForm.email.currentPassword ? "#1e293b" : "#9ca3af" },
+                    profileSettingsAccountInputToneStyle(!!accountForm.email.currentPassword),
                   ]}
                   placeholderTextColor="#9ca3af"
                 />
@@ -561,7 +566,7 @@ export default function ProfileSettingsScreen() {
                   style={[
                     local.accountInput,
                     local.passwordInput,
-                    { color: accountForm.password.newPassword ? "#1e293b" : "#9ca3af" },
+                    profileSettingsAccountInputToneStyle(!!accountForm.password.newPassword),
                   ]}
                   placeholderTextColor="#9ca3af"
                 />
@@ -581,7 +586,7 @@ export default function ProfileSettingsScreen() {
                   style={[
                     local.accountInput,
                     local.passwordInput,
-                    { color: accountForm.password.confirmNewPassword ? "#1e293b" : "#9ca3af" },
+                    profileSettingsAccountInputToneStyle(!!accountForm.password.confirmNewPassword),
                   ]}
                   placeholderTextColor="#9ca3af"
                 />
@@ -603,7 +608,7 @@ export default function ProfileSettingsScreen() {
                   style={[
                     local.accountInput,
                     local.passwordInput,
-                    { color: accountForm.password.currentPassword ? "#1e293b" : "#9ca3af" },
+                    profileSettingsAccountInputToneStyle(!!accountForm.password.currentPassword),
                   ]}
                   placeholderTextColor="#9ca3af"
                 />
@@ -647,11 +652,7 @@ export default function ProfileSettingsScreen() {
           <View
             style={[
               local.modalCard,
-              {
-                maxWidth: Math.round(screenWidth * 0.85),
-                width: Math.round(screenWidth * 0.85),
-                maxHeight: Math.round(screenHeight * 0.7),
-              },
+              profileSettingsModalSizeStyle(screenWidth, screenHeight),
             ]}
           >
             <Text style={local.modalTitle}>
@@ -672,13 +673,7 @@ export default function ProfileSettingsScreen() {
                     onPress={() => handleSelectImage(uri)}
                     style={[
                       local.pickerItem,
-                      {
-                        width: imageSize,
-                        height: pickerType === "cover" ? Math.round((imageSize * 9) / 16) : imageSize,
-                        borderRadius: pickerType === "cover" ? 8 : 999,
-                        borderWidth: selected ? 2 : 1,
-                        borderColor: selected ? "#2563eb" : "#d1d5db",
-                      },
+                      profileSettingsPickerItemStyle(imageSize, pickerType === "cover", selected),
                     ]}
                   >
                     <Image source={{ uri }} style={local.pickerItemImage} resizeMode="cover" />
@@ -697,323 +692,3 @@ export default function ProfileSettingsScreen() {
   );
 }
 
-const COVER_HEIGHT = 240;
-
-const local = StyleSheet.create({
-  flex1: {
-    flex: 1,
-  },
-  loadErrorText: {
-    color: "#dc2626",
-  },
-
-  // Success notice banner
-  successNotice: {
-    position: "absolute",
-    top: 12,
-    left: 16,
-    right: 16,
-    zIndex: 20,
-    backgroundColor: "#ecfdf5",
-    borderColor: "#86efac",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  successNoticeText: {
-    color: "#166534",
-    fontWeight: "600",
-    marginLeft: 8,
-  },
-
-  // Tabs
-  tabsRow: {
-    flexDirection: "row",
-    marginTop: 8,
-    marginBottom: 8,
-    paddingHorizontal: 0,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    alignItems: "center",
-  },
-  tabButtonActive: {
-    borderBottomColor: "#2563eb",
-  },
-  tabButtonInactive: {
-    borderBottomColor: "#e5e7eb",
-  },
-  tabLabelActive: {
-    color: "#2563eb",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  tabLabelInactive: {
-    color: "#6b7280",
-    fontWeight: "500",
-    fontSize: 15,
-  },
-
-  // About tab
-  aboutScrollContent: {
-    paddingHorizontal: 0,
-    paddingTop: 12,
-    paddingBottom: 24,
-  },
-  coverContainer: {
-    height: COVER_HEIGHT,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#bfdbfe",
-    backgroundColor: "#eff6ff",
-    marginBottom: 16,
-    position: "relative",
-    overflow: "hidden",
-  },
-  coverImage: {
-    width: "100%",
-    height: "100%",
-  },
-  coverGradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "100%",
-  },
-  coverEditButton: {
-    position: "absolute",
-    right: 14,
-    top: 14,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 16,
-    padding: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarWrapper: {
-    position: "absolute",
-    left: 14,
-    bottom: 12,
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    borderWidth: 3,
-    borderColor: "#fff",
-    backgroundColor: "#dbeafe",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    zIndex: 2,
-    elevation: 6,
-  },
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-  },
-  avatarGradient: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: "100%",
-    borderBottomLeftRadius: 42,
-    borderBottomRightRadius: 42,
-  },
-  avatarEditButton: {
-    position: "absolute",
-    right: 8,
-    bottom: 8,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    borderRadius: 14,
-    padding: 5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-      },
-      android: { elevation: 1 },
-    }),
-  },
-  fieldLabel: {
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 8,
-  },
-  fieldLabelTight: {
-    fontWeight: "600",
-    color: "#374151",
-    marginBottom: 4,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-    marginBottom: 14,
-  },
-  bioInput: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 120,
-    backgroundColor: "#fff",
-  },
-  errorText: {
-    color: "#dc2626",
-    marginTop: 12,
-  },
-  errorTextSmall: {
-    color: "#dc2626",
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  successText: {
-    marginTop: 12,
-  },
-
-  primaryButton: {
-    backgroundColor: "#2563eb",
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  buttonSaving: {
-    opacity: 0.7,
-  },
-  saveButton: {
-    marginTop: 16,
-  },
-
-  // Account tab
-  accountScrollContent: {
-    paddingHorizontal: 0,
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
-  accountCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 18,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.04,
-        shadowRadius: 3,
-      },
-      android: { elevation: 1 },
-    }),
-  },
-  usernameValue: {
-    fontSize: 16,
-    color: "#1e293b",
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  usernameHint: {
-    color: "#6b7280",
-    fontSize: 12,
-    marginBottom: 18,
-  },
-  currentEmailValue: {
-    fontSize: 16,
-    color: "#1e293b",
-    fontWeight: "700",
-    marginBottom: 18,
-  },
-  accountInput: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-    marginBottom: 8,
-  },
-  passwordFieldWrapper: {
-    position: "relative",
-    marginBottom: 8,
-  },
-  passwordInput: {
-    paddingRight: 44,
-  },
-  eyeButton: {
-    position: "absolute",
-    right: 12,
-    top: 10,
-  },
-  changeEmailButton: {
-    marginBottom: 24,
-  },
-
-  // Modal / image picker
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 14,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111827",
-    marginBottom: 10,
-  },
-  modalGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  pickerItem: {
-    overflow: "hidden",
-    marginBottom: 10,
-  },
-  pickerItemImage: {
-    width: "100%",
-    height: "100%",
-  },
-  modalCloseButton: {
-    alignSelf: "flex-end",
-    marginTop: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: "#f3f4f6",
-  },
-  modalCloseText: {
-    color: "#374151",
-    fontWeight: "600",
-  },
-});

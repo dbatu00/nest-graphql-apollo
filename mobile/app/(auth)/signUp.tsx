@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
-import { commonStyles } from "@/styles/common";
+import { commonStyles } from "@/styles";
 import { signUp } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/common/AppLogo";
+import { authFormStyles as styles } from "@/styles";
 
 export default function SignUp() {
   const { setSession } = useAuth();
@@ -76,7 +77,7 @@ export default function SignUp() {
       <AppLogo subtitle="Create your account" />
       <Text style={commonStyles.title}>Sign Up</Text>
 
-      <View style={{ width: "100%", maxWidth: 360 }}>
+      <View style={styles.formWrap}>
         <TextInput
           placeholder="Username"
           placeholderTextColor="#d1d5db"
@@ -86,7 +87,7 @@ export default function SignUp() {
           style={commonStyles.input}
         />
         {usernameError ? (
-          <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{usernameError}</Text>
+          <Text style={styles.inlineErrorText}>{usernameError}</Text>
         ) : null}
 
         <TextInput
@@ -96,10 +97,10 @@ export default function SignUp() {
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
-          style={[commonStyles.input, { marginTop: 12 }]}
+          style={[commonStyles.input, styles.inputTopGap]}
         />
         {emailError ? (
-          <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 4 }}>{emailError}</Text>
+          <Text style={styles.inlineErrorText}>{emailError}</Text>
         ) : null}
 
         <TextInput
@@ -108,7 +109,7 @@ export default function SignUp() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={[commonStyles.input, { marginTop: 12 }]}
+          style={[commonStyles.input, styles.inputTopGap]}
         />
 
         <TextInput
@@ -117,12 +118,12 @@ export default function SignUp() {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
-          style={[commonStyles.input, { marginTop: 12 }]}
+          style={[commonStyles.input, styles.inputTopGap]}
         />
 
-        <View style={{ alignItems: "center", marginTop: 20 }}>
+        <View style={styles.actionsCenter}>
           <Pressable
-            style={[commonStyles.button, { width: 180, paddingVertical: 14 }]}
+            style={[commonStyles.button, styles.submitButton]}
             onPress={handleSignUp}
             disabled={loading}
           >
@@ -133,19 +134,19 @@ export default function SignUp() {
         </View>
 
         {error ? (
-          <Text style={{ color: "#dc2626", marginTop: 10, textAlign: "center", fontSize: 14 }}>
+          <Text style={styles.errorText}>
             {error}
           </Text>
         ) : null}
 
         {success ? (
-          <Text style={{ color: "#059669", marginTop: 10, textAlign: "center", fontSize: 14 }}>
+          <Text style={styles.successText}>
             Signup successful. Redirecting…
           </Text>
         ) : null}
 
-        <Pressable onPress={() => router.push("/(auth)/login")} style={{ marginTop: 16 }}>
-          <Text style={{ textAlign: "center", color: "#2563eb", fontWeight: "500" }}>
+        <Pressable onPress={() => router.push("/(auth)/login")} style={styles.navLinkWrap}>
+          <Text style={styles.navLinkText}>
             Back to login
           </Text>
         </Pressable>

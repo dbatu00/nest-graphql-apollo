@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
-import { commonStyles } from "../../styles/common";
+import { commonStyles } from "@/styles";
 import { login } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AppLogo } from "@/components/common/AppLogo";
+import { authFormStyles as styles } from "@/styles";
 
 export default function Login() {
   const { setSession } = useAuth();
@@ -55,7 +56,7 @@ export default function Login() {
       <AppLogo subtitle="Welcome back" />
       <Text style={commonStyles.title}>Login</Text>
 
-      <View style={{ width: "100%", maxWidth: 360 }}>
+      <View style={styles.formWrap}>
         <TextInput
           placeholder="Username or Email"
           placeholderTextColor="#d1d5db"
@@ -71,12 +72,12 @@ export default function Login() {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
-          style={[commonStyles.input, { marginTop: 12 }]}
+          style={[commonStyles.input, styles.inputTopGap]}
         />
 
-        <View style={{ alignItems: "center", marginTop: 20 }}>
+        <View style={styles.actionsCenter}>
           <Pressable
-            style={[commonStyles.button, { width: 180, paddingVertical: 14 }]}
+            style={[commonStyles.button, styles.submitButton]}
             onPress={handleLogin}
             disabled={loading}
           >
@@ -87,23 +88,16 @@ export default function Login() {
         </View>
 
         {error ? (
-          <Text
-            style={{
-              color: "#dc2626",
-              marginTop: 10,
-              textAlign: "center",
-              fontSize: 14,
-            }}
-          >
+          <Text style={styles.errorText}>
             {error}
           </Text>
         ) : null}
 
         <Pressable
           onPress={() => router.push("/(auth)/signUp")}
-          style={{ marginTop: 16 }}
+          style={styles.navLinkWrap}
         >
-          <Text style={{ textAlign: "center", color: "#2563eb", fontWeight: "500" }}>Sign up</Text>
+          <Text style={styles.navLinkText}>Sign up</Text>
         </Pressable>
       </View>
     </View>
