@@ -25,6 +25,10 @@ export const profileUsernameStyles = StyleSheet.create({
     emptyText: { marginTop: 8, fontSize: 13, color: color.textMuted, textAlign: "center" },
 });
 
+export const profileLinkContainerStyles = StyleSheet.create({
+    shrinkWrap: { alignSelf: "flex-start", flexGrow: 0, flexShrink: 0 },
+});
+
 export const profileBioColorStyle = (hasBio: boolean) => ({ color: hasBio ? "#374151" : color.textMuted });
 
 const settingsCoverHeight = 240;

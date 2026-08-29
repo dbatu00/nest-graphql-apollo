@@ -1,6 +1,6 @@
 import { Text, TouchableOpacity } from "react-native";
 import { useRouter, usePathname } from "expo-router";
-import { profileLinkStyles as styles } from "@/styles";
+import { profileLinkContainerStyles as containerStyles, profileLinkStyles as styles } from "@/styles";
 
 type Props = {
   username: string;
@@ -30,7 +30,7 @@ export function ProfileLink({ username, children, onNavigate }: Props) {
   };
 
   return (
-    <TouchableOpacity activeOpacity={0.6} onPress={handlePress}>
+    <TouchableOpacity activeOpacity={0.6} onPress={handlePress} style={containerStyles.shrinkWrap}>
       {children !== undefined && children !== null ? (
         children
       ) : (
