@@ -318,16 +318,29 @@ export default function UsernameScreen() {
 
           {!followLoading && (
             <View style={styles.followListInner}>
-              {followUsers.map(followUser => (
-                <View key={followUser.id} style={styles.followUserCard}>
-                  <UserRow
-                    user={followUser}
-                    currentUserId={user?.id}
-                    onToggleFollow={handleToggleFollowInList}
-                    isCompact={false}
-                  />
-                </View>
-              ))}
+              {followUsers.length === 0 ? (
+                <Text
+                  style={{
+                    marginTop: 8,
+                    fontSize: 13,
+                    color: "#9ca3af",
+                    textAlign: "center",
+                  }}
+                >
+                  Nothing to show yet
+                </Text>
+              ) : (
+                followUsers.map(followUser => (
+                  <View key={followUser.id} style={styles.followUserCard}>
+                    <UserRow
+                      user={followUser}
+                      currentUserId={user?.id}
+                      onToggleFollow={handleToggleFollowInList}
+                      isCompact={false}
+                    />
+                  </View>
+                ))
+              )}
             </View>
           )}
         </View>

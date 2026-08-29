@@ -48,8 +48,6 @@ This file tracks only open work. Completed items are intentionally removed.
 - Fix router `as never` coercions (type safety broken)
 - Add optimistic post creation flow (local row + reconcile/rollback)
 - Tighten owner/follow button logic in feed/profile
-- Unify profile tab refresh behavior
-- Improve loading states (web + mobile consistency)
 - Improve form UX:
   - inline validation
   - enter submit
@@ -59,7 +57,6 @@ This file tracks only open work. Completed items are intentionally removed.
 - on login/signup show all errors/missing fields at once and highlight
 - audit all screens for behaviour when window is squeezed
 - handle token expiration gracefully
-- on empty profile tabs : "nothing to show yet"
 - audit settings.tsx
 - audit hooks
 ---
@@ -117,9 +114,6 @@ useActivities.tsx:
   username.tsx's last TODO — avoid two independent optimistic-follow
   implementations drifting out of sync)
 
-
-
-
 -ActivityRow / ActivityBanner:
 - Remove unjustified defensive chaining on fields the schema guarantees
   non-null/non-empty: actor.username, targetUser.username (once targetUser
@@ -175,7 +169,5 @@ lightweight client validation for signup fields
  use user type on mobile
 
  check all logout sites
-
- verify mail exit option
 
  verify mail what happens if token gets deleted on the page?

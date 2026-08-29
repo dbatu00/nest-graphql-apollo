@@ -233,7 +233,20 @@ export function useActivities(params: Params = {}) {
                 ...a.targetPost,
                 comments: [
                   ...(a.targetPost.comments ?? []),
-                  result,
+                  {
+                    id: result.id,
+                    content: result.content,
+                    createdAt: result.createdAt,
+                    updatedAt: result.createdAt,
+                    likesCount: 0,
+                    likedByMe: false,
+                    user: {
+                      id: result.user.id,
+                      username: result.user.username,
+                      displayName: result.user.displayName ?? "",
+                      avatarUrl: result.user.avatarUrl ?? "",
+                    },
+                  },
                 ],
               },
             };
