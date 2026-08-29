@@ -32,6 +32,7 @@ import { useState } from "react";
 import { View } from "react-native";
 
 import { Header } from "@/components/layout/Header";
+import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import { PageShell } from "@/components/layout/PageShell";
 import { Composer } from "@/components/feed/Composer";
 import { useActivities } from "@/hooks/useActivities";
@@ -51,7 +52,7 @@ export default function Feed() {
 
   return (
     <PageShell
-      header={<Header title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} />}
+      header={<Header title="BookBook" onRefresh={feed.refresh} isRefreshing={feed.loading} rightActions={<AppHeaderActions mode="feed" />} />}
     >
       <View
         style={styles.composerCard}

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { commonStyles as styles } from "@/styles";
+import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import {
   changeMyEmail,
   changeMyPassword,
@@ -356,7 +357,7 @@ export default function ProfileSettingsScreen() {
 
   return (
     <PageShell
-      header={<Header title="BookBook" />}
+      header={<Header title="BookBook" rightActions={<AppHeaderActions mode="settings" username={profileMeta.username} />} />}
       contentContainerStyle={local.contentFlexGrow}
     >
       {successNoticeVisible && (

@@ -48,13 +48,12 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { UserRow } from "@/components/user/UserRow";
 import { ActivityList } from "@/components/feed/ActivityList";
 import { Header } from "@/components/layout/Header";
+import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import { PageShell } from "@/components/layout/PageShell";
-import { UserSettingsButton } from "@/components/common/SettingsButton";
-import { FeedLogoutButton } from "@/components/common/LogoutButton";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -112,12 +111,7 @@ function TabFeed({
 export default function UsernameScreen() {
   const { username } =
     useLocalSearchParams<{ username: string }>();
-  const router = useRouter();
-  const { user, logout } = useAuth();
-
-  const handleLogout = async () => {
-    await logout();
-  };
+  const { user } = useAuth();
 
 
   /* ---------------- PROFILE HYDRATION ---------------- */
@@ -213,38 +207,7 @@ export default function UsernameScreen() {
     <PageShell
       header={<Header
         title="BookBook"
-        rightActions={(
-          <>
-            <UserSettingsButton
-              onPress={() => router.push("/feed")}
-              minWidth={70}
-              borderColor="rgba(255, 255, 255, 0.92)"
-              label="Home"
-              iconName="home-outline"
-            />
-
-            {isOwnProfile && (
-              <UserSettingsButton
-                onPress={() => {
-                  if (!username) return;
-                  router.push({
-                    pathname: "/profile/[username]/settings",
-                    params: { username },
-                  });
-                }}
-                minWidth={70}
-                borderColor="rgba(255, 255, 255, 0.92)"
-                style={styles.actionSpacing}
-              />
-            )}
-
-            <FeedLogoutButton
-              onPress={handleLogout}
-              style={styles.actionSpacing}
-              minWidth={70}
-            />
-          </>
-        )}
+        rightActions={<AppHeaderActions mode="profile" username={username} isOwnProfile={isOwnProfile} />}
       />}
     >
       {/* Profile card */}
