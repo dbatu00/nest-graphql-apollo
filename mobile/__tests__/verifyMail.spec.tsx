@@ -31,6 +31,7 @@ describe("VerifyMail screen", () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: { id: 1, username: "deniz", emailVerified: false },
       refreshAuth,
+      logout: jest.fn(),
     });
     refreshAuth.mockResolvedValue({ id: 1, username: "deniz", emailVerified: false });
     (graphqlFetch as jest.Mock).mockResolvedValue({ resendMyVerificationLink: true });
@@ -44,6 +45,7 @@ describe("VerifyMail screen", () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: { id: 1, username: "deniz", emailVerified: true },
       refreshAuth,
+      logout: jest.fn(),
     });
 
     render(<VerifyMail />);
@@ -57,6 +59,7 @@ describe("VerifyMail screen", () => {
     (useAuth as jest.Mock).mockReturnValue({
       user: null,
       refreshAuth,
+      logout: jest.fn(),
     });
 
     render(<VerifyMail />);
@@ -108,6 +111,23 @@ describe("VerifyMail screen", () => {
     await waitFor(() => {
       expect(graphqlFetch).toHaveBeenCalledWith(RESEND_VERIFICATION_EMAIL_MUTATION);
       expect(getByText("Verification link sent. Please check your email.")).toBeTruthy();
+    });
+  });
+
+  it("logs out from verify mail", async () => {
+    const logout = jest.fn().mockResolvedValue(undefined);
+    (useAuth as jest.Mock).mockReturnValue({
+      user: { id: 1, username: "deniz", emailVerified: false },
+      refreshAuth,
+      logout,
+    });
+
+    const { getByText } = render(<VerifyMail />);
+
+    fireEvent.press(getByText("Back to login"));
+
+    await waitFor(() => {
+      expect(logout).toHaveBeenCalledTimes(1);
     });
   });
 

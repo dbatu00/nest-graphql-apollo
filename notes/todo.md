@@ -164,10 +164,8 @@ lightweight client validation for signup fields
 
  fetchgetProfileFollowersView fix/change naming. client.ts
 
- unify header styles
+ dedup headers
 
  use user type on mobile
-
- check all logout sites
 
  verify mail what happens if token gets deleted on the page?

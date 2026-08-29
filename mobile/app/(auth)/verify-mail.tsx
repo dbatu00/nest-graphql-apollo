@@ -5,8 +5,9 @@ import { resendMyVerificationLink } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
 import { EmailSendResult } from "@/types/Auth";
 import { AppLogo } from "@/components/common/AppLogo";
-import { commonStyles } from "@/styles";
 import {
+  authFormStyles as authStyles,
+  commonStyles,
   verifyMailStatusColorStyle,
   verifyMailStyles as styles,
 } from "@/styles";
@@ -18,7 +19,7 @@ function sleep(ms: number) {
 }
 
 export default function VerifyMail() {
-  const { user, refreshAuth } = useAuth();
+  const { user, refreshAuth, logout } = useAuth();
 
   const resendSuccessMessage =
     "Verification link sent. Please check your email.";
@@ -138,6 +139,10 @@ export default function VerifyMail() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <View
       style={[
@@ -175,6 +180,15 @@ export default function VerifyMail() {
         >
           <Text style={styles.secondaryButtonText}>
             {resendLoading ? "Sending..." : "I didn’t get the code"}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={handleLogout}
+          style={authStyles.navLinkWrap}
+        >
+          <Text style={authStyles.navLinkText}>
+            Back to login
           </Text>
         </Pressable>
 
