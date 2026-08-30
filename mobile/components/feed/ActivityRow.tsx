@@ -58,6 +58,7 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { useAuth } from "@/hooks/useAuth";
@@ -173,6 +174,69 @@ type CommentRowProps = {
   onOpenCommentLikes: (commentId: number) => void;
 };
 
+type DeleteConfirmModalProps = {
+  visible: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  loading?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+};
+
+const DeleteConfirmModal = ({
+  visible,
+  title,
+  message,
+  confirmLabel,
+  loading = false,
+  onCancel,
+  onConfirm,
+}: DeleteConfirmModalProps) => {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.confirmOverlay}>
+        <View
+          style={styles.confirmBackdrop}
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={() => {
+            if (!loading) onCancel();
+          }}
+        >
+          <BlurView intensity={18} tint="dark" style={styles.confirmBlur} />
+        </View>
+        <View style={styles.confirmCard}>
+          <Text style={styles.confirmTitle}>{title}</Text>
+          <Text style={styles.confirmMessage}>{message}</Text>
+
+          <View style={styles.confirmActions}>
+            <TouchableOpacity
+              onPress={onCancel}
+              disabled={loading}
+              style={[styles.confirmCancelBtn, loading && styles.confirmBtnDisabled]}
+            >
+              <Text style={styles.confirmCancelText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onConfirm}
+              disabled={loading}
+              style={[styles.confirmDeleteBtn, loading && styles.confirmBtnDisabled]}
+            >
+              <Text style={styles.confirmDeleteText}>{loading ? "Deleting..." : confirmLabel}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const CommentRow = ({
   comment,
   postId,
@@ -181,6 +245,8 @@ const CommentRow = ({
   onOpenCommentLikes,
 }: CommentRowProps) => {
   const [optionsOpen, setOptionsOpen] = React.useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
+  const [deletingComment, setDeletingComment] = React.useState(false);
 
   const { user } = useAuth();
   if (!user) return null;
@@ -190,87 +256,107 @@ const CommentRow = ({
   const likedByMe = comment.likedByMe;
   const likesCount = comment.likesCount;
 
+  const handleConfirmDeleteComment = async () => {
+    setDeletingComment(true);
+    try {
+      await onDeleteComment?.(comment.id, postId);
+    } finally {
+      setDeletingComment(false);
+      setDeleteConfirmVisible(false);
+      setOptionsOpen(false);
+    }
+  };
+
   return (
-    <View style={styles.commentRow}>
-      <ProfileLink username={comment.user.username}>
-        <Image source={{ uri: avatarUri }} style={styles.avatarSm} />
-      </ProfileLink>
+    <>
+      <View style={styles.commentRow}>
+        <ProfileLink username={comment.user.username}>
+          <Image source={{ uri: avatarUri }} style={styles.avatarSm} />
+        </ProfileLink>
 
-      <View style={styles.flexOne}>
-        <Pressable style={styles.commentBubbleHoverArea}>
-          {({ hovered }) => (
-            <View style={styles.commentBubbleRow}>
-              <View style={styles.commentBubble}>
-                <ProfileLink username={comment.user.username}>
-                  <Text style={styles.commentAuthor}>{comment.user.displayName}</Text>
-                </ProfileLink>
-                <Text style={styles.commentContent}>{comment.content}</Text>
-              </View>
-
-              {canDelete && (hovered || optionsOpen) && (
-                <View style={styles.commentOptionsWrap}>
-                  <TouchableOpacity
-                    style={styles.commentOptionsBtn}
-                    onPress={() => setOptionsOpen(o => !o)}
-                  >
-                    <Ionicons name="ellipsis-horizontal" size={14} color={color.textSecondary} />
-                  </TouchableOpacity>
-
-                  {optionsOpen && (
-                    <View style={styles.commentOptionsMenu}>
-                      <TouchableOpacity
-                        style={styles.commentOptionsMenuItem}
-                        onPress={async () => {
-                          try {
-                            await onDeleteComment?.(comment.id, postId);
-                          } finally {
-                            setOptionsOpen(false);
-                          }
-                        }}
-                      >
-                        <MaterialCommunityIcons name="trash-can-outline" size={14} color={color.deleteRed} />
-                        <Text style={styles.commentDeleteText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+        <View style={styles.flexOne}>
+          <Pressable style={styles.commentBubbleHoverArea}>
+            {({ hovered }) => (
+              <View style={styles.commentBubbleRow}>
+                <View style={styles.commentBubble}>
+                  <ProfileLink username={comment.user.username}>
+                    <Text style={styles.commentAuthor}>{comment.user.displayName}</Text>
+                  </ProfileLink>
+                  <Text style={styles.commentContent}>{comment.content}</Text>
                 </View>
-              )}
+
+                {canDelete && (hovered || optionsOpen) && (
+                  <View style={styles.commentOptionsWrap}>
+                    <TouchableOpacity
+                      style={styles.commentOptionsBtn}
+                      onPress={() => setOptionsOpen(o => !o)}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={14} color={color.textSecondary} />
+                    </TouchableOpacity>
+
+                    {optionsOpen && (
+                      <View style={styles.commentOptionsMenu}>
+                        <TouchableOpacity
+                          style={styles.commentOptionsMenuItem}
+                          onPress={() => {
+                            setOptionsOpen(false);
+                            setDeleteConfirmVisible(true);
+                          }}
+                        >
+                          <MaterialCommunityIcons name="trash-can-outline" size={14} color={color.deleteRed} />
+                          <Text style={styles.commentDeleteText}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+          </Pressable>
+
+          <View style={styles.commentActions}>
+            <View style={styles.commentDateWrapper}>
+              <DateToggleText date={comment.createdAt} />
             </View>
-          )}
-        </Pressable>
 
-        <View style={styles.commentActions}>
-          <View style={styles.commentDateWrapper}>
-            <DateToggleText date={comment.createdAt} />
+            {onToggleCommentLike && (
+              <TouchableOpacity
+                style={styles.commentLikeBtn}
+                onPress={() => onToggleCommentLike(comment.id, postId, likedByMe)}
+              >
+                <MaterialCommunityIcons
+                  name={likedByMe ? "thumb-up" : "thumb-up-outline"}
+                  size={12}
+                  color={likedByMe ? color.blue : color.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+
+            {likesCount > 0 && (
+              <Pressable
+                onPress={() => onOpenCommentLikes(comment.id)}
+                style={({ hovered }) => [
+                  styles.commentLikeCountBtn,
+                  hovered && styles.commentLikeCountBtnHover,
+                ]}
+              >
+                <Text style={styles.commentLikeCountText}>{likesCount}</Text>
+              </Pressable>
+            )}
           </View>
-
-          {onToggleCommentLike && (
-            <TouchableOpacity
-              style={styles.commentLikeBtn}
-              onPress={() => onToggleCommentLike(comment.id, postId, likedByMe)}
-            >
-              <MaterialCommunityIcons
-                name={likedByMe ? "thumb-up" : "thumb-up-outline"}
-                size={12}
-                color={likedByMe ? color.blue : color.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-
-          {likesCount > 0 && (
-            <Pressable
-              onPress={() => onOpenCommentLikes(comment.id)}
-              style={({ hovered }) => [
-                styles.commentLikeCountBtn,
-                hovered && styles.commentLikeCountBtnHover,
-              ]}
-            >
-              <Text style={styles.commentLikeCountText}>{likesCount}</Text>
-            </Pressable>
-          )}
         </View>
       </View>
-    </View>
+
+      <DeleteConfirmModal
+        visible={deleteConfirmVisible}
+        title="Delete comment?"
+        message="This comment will be permanently deleted."
+        confirmLabel="Delete"
+        loading={deletingComment}
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={handleConfirmDeleteComment}
+      />
+    </>
   );
 };
 
@@ -311,6 +397,7 @@ const PostCard = ({
   onSubmitComment,
 }: PostCardProps) => {
   const [commentInputFocused, setCommentInputFocused] = React.useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
 
   const { user } = useAuth();
   if (!user || !post?.user) return null;
@@ -337,7 +424,7 @@ const PostCard = ({
     }
     if (isOwner && onDeletePost) {
       return (
-        <TouchableOpacity onPress={() => onDeletePost(post.id)} style={styles.deleteBtn}>
+        <TouchableOpacity onPress={() => setDeleteConfirmVisible(true)} style={styles.deleteBtn}>
           <Text style={styles.deleteBtnText}>✕</Text>
         </TouchableOpacity>
       );
@@ -442,6 +529,18 @@ const PostCard = ({
           )}
         </View>
       )}
+
+      <DeleteConfirmModal
+        visible={deleteConfirmVisible}
+        title="Delete post?"
+        message="This post and its comments will be permanently deleted."
+        confirmLabel="Delete"
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={() => {
+          onDeletePost?.(post.id);
+          setDeleteConfirmVisible(false);
+        }}
+      />
     </View>
   );
 };
