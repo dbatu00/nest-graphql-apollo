@@ -11,5 +11,8 @@ export class AuthPayload {
     token: string;
 
     @Field()
+    refreshToken: string;
+
+    @Field()
     emailVerified: boolean;
 }

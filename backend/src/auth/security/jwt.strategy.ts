@@ -18,7 +18,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         });
     }
 
-    async validate(payload: { sub: number }): Promise<User> {
+    async validate(payload: { sub: number; type?: string }): Promise<User> {
+        if (payload.type && payload.type !== "access") {
+            throw new UnauthorizedException("Invalid token type");
+        }
+
         const user = await this.usersService.findById(payload.sub);
 
         if (!user) {

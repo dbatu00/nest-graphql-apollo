@@ -35,6 +35,11 @@ export class AuthResolver {
         return this.authService.login(args.identifier, args.password);
     }
 
+    @Mutation(() => AuthPayload)
+    refreshAuth(@Args("refreshToken") refreshToken: string) {
+        return this.authService.refreshAuth(refreshToken);
+    }
+
     @UseGuards(GqlAuthGuard)
     @Mutation(() => Boolean)
     changeMyPassword(

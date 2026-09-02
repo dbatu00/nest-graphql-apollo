@@ -58,8 +58,9 @@ import {
 } from "react";
 
 import { getCurrentUser } from "@/utils/currentUser";
-import { clearToken, getToken, saveToken } from "@/utils/token";
+import { clearToken, getRefreshToken, getToken, saveRefreshToken, saveToken } from "@/utils/token";
 import { registerAuthFailureHandler } from "@/utils/graphqlFetch";
+import { refreshAuth as refreshAuthMutation } from "@/graphql/client";
 import type { MeData } from "@/graphql/client";
 
 //AuthUser is the shape this app uses internally to represent an authenticated user.
@@ -97,6 +98,7 @@ type AuthContextValue = {
 
   setSession: (args: {
     token: string;
+    refreshToken?: string;
     user: RawAuthUser;
     emailVerified: boolean;
   }) => Promise<void>;
@@ -218,9 +220,28 @@ means this callback never needs to be recreated because it doesn't capture any c
     try {
       //check local storage
       const token = await getToken();
+      const refreshToken = await getRefreshToken();
+
       if (!token) {
-        setUser(null);
-        return null;
+        if (!refreshToken) {
+          setUser(null);
+          return null;
+        }
+
+        try {
+          const refreshed = await refreshAuthMutation(refreshToken);
+          await saveToken(refreshed.token);
+          await saveRefreshToken(refreshed.refreshToken);
+
+          const nextUser: AuthUser = toAuthUser(refreshed.user, refreshed.emailVerified);
+          setUser(nextUser);
+          return nextUser;
+        } catch (err: unknown) {
+          console.warn("[useAuth] refresh token renew failed", err);
+          await clearToken();
+          setUser(null);
+          return null;
+        }
       }
 
       /*
@@ -260,9 +281,26 @@ means this callback never needs to be recreated because it doesn't capture any c
 
       //backend responded and did not authenticate the user, clear token and logout(setuser(null))
       if (!currentUser) {
-        await clearToken();
-        setUser(null);
-        return null;
+        if (!refreshToken) {
+          await clearToken();
+          setUser(null);
+          return null;
+        }
+
+        try {
+          const refreshed = await refreshAuthMutation(refreshToken);
+          await saveToken(refreshed.token);
+          await saveRefreshToken(refreshed.refreshToken);
+
+          const nextUser: AuthUser = toAuthUser(refreshed.user, refreshed.emailVerified);
+          setUser(nextUser);
+          return nextUser;
+        } catch (err: unknown) {
+          console.warn("[useAuth] refresh token renew failed", err);
+          await clearToken();
+          setUser(null);
+          return null;
+        }
       }
 
       //Convert the backend's user shape into the application'sAuthUser shape.
@@ -294,10 +332,14 @@ means this callback never needs to be recreated because it doesn't capture any c
   */
   const setSession = useCallback(async (args: {
     token: string;
+    refreshToken?: string;
     user: RawAuthUser;
     emailVerified: boolean;
   }) => {
     await saveToken(args.token);
+    if (args.refreshToken) {
+      await saveRefreshToken(args.refreshToken);
+    }
     setUser(toAuthUser(args.user, args.emailVerified));
   }, []);
 
@@ -323,8 +365,10 @@ means this callback never needs to be recreated because it doesn't capture any c
   }, []);
 
   useEffect(() => {
-    return registerAuthFailureHandler(() => logout());
-  }, [logout]);
+    return registerAuthFailureHandler(() => {
+      void refreshAuth();
+    });
+  }, [refreshAuth]);
 
   /*
   Similar idea to useCallback.

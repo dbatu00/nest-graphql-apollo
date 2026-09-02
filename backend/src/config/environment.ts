@@ -183,6 +183,7 @@ export function validateEnvironment(config: RawEnv): RawEnv {
 
         // Kept configurable so we can rotate expiry policy without code changes.
         JWT_EXPIRES_IN: asJwtDuration(config.JWT_EXPIRES_IN, '15m'),
+        JWT_REFRESH_EXPIRES_IN: asJwtDuration(config.JWT_REFRESH_EXPIRES_IN, '30d'),
 
         DB_HOST: asString(config.DB_HOST) ?? 'localhost',
 

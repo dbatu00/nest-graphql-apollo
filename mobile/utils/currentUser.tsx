@@ -13,7 +13,7 @@ export async function getCurrentUser() {
     const hasMoreRetries = attempt < CURRENT_USER_MAX_RETRIES;
 
     try {
-      return await getMe();
+      return await getMe({ skipAuthFailureHandler: true });
     } catch (err: unknown) {
       if (isAuthGraphQLError(err)) {
         console.warn("[currentUser] auth failure while fetching current user", err);

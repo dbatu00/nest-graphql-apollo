@@ -53,6 +53,7 @@ export default function SignUp() {
 
       await setSession({
         token: authPayload.token,
+        refreshToken: authPayload.refreshToken,
         user: authPayload.user,
         emailVerified: authPayload.emailVerified,
       });

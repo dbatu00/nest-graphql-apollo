@@ -62,6 +62,7 @@ type Activity {
 type AuthPayload {
   user: User!
   token: String!
+  refreshToken: String!
   emailVerified: Boolean!
 }
 
@@ -97,6 +98,7 @@ type Mutation {
   unlikeComment(commentId: Int!): Boolean!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(identifier: String!, password: String!): AuthPayload!
+  refreshAuth(refreshToken: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
   changeMyEmail(currentPassword: String!, newEmail: String!): Boolean!
   resendMyVerificationLink: EmailSendResult!

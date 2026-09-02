@@ -134,11 +134,7 @@ export class AuthService {
 
         await this.issueVerificationTokenAndSendEmail(user);
 
-        return {
-            user,
-            token: this.issueAccessToken(user),
-            emailVerified: user.emailVerified ?? false
-        };
+        return this.issueAuthPayload(user);
     }
 
     //------------------------------------------------
@@ -170,11 +166,7 @@ export class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        return {
-            user: credential.user,
-            token: this.issueAccessToken(credential.user),
-            emailVerified: credential.user.emailVerified
-        };
+        return this.issueAuthPayload(credential.user);
     }
 
     //------------------------------------------------
@@ -278,6 +270,29 @@ export class AuthService {
 
         const result = await this.issueVerificationTokenAndSendEmail(user);
         return result;
+    }
+
+    async refreshAuth(refreshToken: string): Promise<AuthPayload> {
+        let payload: { sub: number; type?: string };
+
+        try {
+            payload = this.jwt.verify<{ sub: number; type?: string }>(refreshToken, {
+                secret: this.config.getOrThrow<string>("JWT_SECRET"),
+            });
+        } catch {
+            throw new UnauthorizedException("Invalid or expired refresh token");
+        }
+
+        if (payload.type !== "refresh") {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+        if (!user) {
+            throw new UnauthorizedException("User not found");
+        }
+
+        return this.issueAuthPayload(user);
     }
 
     //------------------------------------------------
@@ -482,8 +497,31 @@ export class AuthService {
     private issueAccessToken(user: User): string {
         return this.jwt.sign({
             sub: user.id,
-            username: user.username
+            username: user.username,
+            type: "access",
         });
+    }
+
+    private issueRefreshToken(user: User): string {
+        const expiresIn = this.config.get<string>("JWT_REFRESH_EXPIRES_IN") ?? "30d";
+
+        return this.jwt.sign(
+            {
+                sub: user.id,
+                username: user.username,
+                type: "refresh",
+            },
+            { expiresIn: expiresIn as any },
+        );
+    }
+
+    private issueAuthPayload(user: User): AuthPayload {
+        return {
+            user,
+            token: this.issueAccessToken(user),
+            refreshToken: this.issueRefreshToken(user),
+            emailVerified: user.emailVerified ?? false,
+        };
     }
 
     //------------------------------------------------

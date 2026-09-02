@@ -134,6 +134,7 @@ export const LOGIN_MUTATION = `
   mutation Login($identifier: String!, $password: String!) {
     login(identifier: $identifier, password: $password) {
       token
+      refreshToken
       emailVerified
       user {
         id
@@ -153,6 +154,7 @@ export const SIGNUP_MUTATION = `
   mutation SignUp($username: String!, $email: String!, $password: String!) {
     signUp(username: $username, email: $email, password: $password) {
       token
+      refreshToken
       user {
         id
         username
@@ -164,6 +166,26 @@ export const SIGNUP_MUTATION = `
         email
       }
       emailVerified
+    }
+  }
+`;
+
+export const REFRESH_AUTH_MUTATION = `
+  mutation RefreshAuth($refreshToken: String!) {
+    refreshAuth(refreshToken: $refreshToken) {
+      token
+      refreshToken
+      emailVerified
+      user {
+        id
+        username
+        displayName
+        bio
+        avatarUrl
+        coverUrl
+        emailVerified
+        email
+      }
     }
   }
 `;

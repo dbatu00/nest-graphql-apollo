@@ -17,6 +17,7 @@ import {
     LIKED_POSTS_QUERY,
     LOGIN_MUTATION,
     GET_ME_QUERY,
+    REFRESH_AUTH_MUTATION,
     RESEND_VERIFICATION_EMAIL_MUTATION,
     SIGNUP_MUTATION,
     UNFOLLOW_USER_MUTATION,
@@ -47,6 +48,7 @@ export type SessionUser = MeData;
 
 export type AuthPayload = {
     token: string;
+    refreshToken: string;
     emailVerified: boolean;
     user: SessionUser;
 };
@@ -88,9 +90,19 @@ export async function signUp(username: string, email: string, password: string):
     return data.signUp;
 }
 
-export async function getMe(): Promise<MeData> {
-    const data = await graphqlFetch<{ me: MeData }>(GET_ME_QUERY);
+export async function getMe(options: { skipAuthFailureHandler?: boolean } = {}): Promise<MeData> {
+    const data = await graphqlFetch<{ me: MeData }>(GET_ME_QUERY, {}, options);
     return data.me;
+}
+
+export async function refreshAuth(refreshToken: string): Promise<AuthPayload> {
+    const data = await graphqlFetch<{ refreshAuth: AuthPayload }>(
+        REFRESH_AUTH_MUTATION,
+        { refreshToken },
+        { skipAuthFailureHandler: true }
+    );
+
+    return data.refreshAuth;
 }
 
 export async function updateMyProfile(input: {

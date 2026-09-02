@@ -15,6 +15,10 @@ type GraphQLResponse<T> = {
   errors?: GraphQLErrorItem[];
 };
 
+type GraphqlFetchOptions = {
+  skipAuthFailureHandler?: boolean;
+};
+
 export class GraphQLRequestError extends Error {
   readonly errors: GraphQLErrorItem[];
   readonly status: number;
@@ -99,7 +103,8 @@ export function isAuthGraphQLError(error: unknown): boolean {
 
 export async function graphqlFetch<T>(
   query: string,
-  variables: Record<string, unknown> = {}
+  variables: Record<string, unknown> = {},
+  options: GraphqlFetchOptions = {}
 ): Promise<T> {
   const url = env.API_URL;
 
@@ -136,7 +141,7 @@ export async function graphqlFetch<T>(
 
     return response.data;
   } catch (err: unknown) {
-    if (isAuthGraphQLError(err) && authFailureHandler) {
+    if (!options.skipAuthFailureHandler && isAuthGraphQLError(err) && authFailureHandler) {
       await authFailureHandler(err);
     }
 
