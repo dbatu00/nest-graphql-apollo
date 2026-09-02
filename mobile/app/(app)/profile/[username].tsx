@@ -99,13 +99,24 @@ type ProfileMeta = {
 function TabFeed({
   username,
   tab,
+  isOwnProfile,
 }: {
   username?: string;
   tab: "posts" | "likes";
+  isOwnProfile: boolean;
 }) {
   const type = useMemo(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
   const feed = useActivities({ username, types: type });
-  return <ActivityList feed={feed} />;
+  return (
+    <ActivityList
+      feed={feed}
+      filter={
+        tab === "likes"
+          ? (activity) => isOwnProfile || activity.targetPost?.user?.id !== activity.actor?.id
+          : undefined
+      }
+    />
+  );
 }
 
 export default function UsernameScreen() {
@@ -306,7 +317,7 @@ export default function UsernameScreen() {
 
       {/* Activity Based Tabs */}
       {(tab === "posts" || tab === "likes") && (
-        <TabFeed username={username} tab={tab} />
+        <TabFeed username={username} tab={tab} isOwnProfile={isOwnProfile} />
       )}
     </PageShell>
   );

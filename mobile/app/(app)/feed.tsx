@@ -36,11 +36,13 @@ import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import { PageShell } from "@/components/layout/PageShell";
 import { Composer } from "@/components/feed/Composer";
 import { useActivities } from "@/hooks/useActivities";
+import { useAuth } from "@/hooks/useAuth";
 import { ActivityList } from "@/components/feed/ActivityList";
 import { feedScreenStyles as styles } from "@/styles";
 
 export default function Feed() {
   const feed = useActivities();
+  const { user } = useAuth();
 
   const [content, setContent] = useState("");
 
@@ -62,7 +64,13 @@ export default function Feed() {
 
       <ActivityList
         feed={feed}
-        filter={a => a.type !== "follow" || a.active}
+        filter={(a) => {
+          if (a.type === "post") return true;
+          if (user && a.actor?.id === user.id) return false;
+          if (a.type === "like" && a.actor?.id === a.targetPost?.user?.id) return false;
+          if (a.type === "comment" && a.actor?.id === a.targetPost?.user?.id) return false;
+          return a.type !== "follow" || a.active;
+        }}
       />
     </PageShell>
   );
