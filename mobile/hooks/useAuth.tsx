@@ -59,6 +59,7 @@ import {
 
 import { getCurrentUser } from "@/utils/currentUser";
 import { clearToken, getToken, saveToken } from "@/utils/token";
+import { registerAuthFailureHandler } from "@/utils/graphqlFetch";
 import type { MeData } from "@/graphql/client";
 
 //AuthUser is the shape this app uses internally to represent an authenticated user.
@@ -320,6 +321,10 @@ means this callback never needs to be recreated because it doesn't capture any c
     setUser(null);
 
   }, []);
+
+  useEffect(() => {
+    return registerAuthFailureHandler(() => logout());
+  }, [logout]);
 
   /*
   Similar idea to useCallback.

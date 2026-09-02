@@ -27,6 +27,20 @@ export class GraphQLRequestError extends Error {
   }
 }
 
+type AuthFailureHandler = (error: unknown) => void | Promise<void>;
+
+let authFailureHandler: AuthFailureHandler | null = null;
+
+export function registerAuthFailureHandler(handler: AuthFailureHandler | null): () => void {
+  authFailureHandler = handler;
+
+  return () => {
+    if (authFailureHandler === handler) {
+      authFailureHandler = null;
+    }
+  };
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -122,6 +136,10 @@ export async function graphqlFetch<T>(
 
     return response.data;
   } catch (err: unknown) {
+    if (isAuthGraphQLError(err) && authFailureHandler) {
+      await authFailureHandler(err);
+    }
+
     console.error("[graphqlFetch] request failed", err);
     throw err;
   }
