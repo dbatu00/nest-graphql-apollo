@@ -10,7 +10,7 @@ import { UseGuards } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import { User } from "src/users/user.entity";
 import { CurrentUser } from "./security/current-user.decorator";
-import { ChangeMyEmailArgs, ChangeMyPasswordArgs, IsEmailUsedArgs, LoginArgs, SignUpArgs } from "./dto/auth.args";
+import { ChangeMyEmailArgs, ChangeMyPasswordArgs, DeleteMyAccountArgs, IsEmailUsedArgs, LoginArgs, SignUpArgs } from "./dto/auth.args";
 
 @Resolver()
 export class AuthResolver {
@@ -56,6 +56,15 @@ export class AuthResolver {
         @Args() args: ChangeMyEmailArgs,
     ) {
         return this.authService.changeMyEmail(user.id, args.newEmail, args.currentPassword);
+    }
+
+    @UseGuards(GqlAuthGuard)
+    @Mutation(() => Boolean)
+    deleteMyAccount(
+        @CurrentUser() user: User,
+        @Args() args: DeleteMyAccountArgs,
+    ) {
+        return this.authService.deleteMyAccount(user.id, args.currentPassword);
     }
 
     @UseGuards(GqlAuthGuard)

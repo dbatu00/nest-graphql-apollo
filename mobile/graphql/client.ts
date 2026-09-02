@@ -3,6 +3,7 @@ import {
     ADD_COMMENT_MUTATION,
     CHANGE_MY_EMAIL_MUTATION,
     CHANGE_MY_PASSWORD_MUTATION,
+    DELETE_MY_ACCOUNT_MUTATION,
     DELETE_COMMENT_MUTATION,
     DELETE_POST_MUTATION,
     FEED_QUERY,
@@ -148,6 +149,14 @@ export async function changeMyPassword(currentPassword: string, newPassword: str
     });
 
     return data.changeMyPassword;
+}
+
+export async function deleteMyAccount(currentPassword: string): Promise<boolean> {
+    const data = await graphqlFetch<{ deleteMyAccount: boolean }>(DELETE_MY_ACCOUNT_MUTATION, {
+        currentPassword,
+    });
+
+    return data.deleteMyAccount;
 }
 
 export async function resendMyVerificationLink(): Promise<EmailSendResult> {

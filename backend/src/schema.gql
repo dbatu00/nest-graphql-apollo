@@ -101,6 +101,7 @@ type Mutation {
   refreshAuth(refreshToken: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
   changeMyEmail(currentPassword: String!, newEmail: String!): Boolean!
+  deleteMyAccount(currentPassword: String!): Boolean!
   resendMyVerificationLink: EmailSendResult!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!

@@ -62,6 +62,14 @@ export class ChangeMyEmailArgs {
 }
 
 @ArgsType()
+export class DeleteMyAccountArgs {
+    @Field(() => String)
+    @IsString()
+    @MinLength(8)
+    currentPassword: string;
+}
+
+@ArgsType()
 export class IsEmailUsedArgs {
     @Field(() => String)
     @Trim()

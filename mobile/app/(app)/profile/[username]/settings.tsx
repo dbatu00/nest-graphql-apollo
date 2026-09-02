@@ -19,9 +19,11 @@ import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import {
   changeMyEmail,
   changeMyPassword,
+  deleteMyAccount,
   isEmailUsed,
   updateMyProfile,
 } from "@/graphql/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useProfileMeta } from "@/hooks/useProfileMeta";
 import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
@@ -96,6 +98,7 @@ export default function ProfileSettingsScreen() {
   const screenHeight = Dimensions.get("window").height;
 
   const router = useRouter();
+  const { logout } = useAuth();
 
   const { profileMeta, loading, refreshProfileMeta } = useProfileMeta();
 
@@ -125,12 +128,17 @@ export default function ProfileSettingsScreen() {
   const [accountUi, setAccountUi] = useState({
     showCurrentPasswordForEmailChange: false, // user's current pw
     showCurrentPasswordForPasswordChange: false, // user's current pw
+    showCurrentPasswordForDelete: false,
     showNewPassword: false,
     showConfirmNewPassword: false,
   });
 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteSuccessVisible, setDeleteSuccessVisible] = useState(false);
   const [successNoticeVisible, setSuccessNoticeVisible] = useState(false);
   const [successNoticeMessage, setSuccessNoticeMessage] = useState("");
   const successNoticeY = React.useRef(new Animated.Value(-80)).current;
@@ -353,6 +361,50 @@ export default function ProfileSettingsScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleting) {
+      return;
+    }
+
+    setDeleteError(null);
+
+    const currentPassword = deletePassword.trim();
+
+    if (!currentPassword) {
+      setDeleteError("Current password is required to delete your account.");
+      return;
+    }
+
+    if (currentPassword.length < 8) {
+      setDeleteError("Current password must be at least 8 characters.");
+      return;
+    }
+
+    setDeleting(true);
+
+    try {
+      const deleted = await deleteMyAccount(currentPassword);
+
+      if (!deleted) {
+        setDeleteError("Failed to delete account.");
+        return;
+      }
+
+      setDeletePassword("");
+      setDeleteSuccessVisible(true);
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete account.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCloseDeleteSuccess = async () => {
+    setDeleteSuccessVisible(false);
+    await logout();
+    router.replace("/(auth)/login");
   };
 
   return (
@@ -643,10 +695,75 @@ export default function ProfileSettingsScreen() {
                   <Text style={local.primaryButtonText}>Change Password</Text>
                 )}
               </TouchableOpacity>
+
+              <View style={local.deleteSectionDivider} />
+
+              <Text style={local.deleteTitle}>Delete Account</Text>
+              <Text style={local.deleteHint}>This permanently removes your account and related data.</Text>
+
+              <View style={local.passwordFieldWrapper}>
+                <TextInput
+                  value={deletePassword}
+                  onChangeText={setDeletePassword}
+                  placeholder="Current password"
+                  secureTextEntry={!accountUi.showCurrentPasswordForDelete}
+                  style={[
+                    local.accountInput,
+                    local.passwordInput,
+                    profileSettingsAccountInputToneStyle(!!deletePassword),
+                  ]}
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity
+                  onPress={() =>
+                    setAccountUi(prev => ({
+                      ...prev,
+                      showCurrentPasswordForDelete: !prev.showCurrentPasswordForDelete,
+                    }))
+                  }
+                  style={local.eyeButton}
+                >
+                  <Ionicons
+                    name={accountUi.showCurrentPasswordForDelete ? "eye-off" : "eye"}
+                    size={20}
+                    color="#6b7280"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {!!deleteError && <Text style={local.errorTextSmall}>{deleteError}</Text>}
+
+              <TouchableOpacity
+                onPress={handleDeleteAccount}
+                disabled={deleting}
+                style={[local.deleteButton, deleting && local.buttonSaving]}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={local.deleteButtonText}>Delete Account</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </ScrollView>
         )}
       </View>
+
+      <Modal
+        visible={deleteSuccessVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseDeleteSuccess}
+      >
+        <View style={local.modalOverlay}>
+          <View style={local.deleteSuccessCard}>
+            <Text style={local.modalTitle}>Account deleted successfully. Goodbye!</Text>
+            <TouchableOpacity onPress={handleCloseDeleteSuccess} style={local.primaryButton}>
+              <Text style={local.primaryButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={pickerType !== null} transparent animationType="fade" onRequestClose={closePicker}>
         <View style={local.modalOverlay}>

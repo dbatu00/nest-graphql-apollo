@@ -501,3 +501,26 @@ Decided not to extract the shared logic between likeComment and unlikeComment. A
 29.07.2026
 
 Reviewed authentication strategy. Considered switching to a global GqlAuthGuard with a @Public() decorator since most operations currently require authentication. Decided against refactoring for now because the long-term visibility model is still undecided. If the application later adopts Instagram/Twitter-style public profiles and posts, many currently protected queries may become public. Deferred the change until the product's access model is finalized.
+
+
+---
+
+## 2026-09-02 — Align DB constraints with ownership concept
+
+Question: should we keep relying mainly on service-layer cleanup for likes/activity, or enforce more ownership guarantees in DB constraints?
+
+### Decision
+
+- Keep polymorphic likes (`targetType` + `targetId`) as-is.
+- Strengthen user-linked FK behavior at the DB level:
+  - `Like.userId` -> `onDelete: CASCADE`
+  - `Activity.actorId` -> `onDelete: CASCADE`
+  - `Activity.targetUserId` -> `onDelete: CASCADE`
+- Add DB check constraint for allowed like target types.
+
+### Reasoning
+
+- The earlier polymorphic decision remains valid for flexibility and low coupling.
+- The biggest practical integrity risk is account deletion cleanup, which is ownership-based and should be guaranteed by DB.
+- This change reduces manual purge burden and lowers chance of orphaned user-linked rows.
+- It does not force an activity-centric like model or add lookup overhead.

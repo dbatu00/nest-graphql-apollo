@@ -215,6 +215,12 @@ export const CHANGE_MY_PASSWORD_MUTATION = `
   }
 `;
 
+export const DELETE_MY_ACCOUNT_MUTATION = `
+  mutation DeleteMyAccount($currentPassword: String!) {
+    deleteMyAccount(currentPassword: $currentPassword)
+  }
+`;
+
 export const FOLLOW_USER_MUTATION = `
   mutation FollowUser($username: String!) {
     followUser(username: $username)

@@ -15,6 +15,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import {
     Repository,
     DataSource,
+    In,
     MoreThan,
     QueryFailedError,
 } from "typeorm";
@@ -32,6 +33,10 @@ import { AuthPayload } from "./auth.types";
 import { VerificationToken } from "./verification/verification-token.entity";
 import { VerificationEmailService } from "./verification/verification-email.service";
 import { VerificationLinkResult } from "./verification/verification-link-result.enum";
+import { Post } from "src/posts/post.entity";
+import { Comment } from "src/comments/comment.entity";
+import { Like } from "src/likes/like.entity";
+import { LIKE_TYPE } from "src/likes/likes.constants";
 
 import { EmailSendResult } from "./verification/verification-email-send-result.enum";
 import { VerifyEmailResult } from "./verification/verify-email-result.enum";
@@ -367,6 +372,60 @@ export class AuthService {
         // Both writes in a single transaction so they succeed or fail together.
         await this.dataSource.transaction(async manager => {
             await manager.save(auth);
+        });
+
+        return true;
+    }
+
+    async deleteMyAccount(userId: number, currentPassword: string) {
+        const auth = await this.authRepo.findOne({
+            where: { user: { id: userId } },
+        });
+
+        if (!auth) {
+            throw new UnauthorizedException();
+        }
+
+        const valid = await argon2.verify(auth.password, currentPassword);
+        if (!valid) {
+            throw new UnauthorizedException("Invalid password");
+        }
+
+        await this.dataSource.transaction(async (manager) => {
+            const postRows = await manager
+                .getRepository(Post)
+                .createQueryBuilder("post")
+                .select("post.id", "id")
+                .where("post.userId = :userId", { userId })
+                .getRawMany<{ id: number }>();
+
+            const commentRows = await manager
+                .getRepository(Comment)
+                .createQueryBuilder("comment")
+                .select("comment.id", "id")
+                .where("comment.userId = :userId", { userId })
+                .getRawMany<{ id: number }>();
+
+            const postIds = postRows.map(row => row.id);
+            const commentIds = commentRows.map(row => row.id);
+
+            const likeRepo = manager.getRepository(Like);
+
+            if (postIds.length > 0) {
+                await likeRepo.delete({
+                    targetType: LIKE_TYPE.POST,
+                    targetId: In(postIds),
+                });
+            }
+
+            if (commentIds.length > 0) {
+                await likeRepo.delete({
+                    targetType: LIKE_TYPE.COMMENT,
+                    targetId: In(commentIds),
+                });
+            }
+
+            await manager.delete(User, { id: userId });
         });
 
         return true;

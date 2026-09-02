@@ -1,4 +1,5 @@
 import {
+  Check,
   Column,
   CreateDateColumn,
   Entity,
@@ -13,11 +14,12 @@ import type { LikeType } from './likes.constants';
 
 @Entity()
 @Unique(['userId', 'targetType', 'targetId'])
+@Check(`"targetType" IN ('post', 'comment')`)
 export class Like {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 
   @Column()
