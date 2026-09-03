@@ -8,6 +8,7 @@ import { Language } from "@/hooks/i18n.translations";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import { AppLogo } from "@/components/common/AppLogo";
+import { PageShell } from "@/components/layout/PageShell";
 import { authFormStyles as styles } from "@/styles";
 
 const LANGUAGE_OPTIONS: Language[] = ["en", "tr", "de"];
@@ -65,9 +66,10 @@ export default function Login() {
   };
 
   return (
-    <View style={[commonStyles.container, commonStyles.center, commonStyles.pageGutter]}>
-      <AppLogo subtitle={t("auth.login.subtitle")} />
-      <View style={styles.titleRow}>
+    <PageShell header={<View />} contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
+      <View style={[commonStyles.container, commonStyles.center]}>
+        <AppLogo subtitle={t("auth.login.subtitle")} />
+        <View style={styles.titleRow}>
         <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.login.title")}</Text>
 
         <View style={styles.titleLanguageMenuWrap}>
@@ -143,6 +145,7 @@ export default function Login() {
           <Text style={styles.navLinkText}>{t("auth.login.signUpLink")}</Text>
         </Pressable>
       </View>
-    </View>
+      </View>
+    </PageShell>
   );
 }

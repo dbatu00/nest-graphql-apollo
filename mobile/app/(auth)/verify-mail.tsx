@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
 import { EmailSendResult } from "@/types/Auth";
 import { AppLogo } from "@/components/common/AppLogo";
+import { PageShell } from "@/components/layout/PageShell";
 import {
   authFormStyles as authStyles,
   commonStyles,
@@ -146,14 +147,14 @@ export default function VerifyMail() {
   };
 
   return (
-    <View
-      style={[
-        commonStyles.container,
-        commonStyles.pageGutter,
-        styles.containerTone,
-      ]}
-    >
-      <View style={styles.inner}>
+    <PageShell header={<View />} contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
+      <View
+        style={[
+          commonStyles.container,
+          styles.containerTone,
+        ]}
+      >
+        <View style={styles.inner}>
         <AppLogo subtitle={t("auth.verify.subtitle")} />
 
         <Text style={styles.title}>
@@ -209,7 +210,8 @@ export default function VerifyMail() {
             {info}
           </Text>
         ) : null}
+        </View>
       </View>
-    </View>
+    </PageShell>
   );
 }
