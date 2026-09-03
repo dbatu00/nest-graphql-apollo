@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useI18n } from "@/hooks/useI18n";
 import { buildSettingsButtonContainerStyle, settingsButtonStyles as styles } from "@/styles";
 
 type Props = {
@@ -19,12 +20,14 @@ export function UserSettingsButton({
   style,
   minWidth = 80,
   borderColor = "#fff",
-  label = "Settings",
+  label,
   iconName = "settings-outline",
   backgroundColor = "#fff",
   textColor = "#1d4ed8",
   iconColor = "#1d4ed8",
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -36,7 +39,7 @@ export function UserSettingsButton({
       <View style={styles.contentRow}>
         <Ionicons name={iconName} size={14} color={iconColor} />
         <Text style={[styles.text, { color: textColor }]}>
-          {label}
+          {label ?? t("common.settings")}
         </Text>
       </View>
     </TouchableOpacity>

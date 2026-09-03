@@ -29,6 +29,7 @@ TODO:
 */
 import { useEffect, useState, useCallback } from "react";
 import { Activity } from "@/types/Activity";
+import { useI18n } from "@/hooks/useI18n";
 import {
   addPost,
   deleteComment as deleteCommentMutation,
@@ -52,6 +53,7 @@ type Params = {
 
 export function useActivities(params: Params = {}) {
   const { username, types } = params;
+  const { t } = useI18n();
 
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -72,7 +74,7 @@ export function useActivities(params: Params = {}) {
       setActivities(feed);
     } catch (err: unknown) {
       console.error("[useActivities] feed refresh failed", err);
-      setError("Failed to load feed");
+      setError(t("feed.error.loadFailed"));
     } finally {
       setLoading(false);
     }

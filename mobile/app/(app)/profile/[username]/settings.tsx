@@ -24,6 +24,7 @@ import {
   updateMyProfile,
 } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import { useProfileMeta } from "@/hooks/useProfileMeta";
 import { Header } from "@/components/layout/Header";
 import { PageShell } from "@/components/layout/PageShell";
@@ -53,9 +54,9 @@ const avatarOptions = [
 ];
 
 const TABS = [
-  { key: "about", label: "About You" },
-  { key: "account", label: "Account Details" },
-];
+  { key: "about", labelKey: "settings.tab.about" },
+  { key: "account", labelKey: "settings.tab.account" },
+] as const;
 
 const GRADIENT_COLORS: [string, string, string, string, string, string] = [
   "rgba(0,0,0,1)",
@@ -99,6 +100,7 @@ export default function ProfileSettingsScreen() {
 
   const router = useRouter();
   const { logout } = useAuth();
+  const { t } = useI18n();
 
   const { profileMeta, loading, refreshProfileMeta } = useProfileMeta();
 
@@ -157,24 +159,24 @@ export default function ProfileSettingsScreen() {
   const closePicker = () => setPickerType(null);
 
   const validateEmailChange = (email: string, confirm: string, password: string): string | null => {
-    if (!email && !confirm && !password) return "Please fill in the fields to change your email.";
-    if (!email) return "Please enter a new email.";
-    if (!confirm) return "Please confirm your new email.";
-    if (!password) return "Please enter your current password.";
-    if (password.length < 8) return "Current password must be at least 8 characters.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Please enter a valid email address.";
-    if (email !== confirm) return "Email and confirmation do not match.";
-    if (email === profileMeta?.email) return "This is already your current email."; //profileMeta exists before exec comes here
+    if (!email && !confirm && !password) return t("settings.error.email.fillFields");
+    if (!email) return t("settings.error.email.enterNew");
+    if (!confirm) return t("settings.error.email.confirm");
+    if (!password) return t("settings.error.email.enterCurrentPassword");
+    if (password.length < 8) return t("settings.error.email.currentPasswordLength");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t("settings.error.email.invalidAddress");
+    if (email !== confirm) return t("settings.error.email.mismatch");
+    if (email === profileMeta?.email) return t("settings.error.email.sameAsCurrent"); //profileMeta exists before exec comes here
     return null;
   };
 
   const validatePasswordChange = (newPassword: string, confirmPassword: string, currentPassword: string): string | null => {
-    if (!newPassword || !confirmPassword) return "Please enter and confirm your new password.";
-    if (newPassword !== confirmPassword) return "New password and confirmation do not match.";
-    if (newPassword.length < 8) return "Password must be at least 8 characters.";
-    if (!currentPassword) return "Current password is required to change password.";
-    if (currentPassword === newPassword) return "The new password and current password you entered are the same.";
-    if (currentPassword.length < 8) return "Password must be at least 8 characters.";
+    if (!newPassword || !confirmPassword) return t("settings.error.password.enterAndConfirm");
+    if (newPassword !== confirmPassword) return t("settings.error.password.mismatch");
+    if (newPassword.length < 8) return t("settings.error.password.length");
+    if (!currentPassword) return t("settings.error.password.currentRequired");
+    if (currentPassword === newPassword) return t("settings.error.password.sameAsCurrent");
+    if (currentPassword.length < 8) return t("settings.error.password.length");
     return null;
   };
 
@@ -265,7 +267,7 @@ export default function ProfileSettingsScreen() {
 
     if (!aboutDraftChanged) {
       setError(null);
-      setSuccess("There are no changes to update.");
+      setSuccess(t("settings.about.noChanges"));
       return;
     }
 
@@ -282,9 +284,9 @@ export default function ProfileSettingsScreen() {
       });
 
       await refreshProfileMeta();
-      setSuccess("Profile updated");
+      setSuccess(t("settings.about.profileUpdated"));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update profile");
+      setError(err instanceof Error ? err.message : t("settings.about.failedUpdate"));
     } finally {
       setSaving(false);
     }
@@ -308,19 +310,19 @@ export default function ProfileSettingsScreen() {
     try {
       const emailAlreadyUsed = await isEmailUsed(email);
       if (emailAlreadyUsed) {
-        setEmailError("This email address is already in use.");
+        setEmailError(t("settings.error.emailUsed"));
         return;
       }
 
       await changeMyEmail(password, email);
-      showSuccessNotice("Email changed successfully. Redirecting...");
+      showSuccessNotice(t("settings.notice.emailChangedRedirect"));
       await new Promise(resolve => setTimeout(resolve, 2000));
       router.replace("/(auth)/verify-mail");
     } catch (err) {
       if (err instanceof Error && err.message === "Too Many Requests") {
-        setEmailError("Too many verification emails sent. Please wait before trying again.");
+        setEmailError(t("settings.error.tooManyRequests"));
       } else {
-        setEmailError(err instanceof Error ? err.message : "Failed to change email.");
+        setEmailError(err instanceof Error ? err.message : t("settings.error.changeEmailFailed"));
       }
     } finally {
       setSaving(false);
@@ -352,12 +354,12 @@ export default function ProfileSettingsScreen() {
             currentPassword: "",
           },
         }));
-        showSuccessNotice("Password changed successfully.");
+        showSuccessNotice(t("settings.notice.passwordChanged"));
       } else {
-        setPasswordError("Failed to change password.");
+        setPasswordError(t("settings.error.changePasswordFailed"));
       }
     } catch (err: unknown) {
-      setPasswordError(err instanceof Error ? err.message : "Failed to change password.");
+      setPasswordError(err instanceof Error ? err.message : t("settings.error.changePasswordFailed"));
     } finally {
       setSaving(false);
     }
@@ -373,12 +375,12 @@ export default function ProfileSettingsScreen() {
     const currentPassword = deletePassword.trim();
 
     if (!currentPassword) {
-      setDeleteError("Current password is required to delete your account.");
+      setDeleteError(t("settings.error.deletePasswordRequired"));
       return;
     }
 
     if (currentPassword.length < 8) {
-      setDeleteError("Current password must be at least 8 characters.");
+      setDeleteError(t("settings.error.deletePasswordLength"));
       return;
     }
 
@@ -388,14 +390,14 @@ export default function ProfileSettingsScreen() {
       const deleted = await deleteMyAccount(currentPassword);
 
       if (!deleted) {
-        setDeleteError("Failed to delete account.");
+        setDeleteError(t("settings.error.deleteFailed"));
         return;
       }
 
       setDeletePassword("");
       setDeleteSuccessVisible(true);
     } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : "Failed to delete account.");
+      setDeleteError(err instanceof Error ? err.message : t("settings.error.deleteFailed"));
     } finally {
       setDeleting(false);
     }
@@ -434,7 +436,7 @@ export default function ProfileSettingsScreen() {
               ]}
             >
               <Text style={activeTab === tab.key ? local.tabLabelActive : local.tabLabelInactive}>
-                {tab.label}
+                {t(tab.labelKey)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -478,20 +480,20 @@ export default function ProfileSettingsScreen() {
             </View>
 
             <View style={local.card}>
-              <Text style={local.fieldLabel}>Display name</Text>
+              <Text style={local.fieldLabel}>{t("settings.about.displayName")}</Text>
               <TextInput
                 value={aboutDraft.displayName}
                 onChangeText={displayName => setAboutDraft({ ...aboutDraft, displayName })}
-                placeholder="Display name"
+                placeholder={t("settings.about.displayNamePlaceholder")}
                 style={local.textInput}
                 maxLength={50}
               />
 
-              <Text style={local.fieldLabel}>Bio</Text>
+              <Text style={local.fieldLabel}>{t("settings.about.bio")}</Text>
               <TextInput
                 value={aboutDraft.bio}
                 onChangeText={bio => setAboutDraft({ ...aboutDraft, bio })}
-                placeholder="Tell people a bit about yourself"
+                placeholder={t("settings.about.bioPlaceholder")}
                 placeholderTextColor="#9ca3af"
                 multiline
                 textAlignVertical="top"
@@ -505,7 +507,7 @@ export default function ProfileSettingsScreen() {
                 <Text
                   style={[
                     local.successText,
-                    profileSettingsSuccessToneStyle(success === "Profile updated"),
+                    profileSettingsSuccessToneStyle(success === t("settings.about.profileUpdated")),
                   ]}
                 >
                   {success}
@@ -520,7 +522,7 @@ export default function ProfileSettingsScreen() {
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={local.primaryButtonText}>Save changes</Text>
+                  <Text style={local.primaryButtonText}>{t("settings.about.saveChanges")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -531,19 +533,19 @@ export default function ProfileSettingsScreen() {
           <ScrollView style={local.flex1} contentContainerStyle={local.accountScrollContent}>
             <View style={local.accountCard}>
               {/* Username (not editable) */}
-              <Text style={local.fieldLabel}>Username</Text>
+              <Text style={local.fieldLabel}>{t("settings.account.username")}</Text>
               <Text style={local.usernameValue}>{profileMeta.username}</Text>
-              <Text style={local.usernameHint}>Your username is not changeable.</Text>
+              <Text style={local.usernameHint}>{t("settings.account.usernameHint")}</Text>
 
               {/* ── Email section ── */}
-              <Text style={local.fieldLabel}>Current Email</Text>
+              <Text style={local.fieldLabel}>{t("settings.account.currentEmail")}</Text>
               <Text style={local.currentEmailValue}>{profileMeta.email}</Text>
 
-              <Text style={local.fieldLabelTight}>New Email</Text>
+              <Text style={local.fieldLabelTight}>{t("settings.account.newEmail")}</Text>
               <TextInput
                 value={accountForm.email.newEmail}
                 onChangeText={(val) => updateAccountForm("email", "newEmail", val)}
-                placeholder="Enter new email"
+                placeholder={t("settings.account.newEmailPlaceholder")}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 style={[
@@ -555,7 +557,7 @@ export default function ProfileSettingsScreen() {
               <TextInput
                 value={accountForm.email.confirmNewEmail}
                 onChangeText={(val) => updateAccountForm("email", "confirmNewEmail", val)}
-                placeholder="Confirm new email"
+                placeholder={t("settings.account.confirmNewEmailPlaceholder")}
                 autoCapitalize="none"
                 keyboardType="email-address"
                 style={[
@@ -568,7 +570,7 @@ export default function ProfileSettingsScreen() {
                 <TextInput
                   value={accountForm.email.currentPassword}
                   onChangeText={(val) => updateAccountForm("email", "currentPassword", val)}
-                  placeholder="Current password"
+                  placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForEmailChange}
                   style={[
                     local.accountInput,
@@ -604,17 +606,17 @@ export default function ProfileSettingsScreen() {
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={local.primaryButtonText}>Change Email</Text>
+                  <Text style={local.primaryButtonText}>{t("settings.account.changeEmail")}</Text>
                 )}
               </TouchableOpacity>
 
               {/* ── Password section ── */}
-              <Text style={local.fieldLabelTight}>New Password</Text>
+              <Text style={local.fieldLabelTight}>{t("settings.account.newPassword")}</Text>
               <View style={local.passwordFieldWrapper}>
                 <TextInput
                   value={accountForm.password.newPassword}
                   onChangeText={(val) => updateAccountForm("password", "newPassword", val)}
-                  placeholder="Enter new password"
+                  placeholder={t("settings.account.newPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showNewPassword}
                   style={[
                     local.accountInput,
@@ -634,7 +636,7 @@ export default function ProfileSettingsScreen() {
                 <TextInput
                   value={accountForm.password.confirmNewPassword}
                   onChangeText={(val) => updateAccountForm("password", "confirmNewPassword", val)}
-                  placeholder="Confirm new password"
+                  placeholder={t("settings.account.confirmNewPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showConfirmNewPassword}
                   style={[
                     local.accountInput,
@@ -656,7 +658,7 @@ export default function ProfileSettingsScreen() {
                 <TextInput
                   value={accountForm.password.currentPassword}
                   onChangeText={(val) => updateAccountForm("password", "currentPassword", val)}
-                  placeholder="Current password"
+                  placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForPasswordChange}
                   style={[
                     local.accountInput,
@@ -692,20 +694,20 @@ export default function ProfileSettingsScreen() {
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={local.primaryButtonText}>Change Password</Text>
+                  <Text style={local.primaryButtonText}>{t("settings.account.changePassword")}</Text>
                 )}
               </TouchableOpacity>
 
               <View style={local.deleteSectionDivider} />
 
-              <Text style={local.deleteTitle}>Delete Account</Text>
-              <Text style={local.deleteHint}>This permanently removes your account and related data.</Text>
+              <Text style={local.deleteTitle}>{t("settings.account.deleteTitle")}</Text>
+              <Text style={local.deleteHint}>{t("settings.account.deleteHint")}</Text>
 
               <View style={local.passwordFieldWrapper}>
                 <TextInput
                   value={deletePassword}
                   onChangeText={setDeletePassword}
-                  placeholder="Current password"
+                  placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForDelete}
                   style={[
                     local.accountInput,
@@ -741,7 +743,7 @@ export default function ProfileSettingsScreen() {
                 {deleting ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={local.deleteButtonText}>Delete Account</Text>
+                  <Text style={local.deleteButtonText}>{t("settings.account.deleteButton")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -757,9 +759,9 @@ export default function ProfileSettingsScreen() {
       >
         <View style={local.modalOverlay}>
           <View style={local.deleteSuccessCard}>
-            <Text style={local.modalTitle}>Account deleted successfully. Goodbye!</Text>
+            <Text style={local.modalTitle}>{t("settings.modal.accountDeleted")}</Text>
             <TouchableOpacity onPress={handleCloseDeleteSuccess} style={local.primaryButton}>
-              <Text style={local.primaryButtonText}>Close</Text>
+              <Text style={local.primaryButtonText}>{t("settings.modal.close")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -774,7 +776,7 @@ export default function ProfileSettingsScreen() {
             ]}
           >
             <Text style={local.modalTitle}>
-              {pickerType === "cover" ? "Pick a cover" : "Pick a profile photo"}
+              {pickerType === "cover" ? t("settings.modal.pickCover") : t("settings.modal.pickProfilePhoto")}
             </Text>
 
             <View style={local.modalGrid}>
@@ -801,7 +803,7 @@ export default function ProfileSettingsScreen() {
             </View>
 
             <TouchableOpacity onPress={closePicker} style={local.modalCloseButton}>
-              <Text style={local.modalCloseText}>Close</Text>
+              <Text style={local.modalCloseText}>{t("settings.modal.close")}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -1,5 +1,6 @@
 import { Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useI18n } from "@/hooks/useI18n";
 import { buildLogoutButtonContainerStyle, logoutButtonStyles as styles } from "@/styles";
 
 type Props = {
@@ -17,6 +18,8 @@ export function FeedLogoutButton({
   iconColor = "#fff",
   textColor = "#fff",
 }: Props) {
+  const { t } = useI18n();
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -28,7 +31,7 @@ export function FeedLogoutButton({
       <View style={styles.contentRow}>
         <Ionicons name="exit-outline" size={14} color={iconColor} />
         <Text style={[styles.text, { color: textColor }]}>
-          Logout
+          {t("common.logout")}
         </Text>
       </View>
     </TouchableOpacity>

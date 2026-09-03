@@ -1,6 +1,7 @@
 import { View, Text } from "react-native";
 import { ActivityRow } from "@/components/feed/ActivityRow";
 import { useActivities } from "@/hooks/useActivities";
+import { useI18n } from "@/hooks/useI18n";
 import { ActivityIndicator } from "react-native";
 import { activityListStyles as styles } from "@/styles";
 
@@ -10,6 +11,7 @@ type Props = {
 };
 
 export function ActivityList({ feed, filter }: Props) {
+    const { t } = useI18n();
     const activities = filter
         ? feed.activities.filter(filter)
         : feed.activities;
@@ -27,7 +29,7 @@ export function ActivityList({ feed, filter }: Props) {
             {!feed.loading && !feed.error && activities.length === 0 && (
                 <View style={styles.emptyWrap}>
                     <Text style={styles.emptyText}>
-                        Nothing to show yet
+                        {t("feed.empty")}
                     </Text>
                 </View>
             )}

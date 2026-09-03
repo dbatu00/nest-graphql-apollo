@@ -1,30 +1,42 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { commonStyles } from "@/styles";
 import { login } from "@/graphql/client";
+import { Language } from "@/hooks/i18n.translations";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import { AppLogo } from "@/components/common/AppLogo";
 import { authFormStyles as styles } from "@/styles";
 
+const LANGUAGE_OPTIONS: Language[] = ["en", "tr", "de"];
+
 export default function Login() {
   const { setSession } = useAuth();
+  const { language, setLanguage, t } = useI18n();
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleLanguageSelect = async (option: Language) => {
+    await setLanguage(option);
+    setLanguageMenuOpen(false);
+  };
 
   const handleLogin = async () => {
     setError("");
 
 
     if (!identifier || !password) {
-      setError("Username or email and password required");
+      setError(t("auth.login.error.required"));
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("auth.login.error.passwordLength"));
       return;
     }
 
@@ -46,7 +58,7 @@ export default function Login() {
         router.replace("/(auth)/verify-mail" as never);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid credentials");
+      setError(err instanceof Error ? err.message : t("auth.login.error.invalidCredentials"));
     } finally {
       setLoading(false);
     }
@@ -54,12 +66,42 @@ export default function Login() {
 
   return (
     <View style={[commonStyles.container, commonStyles.center, commonStyles.pageGutter]}>
-      <AppLogo subtitle="Welcome back" />
-      <Text style={commonStyles.title}>Login</Text>
+      <AppLogo subtitle={t("auth.login.subtitle")} />
+      <View style={styles.titleRow}>
+        <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.login.title")}</Text>
+
+        <View style={styles.titleLanguageMenuWrap}>
+          <Pressable
+            onPress={() => setLanguageMenuOpen((prev) => !prev)}
+            style={styles.titleLanguageIconButton}
+          >
+            <Ionicons name="globe-outline" size={18} color="#1d4ed8" />
+          </Pressable>
+
+          {languageMenuOpen && (
+            <View style={styles.titleLanguageDropdown}>
+              {LANGUAGE_OPTIONS.map((option) => {
+                const active = language === option;
+                return (
+                  <Pressable
+                    key={option}
+                    onPress={() => void handleLanguageSelect(option)}
+                    style={[styles.titleLanguageDropdownItem, active && styles.titleLanguageDropdownItemActive]}
+                  >
+                    <Text style={[styles.titleLanguageDropdownItemText, active && styles.titleLanguageDropdownItemTextActive]}>
+                      {t(`settings.language.${option}`)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </View>
 
       <View style={styles.formWrap}>
         <TextInput
-          placeholder="Username or Email"
+          placeholder={t("auth.login.identifierPlaceholder")}
           placeholderTextColor="#d1d5db"
           value={identifier}
           onChangeText={setIdentifier}
@@ -68,7 +110,7 @@ export default function Login() {
         />
 
         <TextInput
-          placeholder="Password"
+          placeholder={t("auth.login.passwordPlaceholder")}
           placeholderTextColor="#d1d5db"
           value={password}
           onChangeText={setPassword}
@@ -83,7 +125,7 @@ export default function Login() {
             disabled={loading}
           >
             <Text style={commonStyles.buttonText}>
-              {loading ? "Logging in..." : "Login"}
+              {loading ? t("auth.login.submitting") : t("auth.login.submit")}
             </Text>
           </Pressable>
         </View>
@@ -98,7 +140,7 @@ export default function Login() {
           onPress={() => router.push("/(auth)/signUp")}
           style={styles.navLinkWrap}
         >
-          <Text style={styles.navLinkText}>Sign up</Text>
+          <Text style={styles.navLinkText}>{t("auth.login.signUpLink")}</Text>
         </Pressable>
       </View>
     </View>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { View, Text, Pressable, Image } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ProfileLink } from "@/components/common/ProfileLink";
+import { useI18n } from "@/hooks/useI18n";
 import {
   userRowCardStyle,
   userRowDeleteIconStyle,
@@ -34,6 +35,7 @@ export function UserRow({
   isCompact = false,
   onProfileNavigate,
 }: UserRowProps) {
+  const { t } = useI18n();
   const isSelf = currentUserId === user.id;
   const [isDeleteHovered, setIsDeleteHovered] = useState(false);
   const label = user.displayName?.trim() || user.username;
@@ -95,7 +97,7 @@ export function UserRow({
               <Text
                 style={[styles.followText, userRowFollowTextToneStyle(!!user.followedByMe)]}
               >
-                {user.followedByMe ? "Following" : "Follow"}
+                {user.followedByMe ? t("user.following") : t("user.follow")}
               </Text>
             </View>
           </Pressable>

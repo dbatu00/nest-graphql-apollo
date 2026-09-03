@@ -1,8 +1,10 @@
 import { router } from "expo-router";
 
 import { FeedLogoutButton } from "@/components/common/LogoutButton";
+import { HeaderLanguageMenu } from "@/components/common/LanguageMenu";
 import { UserSettingsButton } from "@/components/common/SettingsButton";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import { headerStyles as styles } from "@/styles";
 
 type HeaderMode = "feed" | "profile" | "settings";
@@ -15,6 +17,7 @@ type Props = {
 
 export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props) {
     const { user, logout } = useAuth();
+    const { t } = useI18n();
 
     const handleLogout = async () => {
         await logout();
@@ -49,11 +52,13 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                 <UserSettingsButton
                     onPress={handleGoProfile}
                     minWidth={80}
-                    label="Profile"
+                    label={t("common.profile")}
                     iconName="person-circle-outline"
                 />
 
-                <FeedLogoutButton onPress={handleLogout} style={styles.logoutMargin} />
+                <HeaderLanguageMenu style={styles.languageMiddleMargin} />
+
+                <FeedLogoutButton onPress={handleLogout} />
             </>
         );
     }
@@ -65,7 +70,7 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                     onPress={handleGoFeed}
                     minWidth={70}
                     borderColor="rgba(255, 255, 255, 0.92)"
-                    label="Home"
+                    label={t("common.home")}
                     iconName="home-outline"
                 />
 
@@ -78,9 +83,10 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                     />
                 )}
 
+                <HeaderLanguageMenu style={styles.languageMiddleMargin} />
+
                 <FeedLogoutButton
                     onPress={handleLogout}
-                    style={styles.logoutMargin}
                     minWidth={70}
                 />
             </>
@@ -93,7 +99,7 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                 onPress={handleGoFeed}
                 minWidth={70}
                 borderColor="rgba(255, 255, 255, 0.92)"
-                label="Home"
+                label={t("common.home")}
                 iconName="home-outline"
             />
 
@@ -101,14 +107,15 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                 onPress={handleGoProfile}
                 minWidth={70}
                 borderColor="rgba(255, 255, 255, 0.92)"
-                label="Profile"
+                label={t("common.profile")}
                 iconName="person-circle-outline"
                 style={styles.logoutMargin}
             />
 
+            <HeaderLanguageMenu style={styles.languageMiddleMargin} />
+
             <FeedLogoutButton
                 onPress={handleLogout}
-                style={styles.logoutMargin}
                 minWidth={70}
             />
         </>

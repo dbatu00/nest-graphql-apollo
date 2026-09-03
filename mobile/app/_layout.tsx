@@ -1,13 +1,16 @@
 import { Redirect, Stack, useSegments } from "expo-router";
 import { ActivityIndicator, Text, View } from "react-native";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import { I18nProvider, useI18n } from "@/hooks/useI18n";
 import { authLoadingStyles as styles } from "@/styles";
 
 export default function Layout() {
   return (
-    <AuthProvider>
-      <AppNavigator />
-    </AuthProvider>
+    <I18nProvider>
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
+    </I18nProvider>
   );
 }
 
@@ -39,11 +42,13 @@ function AppNavigator() {
 }
 
 function AuthLoadingScreen() {
+  const { t } = useI18n();
+
   return (
     <View style={styles.container}>
       <ActivityIndicator size="large" />
       <Text style={styles.text}>
-        Loading session...
+        {t("app.loadingSession")}
       </Text>
     </View>
   );

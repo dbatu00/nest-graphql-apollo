@@ -62,6 +62,7 @@ import { BlurView } from "expo-blur";
 import { ProfileLink } from "@/components/common/ProfileLink";
 import { UserRow } from "@/components/user/UserRow";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import { Activity } from "@/types/Activity";
 import { Comment } from "@/types/Comment";
 import {
@@ -106,6 +107,7 @@ const ClickableName = (username: string, label: string) => {
 // ─────────────────────────────────────────────
 
 const ActivityBanner = ({ activity }: { activity: Activity }) => {
+  const { t } = useI18n();
   const { type, actor, targetPost, createdAt } = activity;
 
   const actorAvatarUri = resolveAvatarUri(activity.actor.displayName, activity.actor.avatarUrl);
@@ -118,18 +120,18 @@ const ActivityBanner = ({ activity }: { activity: Activity }) => {
   else if (targetPost) {
     targetUser = targetPost.user!;
     if (type === "comment") {
-      verb = "commented on";
-      noun = "'s post";
+      verb = t("activity.banner.commentedOn");
+      noun = t("activity.banner.postSuffix");
     } else if (type === "share") {
-      verb = "shared";
-      noun = "'s post";
+      verb = t("activity.banner.shared");
+      noun = t("activity.banner.postSuffix");
     } else if (type === "like") {
-      verb = "liked";
-      noun = "'s post";
+      verb = t("activity.banner.liked");
+      noun = t("activity.banner.postSuffix");
     }
   }
   else if (type === "follow") {
-    verb = "followed";
+    verb = t("activity.banner.followed");
     noun = "";
   }
   else {
@@ -193,6 +195,8 @@ const DeleteConfirmModal = ({
   onCancel,
   onConfirm,
 }: DeleteConfirmModalProps) => {
+  const { t } = useI18n();
+
   return (
     <Modal
       visible={visible}
@@ -220,7 +224,7 @@ const DeleteConfirmModal = ({
               disabled={loading}
               style={[styles.confirmCancelBtn, loading && styles.confirmBtnDisabled]}
             >
-              <Text style={styles.confirmCancelText}>Cancel</Text>
+              <Text style={styles.confirmCancelText}>{t("activity.confirm.cancel")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -228,7 +232,7 @@ const DeleteConfirmModal = ({
               disabled={loading}
               style={[styles.confirmDeleteBtn, loading && styles.confirmBtnDisabled]}
             >
-              <Text style={styles.confirmDeleteText}>{loading ? "Deleting..." : confirmLabel}</Text>
+              <Text style={styles.confirmDeleteText}>{loading ? t("activity.confirm.deleting") : confirmLabel}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -244,6 +248,7 @@ const CommentRow = ({
   onToggleCommentLike,
   onOpenCommentLikes,
 }: CommentRowProps) => {
+  const { t } = useI18n();
   const [optionsOpen, setOptionsOpen] = React.useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
   const [deletingComment, setDeletingComment] = React.useState(false);
@@ -304,7 +309,7 @@ const CommentRow = ({
                           }}
                         >
                           <MaterialCommunityIcons name="trash-can-outline" size={14} color={color.deleteRed} />
-                          <Text style={styles.commentDeleteText}>Delete</Text>
+                          <Text style={styles.commentDeleteText}>{t("activity.confirm.delete")}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -349,9 +354,9 @@ const CommentRow = ({
 
       <DeleteConfirmModal
         visible={deleteConfirmVisible}
-        title="Delete comment?"
-        message="This comment will be permanently deleted."
-        confirmLabel="Delete"
+        title={t("activity.confirm.deleteCommentTitle")}
+        message={t("activity.confirm.deleteCommentMessage")}
+        confirmLabel={t("activity.confirm.delete")}
         loading={deletingComment}
         onCancel={() => setDeleteConfirmVisible(false)}
         onConfirm={handleConfirmDeleteComment}
@@ -396,6 +401,7 @@ const PostCard = ({
   commentLoading,
   onSubmitComment,
 }: PostCardProps) => {
+  const { t } = useI18n();
   const [commentInputFocused, setCommentInputFocused] = React.useState(false);
   const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
 
@@ -417,7 +423,7 @@ const PostCard = ({
           style={[styles.followBtn, post.user.followedByMe && styles.followBtnActive]}
         >
           <Text style={[styles.followBtnText, post.user.followedByMe && styles.followBtnTextActive]}>
-            {post.user.followedByMe ? "Following" : "Follow"}
+            {post.user.followedByMe ? t("user.following") : t("user.follow")}
           </Text>
         </TouchableOpacity>
       );
@@ -502,7 +508,7 @@ const PostCard = ({
                 ]}
               >
                 <TextInput
-                  placeholder="Write a comment..."
+                  placeholder={t("activity.comment.placeholder")}
                   placeholderTextColor="#8a8d91"
                   value={commentText}
                   onChangeText={setCommentText}
@@ -532,9 +538,9 @@ const PostCard = ({
 
       <DeleteConfirmModal
         visible={deleteConfirmVisible}
-        title="Delete post?"
-        message="This post and its comments will be permanently deleted."
-        confirmLabel="Delete"
+        title={t("activity.confirm.deletePostTitle")}
+        message={t("activity.confirm.deletePostMessage")}
+        confirmLabel={t("activity.confirm.delete")}
         onCancel={() => setDeleteConfirmVisible(false)}
         onConfirm={() => {
           onDeletePost?.(post.id);
@@ -564,6 +570,7 @@ const LikedUsersModal = ({
   onClose,
   onToggleFollow,
 }: LikedUsersModalProps) => {
+  const { t } = useI18n();
   const { user } = useAuth();
   const currentUser = user;
   if (!currentUser) return null;
@@ -572,9 +579,9 @@ const LikedUsersModal = ({
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalBody}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Liked by</Text>
+          <Text style={styles.modalTitle}>{t("activity.modal.likedBy")}</Text>
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
-            <Text style={styles.modalCloseBtnText}>Close</Text>
+            <Text style={styles.modalCloseBtnText}>{t("activity.modal.close")}</Text>
           </TouchableOpacity>
         </View>
         {!loading && (

@@ -56,6 +56,7 @@ import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import { PageShell } from "@/components/layout/PageShell";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import {
   fetchFollowers,
   fetchFollowing,
@@ -123,6 +124,7 @@ export default function UsernameScreen() {
   const { username } =
     useLocalSearchParams<{ username: string }>();
   const { user } = useAuth();
+  const { t } = useI18n();
 
 
   /* ---------------- PROFILE HYDRATION ---------------- */
@@ -233,7 +235,7 @@ export default function UsernameScreen() {
           ) : (
             <>
               <Ionicons name="image-outline" size={24} color="#60a5fa" />
-              <Text style={styles.coverPlaceholderText}>Cover photo</Text>
+              <Text style={styles.coverPlaceholderText}>{t("profile.coverPlaceholder")}</Text>
             </>
           )}
 
@@ -261,7 +263,7 @@ export default function UsernameScreen() {
             style={[styles.bioText, profileBioColorStyle(!!profileBio)]}
             numberOfLines={2}
           >
-            {profileBio || "No bio yet"}
+            {profileBio || t("profile.noBio")}
           </Text>
         </View>
       </View>
@@ -269,14 +271,14 @@ export default function UsernameScreen() {
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <View style={styles.tabsRow}>
-          {(["posts", "likes", "followers", "following"] as Tab[]).map(t => (
+          {(["posts", "likes", "followers", "following"] as Tab[]).map(tabKey => (
             <TouchableOpacity
-              key={t}
-              onPress={() => setTab(t)}
-              style={[styles.tabButton, tab === t && styles.tabButtonActive]}
+              key={tabKey}
+              onPress={() => setTab(tabKey)}
+              style={[styles.tabButton, tab === tabKey && styles.tabButtonActive]}
             >
-              <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
-                {t}
+              <Text style={[styles.tabText, tab === tabKey && styles.tabTextActive]}>
+                {t(`profile.tab.${tabKey}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -296,7 +298,7 @@ export default function UsernameScreen() {
             <View style={styles.followListInner}>
               {followUsers.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  Nothing to show yet
+                  {t("feed.empty")}
                 </Text>
               ) : (
                 followUsers.map(followUser => (
