@@ -32,6 +32,7 @@ import {
 import { EmailSendResult } from "@/types/Auth";
 import { Activity } from "@/types/Activity";
 import { Post } from "@/types/Post";
+import { getStoredAppLanguage } from "@/utils/appLanguage";
 import { graphqlFetch } from "@/utils/graphqlFetch";
 
 export type MeData = {
@@ -87,7 +88,8 @@ export async function login(identifier: string, password: string): Promise<AuthP
 }
 
 export async function signUp(username: string, email: string, password: string): Promise<AuthPayload> {
-    const data = await graphqlFetch<{ signUp: AuthPayload }>(SIGNUP_MUTATION, { username, email, password });
+    const language = await getStoredAppLanguage();
+    const data = await graphqlFetch<{ signUp: AuthPayload }>(SIGNUP_MUTATION, { username, email, password }, language ? { headers: { "x-app-language": language } } : undefined);
     return data.signUp;
 }
 
@@ -134,10 +136,11 @@ export async function isEmailUsed(email: string): Promise<boolean> {
 }
 
 export async function changeMyEmail(currentPassword: string, newEmail: string): Promise<boolean> {
+    const language = await getStoredAppLanguage();
     const data = await graphqlFetch<{ changeMyEmail: boolean }>(CHANGE_MY_EMAIL_MUTATION, {
         currentPassword,
         newEmail,
-    });
+    }, language ? { headers: { "x-app-language": language } } : undefined);
 
     return data.changeMyEmail;
 }
@@ -160,7 +163,8 @@ export async function deleteMyAccount(currentPassword: string): Promise<boolean>
 }
 
 export async function resendMyVerificationLink(): Promise<EmailSendResult> {
-    const data = await graphqlFetch<{ resendMyVerificationLink: EmailSendResult }>(RESEND_VERIFICATION_EMAIL_MUTATION);
+    const language = await getStoredAppLanguage();
+    const data = await graphqlFetch<{ resendMyVerificationLink: EmailSendResult }>(RESEND_VERIFICATION_EMAIL_MUTATION, {}, language ? { headers: { "x-app-language": language } } : undefined);
     return data.resendMyVerificationLink;
 }
 

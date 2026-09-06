@@ -88,7 +88,7 @@ export class AuthService {
     *
     * Verification email is non-fatal: account is created regardless
     */
-    async signUp(username: string, email: string, password: string): Promise<AuthPayload> {
+    async signUp(username: string, email: string, password: string, language?: string): Promise<AuthPayload> {
 
         this.validateUsername(username);
         this.validatePassword(password);
@@ -137,7 +137,7 @@ export class AuthService {
             throw err;
         }
 
-        await this.issueVerificationTokenAndSendEmail(user);
+        await this.issueVerificationTokenAndSendEmail(user, language);
 
         return this.issueAuthPayload(user);
     }
@@ -268,12 +268,12 @@ export class AuthService {
     // RESEND
     //------------------------------------------------
 
-    async resendVerification(userId: number): Promise<EmailSendResult> {
+    async resendVerification(userId: number, language?: string): Promise<EmailSendResult> {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user) throw new BadRequestException("User not found");
         if (user.emailVerified) return EmailSendResult.ALREADY_VERIFIED;
 
-        const result = await this.issueVerificationTokenAndSendEmail(user);
+        const result = await this.issueVerificationTokenAndSendEmail(user, language);
         return result;
     }
 
@@ -303,7 +303,7 @@ export class AuthService {
     //------------------------------------------------
     // CHANGE EMAIL
     //------------------------------------------------
-    async changeMyEmail(userId: number, newEmail: string, password: string) {
+    async changeMyEmail(userId: number, newEmail: string, password: string, language?: string) {
         const normalized = this.normalizeEmail(newEmail);
         const auth = await this.authRepo.findOne({
             where: { user: { id: userId } },
@@ -330,7 +330,7 @@ export class AuthService {
             throw err;
         }
 
-        const result = await this.issueVerificationTokenAndSendEmail(auth.user);
+        const result = await this.issueVerificationTokenAndSendEmail(auth.user, language);
         if (result === EmailSendResult.FAILED) {
             this.logger.warn(`[changeMyEmail] Email delivery failed after email change userId=${auth.user.id}`);
         }
@@ -442,7 +442,7 @@ export class AuthService {
      * No rollback on delivery failure: the orphaned token is inert
      * without the email and will be invalidated on the next resend.
      */
-    private async issueVerificationTokenAndSendEmail(user: User): Promise<EmailSendResult> {
+    private async issueVerificationTokenAndSendEmail(user: User, language?: string): Promise<EmailSendResult> {
         const throttled = await this.isThrottled(user.id);
         if (throttled) {
             return EmailSendResult.THROTTLED;
@@ -474,7 +474,8 @@ export class AuthService {
             await this.emailService.sendVerificationEmail(
                 user.email,
                 rawToken,
-                user.username
+                user.username,
+                language
             );
             return EmailSendResult.SENT;
         } catch (err) {

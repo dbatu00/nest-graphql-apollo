@@ -17,6 +17,7 @@ type GraphQLResponse<T> = {
 
 type GraphqlFetchOptions = {
   skipAuthFailureHandler?: boolean;
+  headers?: Record<string, string>;
 };
 
 export class GraphQLRequestError extends Error {
@@ -116,6 +117,7 @@ export async function graphqlFetch<T>(
       headers: {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options.headers ?? {}),
       },
       body: JSON.stringify({ query, variables }),
     });

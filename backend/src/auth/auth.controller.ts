@@ -9,6 +9,7 @@ import type { Response } from "express";
 
 import { AuthService } from "./auth.service";
 import { VerificationLinkResult } from "./verification/verification-link-result.enum";
+import { getAuthI18n } from "../common/i18n/auth.i18n";
 
 @Controller("auth")
 export class AuthController {
@@ -18,6 +19,7 @@ export class AuthController {
     async verifyEmailFromLink(
         @Query("token") token: string,
         @Res() res: Response,
+        @Query("lang") language?: string,
     ): Promise<void> {
         const cleanToken = token?.trim();
 
@@ -28,7 +30,7 @@ export class AuthController {
         const result =
             await this.authService.processVerificationLink(cleanToken);
 
-        const response = this.mapResult(result);
+        const response = this.mapResult(result, language);
 
         res
             .status(response.status)
@@ -36,58 +38,54 @@ export class AuthController {
             .send(this.renderHtmlPage(response.title, response.message));
     }
 
-    private mapResult(result: VerificationLinkResult): {
+    private mapResult(result: VerificationLinkResult, language?: string): {
         status: number;
         title: string;
         message: string;
     } {
+        const copy = getAuthI18n(language).verificationPage;
+
         switch (result) {
             case VerificationLinkResult.VERIFIED:
                 return {
                     status: 200,
-                    title: "Email verified",
-                    message:
-                        "Your email has been verified. You can return to the app and log in.",
+                    title: copy.verifiedTitle,
+                    message: copy.verifiedMessage,
                 };
 
             case VerificationLinkResult.ALREADY_VERIFIED:
                 return {
                     status: 200,
-                    title: "Email verified",
-                    message:
-                        "Your email was already verified. You can return to the app and log in.",
+                    title: copy.verifiedTitle,
+                    message: copy.alreadyVerifiedMessage,
                 };
 
             case VerificationLinkResult.EXPIRED_RESENT:
                 return {
                     status: 400,
-                    title: "Link expired",
-                    message:
-                        "This verification link has expired. We sent a new verification email. Please check your inbox.",
+                    title: copy.expiredTitle,
+                    message: copy.expiredResentMessage,
                 };
 
             case VerificationLinkResult.EXPIRED_THROTTLED:
                 return {
                     status: 429,
-                    title: "Link expired",
-                    message:
-                        "This verification link has expired. Please wait briefly before trying again.",
+                    title: copy.expiredTitle,
+                    message: copy.expiredThrottledMessage,
                 };
 
             case VerificationLinkResult.EXPIRED_DELIVERY_FAILED:
                 return {
                     status: 503,
-                    title: "Link expired",
-                    message:
-                        "This verification link has expired, and we could not send a new verification email right now. Please try again shortly.",
+                    title: copy.expiredTitle,
+                    message: copy.expiredDeliveryFailedMessage,
                 };
 
             default:
                 return {
                     status: 400,
-                    title: "Verification failed",
-                    message:
-                        "This verification link is invalid or already used.",
+                    title: copy.invalidTitle,
+                    message: copy.invalidMessage,
                 };
         }
     }

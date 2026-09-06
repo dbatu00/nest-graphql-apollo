@@ -44,6 +44,18 @@ describe('AuthController', () => {
         expect(res.send).toHaveBeenCalled();
     });
 
+    it('renders the verified page in the requested language', async () => {
+        const res = createResponseMock();
+        authService.processVerificationLink.mockResolvedValue({ status: 'verified' });
+
+        await controller.verifyEmailFromLink('ok-token', res as any, 'tr');
+
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(res.type).toHaveBeenCalledWith('html');
+        expect(res.send).toHaveBeenCalledWith(expect.stringContaining('E-posta doğrulandı'));
+        expect(res.send).toHaveBeenCalledWith(expect.stringContaining('E-postan doğrulandı. Uygulamaya geri dönüp giriş yapabilirsin.'));
+    });
+
     it('renders expired resent page when expired token triggers resend', async () => {
         const res = createResponseMock();
         authService.processVerificationLink.mockResolvedValue({ status: 'expired_resent' });

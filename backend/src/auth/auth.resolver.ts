@@ -1,5 +1,5 @@
 
-import { Resolver, Mutation, Args, Query, registerEnumType } from "@nestjs/graphql";
+import { Resolver, Mutation, Args, Query, registerEnumType, Context } from "@nestjs/graphql";
 import { EmailSendResult } from "./verification/verification-email-send-result.enum";
 // Register the enum with GraphQL
 registerEnumType(EmailSendResult, { name: "EmailSendResult" });
@@ -16,6 +16,11 @@ import { ChangeMyEmailArgs, ChangeMyPasswordArgs, DeleteMyAccountArgs, IsEmailUs
 export class AuthResolver {
     constructor(private readonly authService: AuthService) { }
 
+    private getLanguageFromContext(context: { req?: { headers?: Record<string, string | string[] | undefined> } }): string | undefined {
+        const value = context.req?.headers?.["x-app-language"];
+        return Array.isArray(value) ? value[0] : value;
+    }
+
     /**
     * Logged-in user's own profile
     */
@@ -26,8 +31,9 @@ export class AuthResolver {
     }
 
     @Mutation(() => AuthPayload)
-    signUp(@Args() args: SignUpArgs) {
-        return this.authService.signUp(args.username, args.email, args.password);
+    signUp(@Args() args: SignUpArgs, @Context() context: { req?: { headers?: Record<string, string | string[] | undefined> } }) {
+        const language = this.getLanguageFromContext(context);
+        return this.authService.signUp(args.username, args.email, args.password, language);
     }
 
     @Mutation(() => AuthPayload)
@@ -54,8 +60,10 @@ export class AuthResolver {
     changeMyEmail(
         @CurrentUser() user: User,
         @Args() args: ChangeMyEmailArgs,
+        @Context() context: { req?: { headers?: Record<string, string | string[] | undefined> } },
     ) {
-        return this.authService.changeMyEmail(user.id, args.newEmail, args.currentPassword);
+        const language = this.getLanguageFromContext(context);
+        return this.authService.changeMyEmail(user.id, args.newEmail, args.currentPassword, language);
     }
 
     @UseGuards(GqlAuthGuard)
@@ -84,7 +92,8 @@ export class AuthResolver {
 
     @UseGuards(GqlAuthGuard)
     @Mutation(() => EmailSendResult)
-    resendMyVerificationLink(@CurrentUser() user: User) {
-        return this.authService.resendVerification(user.id);
+    resendMyVerificationLink(@CurrentUser() user: User, @Context() context: { req?: { headers?: Record<string, string | string[] | undefined> } }) {
+        const language = this.getLanguageFromContext(context);
+        return this.authService.resendVerification(user.id, language);
     }
 }

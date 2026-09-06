@@ -3,7 +3,10 @@ import { ConfigService } from "@nestjs/config";
 import * as nodemailer from "nodemailer";
 import { Resend } from "resend";
 
+import { getAuthI18n, normalizeBackendLanguage } from "../../common/i18n/auth.i18n";
+
 // TODO: move transporter creation and config reads to constructor
+
 @Injectable()
 export class VerificationEmailService {
     private readonly logger = new Logger(VerificationEmailService.name);
@@ -19,7 +22,10 @@ export class VerificationEmailService {
         return Boolean(smtpHost || resendApiKey);
     }
 
-    async sendVerificationEmail(to: string, token: string, username: string): Promise<void> {
+    async sendVerificationEmail(to: string, token: string, username: string, language?: string): Promise<void> {
+        const normalizedLanguage = normalizeBackendLanguage(language);
+        const copy = getAuthI18n(normalizedLanguage).verificationEmail;
+
         if (!this.isConfigured()) {
             this.logger.warn(`Email is not configured. Dev token for ${to}: ${token}`);
             return;
@@ -34,15 +40,15 @@ export class VerificationEmailService {
         const smtpPass = this.configService.get<string>("SMTP_PASS");
         const resendApiKey = this.configService.get<string>("RESEND_API_KEY") ?? smtpPass;
 
-        const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(token)}`;
-        const html = this.buildHtmlEmail(username, verifyUrl, token);
+        const verifyUrl = `${appBaseUrl}/auth/verify-email?token=${encodeURIComponent(token)}&lang=${encodeURIComponent(normalizedLanguage)}`;
+        const html = this.buildHtmlEmail(username, verifyUrl, token, copy);
         const text = [
-            `Hi ${username},`,
+            `${copy.greeting} ${username},`,
             "",
-            "Please verify your email by opening this link:",
+            copy.intro,
             verifyUrl,
             "",
-            "If the link does not open, you can still verify manually with token:",
+            copy.copyLink,
             token,
         ].join("\n");
 
@@ -57,7 +63,7 @@ export class VerificationEmailService {
             await transporter.sendMail({
                 from,
                 to,
-                subject: "Verify your email",
+                subject: copy.subject,
                 text,
                 html,
             });
@@ -75,7 +81,7 @@ export class VerificationEmailService {
         const { error } = await resend.emails.send({
             from,
             to,
-            subject: "Verify your email",
+            subject: copy.subject,
             text,
             html,
         });
@@ -85,7 +91,12 @@ export class VerificationEmailService {
         }
     }
 
-    private buildHtmlEmail(username: string, verifyUrl: string, token: string): string {
+    private buildHtmlEmail(
+        username: string,
+        verifyUrl: string,
+        token: string,
+        copy: ReturnType<typeof getAuthI18n>["verificationEmail"]
+    ): string {
         return `<!doctype html>
 <html>
     <head>
@@ -99,12 +110,12 @@ export class VerificationEmailService {
                     <table role="presentation" width="520" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:24px;">
                         <tr>
                             <td>
-                                <h2 style="margin:0 0 12px 0;color:#111827;">Verify your email</h2>
-                                <p style="margin:0 0 18px 0;color:#374151;line-height:1.5;">Hi ${username}, please verify your email to complete account setup.</p>
-                                <a href="${verifyUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">Verify Email</a>
-                                <p style="margin:18px 0 6px 0;color:#6b7280;font-size:13px;">If the button doesn't work, copy this link:</p>
+                                <h2 style="margin:0 0 12px 0;color:#111827;">${copy.title}</h2>
+                                <p style="margin:0 0 18px 0;color:#374151;line-height:1.5;">${copy.greeting} ${username}, ${copy.intro}</p>
+                                <a href="${verifyUrl}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:600;">${copy.button}</a>
+                                <p style="margin:18px 0 6px 0;color:#6b7280;font-size:13px;">${copy.copyLink}</p>
                                 <p style="margin:0 0 16px 0;color:#1f2937;font-size:13px;word-break:break-all;">${verifyUrl}</p>
-                                <p style="margin:0;color:#6b7280;font-size:12px;">Manual token fallback: ${token}</p>
+                                <p style="margin:0;color:#6b7280;font-size:12px;">${copy.manualToken}: ${token}</p>
                             </td>
                         </tr>
                     </table>
