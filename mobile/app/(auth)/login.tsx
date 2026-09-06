@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -21,6 +21,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const passwordInputRef = useRef<TextInput>(null);
 
   const handleLanguageSelect = async (option: Language) => {
     await setLanguage(option);
@@ -108,15 +109,20 @@ export default function Login() {
           value={identifier}
           onChangeText={setIdentifier}
           autoCapitalize="none"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordInputRef.current?.focus()}
           style={commonStyles.input}
         />
 
         <TextInput
+          ref={passwordInputRef}
           placeholder={t("auth.login.passwordPlaceholder")}
           placeholderTextColor="#d1d5db"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          returnKeyType="go"
+          onSubmitEditing={() => void handleLogin()}
           style={[commonStyles.input, styles.inputTopGap]}
         />
 

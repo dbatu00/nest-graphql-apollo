@@ -55,6 +55,7 @@ This file tracks only open work. Completed items are intentionally removed.
 - Add verify-email escape/back flow
 - Hide self-activity except posts
 - on login/signup show all errors/missing fields at once and highlight
+- Validate email format client-side before submitting change-email request
 - audit all screens for behaviour when window is squeezed
 - handle token expiration gracefully
 - audit settings.tsx

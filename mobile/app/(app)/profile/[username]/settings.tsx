@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   View,
@@ -141,6 +141,14 @@ export default function ProfileSettingsScreen() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteSuccessVisible, setDeleteSuccessVisible] = useState(false);
+  const aboutDisplayNameInputRef = useRef<TextInput>(null);
+  const aboutBioInputRef = useRef<TextInput>(null);
+  const emailConfirmInputRef = useRef<TextInput>(null);
+  const emailCurrentPasswordInputRef = useRef<TextInput>(null);
+  const passwordNewInputRef = useRef<TextInput>(null);
+  const passwordConfirmInputRef = useRef<TextInput>(null);
+  const passwordCurrentInputRef = useRef<TextInput>(null);
+  const deletePasswordInputRef = useRef<TextInput>(null);
   const [successNoticeVisible, setSuccessNoticeVisible] = useState(false);
   const [successNoticeMessage, setSuccessNoticeMessage] = useState("");
   const successNoticeY = React.useRef(new Animated.Value(-80)).current;
@@ -482,15 +490,19 @@ export default function ProfileSettingsScreen() {
             <View style={local.card}>
               <Text style={local.fieldLabel}>{t("settings.about.displayName")}</Text>
               <TextInput
+                ref={aboutDisplayNameInputRef}
                 value={aboutDraft.displayName}
                 onChangeText={displayName => setAboutDraft({ ...aboutDraft, displayName })}
                 placeholder={t("settings.about.displayNamePlaceholder")}
                 style={local.textInput}
                 maxLength={50}
+                returnKeyType="next"
+                onSubmitEditing={() => aboutBioInputRef.current?.focus()}
               />
 
               <Text style={local.fieldLabel}>{t("settings.about.bio")}</Text>
               <TextInput
+                ref={aboutBioInputRef}
                 value={aboutDraft.bio}
                 onChangeText={bio => setAboutDraft({ ...aboutDraft, bio })}
                 placeholder={t("settings.about.bioPlaceholder")}
@@ -499,6 +511,9 @@ export default function ProfileSettingsScreen() {
                 textAlignVertical="top"
                 style={local.bioInput}
                 maxLength={160}
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={handleSave}
               />
 
               {!!error && <Text style={local.errorText}>{error}</Text>}
@@ -548,6 +563,8 @@ export default function ProfileSettingsScreen() {
                 placeholder={t("settings.account.newEmailPlaceholder")}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => emailConfirmInputRef.current?.focus()}
                 style={[
                   local.accountInput,
                   profileSettingsAccountInputToneStyle(!!accountForm.email.newEmail),
@@ -555,11 +572,14 @@ export default function ProfileSettingsScreen() {
                 placeholderTextColor="#9ca3af"
               />
               <TextInput
+                ref={emailConfirmInputRef}
                 value={accountForm.email.confirmNewEmail}
                 onChangeText={(val) => updateAccountForm("email", "confirmNewEmail", val)}
                 placeholder={t("settings.account.confirmNewEmailPlaceholder")}
                 autoCapitalize="none"
                 keyboardType="email-address"
+                returnKeyType="next"
+                onSubmitEditing={() => emailCurrentPasswordInputRef.current?.focus()}
                 style={[
                   local.accountInput,
                   profileSettingsAccountInputToneStyle(!!accountForm.email.confirmNewEmail),
@@ -568,10 +588,13 @@ export default function ProfileSettingsScreen() {
               />
               <View style={local.passwordFieldWrapper}>
                 <TextInput
+                  ref={emailCurrentPasswordInputRef}
                   value={accountForm.email.currentPassword}
                   onChangeText={(val) => updateAccountForm("email", "currentPassword", val)}
                   placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForEmailChange}
+                  returnKeyType="go"
+                  onSubmitEditing={() => void handleChangeEmail()}
                   style={[
                     local.accountInput,
                     local.passwordInput,
@@ -614,10 +637,13 @@ export default function ProfileSettingsScreen() {
               <Text style={local.fieldLabelTight}>{t("settings.account.newPassword")}</Text>
               <View style={local.passwordFieldWrapper}>
                 <TextInput
+                  ref={passwordNewInputRef}
                   value={accountForm.password.newPassword}
                   onChangeText={(val) => updateAccountForm("password", "newPassword", val)}
                   placeholder={t("settings.account.newPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showNewPassword}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordConfirmInputRef.current?.focus()}
                   style={[
                     local.accountInput,
                     local.passwordInput,
@@ -634,10 +660,13 @@ export default function ProfileSettingsScreen() {
               </View>
               <View style={local.passwordFieldWrapper}>
                 <TextInput
+                  ref={passwordConfirmInputRef}
                   value={accountForm.password.confirmNewPassword}
                   onChangeText={(val) => updateAccountForm("password", "confirmNewPassword", val)}
                   placeholder={t("settings.account.confirmNewPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showConfirmNewPassword}
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordCurrentInputRef.current?.focus()}
                   style={[
                     local.accountInput,
                     local.passwordInput,
@@ -656,10 +685,13 @@ export default function ProfileSettingsScreen() {
               </View>
               <View style={local.passwordFieldWrapper}>
                 <TextInput
+                  ref={passwordCurrentInputRef}
                   value={accountForm.password.currentPassword}
                   onChangeText={(val) => updateAccountForm("password", "currentPassword", val)}
                   placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForPasswordChange}
+                  returnKeyType="go"
+                  onSubmitEditing={() => void handleChangePassword()}
                   style={[
                     local.accountInput,
                     local.passwordInput,
@@ -705,9 +737,12 @@ export default function ProfileSettingsScreen() {
 
               <View style={local.passwordFieldWrapper}>
                 <TextInput
+                  ref={deletePasswordInputRef}
                   value={deletePassword}
                   onChangeText={setDeletePassword}
                   placeholder={t("settings.account.currentPasswordPlaceholder")}
+                  returnKeyType="go"
+                  onSubmitEditing={() => void handleDeleteAccount()}
                   secureTextEntry={!accountUi.showCurrentPasswordForDelete}
                   style={[
                     local.accountInput,

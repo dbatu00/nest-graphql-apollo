@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +26,9 @@ export default function SignUp() {
   const [emailError, setEmailError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const emailInputRef = useRef<TextInput>(null);
+  const passwordInputRef = useRef<TextInput>(null);
+  const confirmPasswordInputRef = useRef<TextInput>(null);
 
   const handleLanguageSelect = async (option: Language) => {
     await setLanguage(option);
@@ -129,6 +132,8 @@ export default function SignUp() {
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
+          returnKeyType="next"
+          onSubmitEditing={() => emailInputRef.current?.focus()}
           style={commonStyles.input}
         />
         {usernameError ? (
@@ -136,12 +141,15 @@ export default function SignUp() {
         ) : null}
 
         <TextInput
+          ref={emailInputRef}
           placeholder={t("auth.signup.emailPlaceholder")}
           placeholderTextColor="#d1d5db"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
           keyboardType="email-address"
+          returnKeyType="next"
+          onSubmitEditing={() => passwordInputRef.current?.focus()}
           style={[commonStyles.input, styles.inputTopGap]}
         />
         {emailError ? (
@@ -149,20 +157,26 @@ export default function SignUp() {
         ) : null}
 
         <TextInput
+          ref={passwordInputRef}
           placeholder={t("auth.signup.passwordPlaceholder")}
           placeholderTextColor="#d1d5db"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          returnKeyType="next"
+          onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
           style={[commonStyles.input, styles.inputTopGap]}
         />
 
         <TextInput
+          ref={confirmPasswordInputRef}
           placeholder={t("auth.signup.confirmPasswordPlaceholder")}
           placeholderTextColor="#d1d5db"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          returnKeyType="go"
+          onSubmitEditing={() => void handleSignUp()}
           style={[commonStyles.input, styles.inputTopGap]}
         />
 

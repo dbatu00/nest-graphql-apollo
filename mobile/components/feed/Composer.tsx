@@ -20,6 +20,9 @@ export function Composer({ value, onChange, onPublish }: Props) {
         placeholder={t("feed.composer.placeholder")}
         placeholderTextColor="#d1d5db"
         underlineColorAndroid="transparent"
+        returnKeyType="send"
+        blurOnSubmit
+        onSubmitEditing={onPublish}
         style={[
           styles.input,
           Platform.OS === "web"
