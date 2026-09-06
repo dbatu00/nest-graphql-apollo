@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/useAuth";
 import { FeedLogoutButton } from "@/components/common/LogoutButton";
-import { headerStyles as styles, titlePressableOpacityStyle } from "@/styles";
+import { headerStyles as styles, headerActionGridStyles, titlePressableOpacityStyle } from "@/styles";
 
 type Props = {
   title?: string;
@@ -57,9 +57,9 @@ export function Header({ title = "BookBook", onRefresh, isRefreshing = false, ri
         </View>
 
         {rightActions ? (
-          <View style={styles.rowCenter}>{rightActions}</View>
+          <View style={headerActionGridStyles}>{rightActions}</View>
         ) : (
-          <View style={styles.rowCenter}>
+          <View style={headerActionGridStyles}>
             <TouchableOpacity
               onPress={handleProfile}
               style={styles.profileButton}
@@ -72,7 +72,7 @@ export function Header({ title = "BookBook", onRefresh, isRefreshing = false, ri
               </View>
             </TouchableOpacity>
 
-            <FeedLogoutButton onPress={handleLogout} style={styles.logoutMargin} />
+            <FeedLogoutButton onPress={handleLogout} />
           </View>
         )}
       </View>

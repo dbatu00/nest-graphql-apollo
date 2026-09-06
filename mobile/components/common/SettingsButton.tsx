@@ -13,6 +13,7 @@ type Props = {
   backgroundColor?: string;
   textColor?: string;
   iconColor?: string;
+  hideText?: boolean;
 };
 
 export function UserSettingsButton({
@@ -25,22 +26,28 @@ export function UserSettingsButton({
   backgroundColor = "#fff",
   textColor = "#1d4ed8",
   iconColor = "#1d4ed8",
+  hideText = false,
 }: Props) {
   const { t } = useI18n();
+  
+  const compactStyle = hideText ? { minWidth: 0, paddingHorizontal: 4, paddingVertical: 4 } : {};
 
   return (
     <TouchableOpacity
       onPress={onPress}
       style={[
-        buildSettingsButtonContainerStyle(minWidth, borderColor, backgroundColor),
+        buildSettingsButtonContainerStyle(hideText ? 0 : minWidth, borderColor, backgroundColor),
+        compactStyle,
         style,
       ]}
     >
       <View style={styles.contentRow}>
         <Ionicons name={iconName} size={14} color={iconColor} />
-        <Text style={[styles.text, { color: textColor }]}>
-          {label ?? t("common.settings")}
-        </Text>
+        {!hideText && (
+          <Text style={[styles.text, { color: textColor }]}>
+            {label ?? t("common.settings")}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );

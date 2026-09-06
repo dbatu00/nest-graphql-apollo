@@ -38,6 +38,8 @@ export const pageShellStyles = StyleSheet.create({
     inner: { width: "100%", maxWidth: 960, alignSelf: "center", paddingHorizontal: 16 },
 });
 
+export const headerActionGridStyles = { flexDirection: "row" as const, gap: 8, alignItems: "center" as const };
+
 export const pageShellWebScrollbar = { scrollbarColor: "#bfdbfe #2563eb", scrollbarWidth: "thin", scrollbarGutter: "stable", overflowY: "scroll" } as const;
 
 export const headerStyles = StyleSheet.create({

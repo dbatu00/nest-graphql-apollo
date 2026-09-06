@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { Platform, useWindowDimensions } from "react-native";
 
 import { FeedLogoutButton } from "@/components/common/LogoutButton";
 import { HeaderLanguageMenu } from "@/components/common/LanguageMenu";
@@ -18,6 +19,8 @@ type Props = {
 export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props) {
     const { user, logout } = useAuth();
     const { t } = useI18n();
+    const { width } = useWindowDimensions();
+    const isMobileBrowser = Platform.OS === "web" && width < 768;
 
     const handleLogout = async () => {
         await logout();
@@ -54,11 +57,12 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                     minWidth={80}
                     label={t("common.profile")}
                     iconName="person-circle-outline"
+                    hideText={isMobileBrowser}
                 />
 
-                <HeaderLanguageMenu style={styles.languageMiddleMargin} />
+                <HeaderLanguageMenu />
 
-                <FeedLogoutButton onPress={handleLogout} />
+                <FeedLogoutButton onPress={handleLogout} hideText={isMobileBrowser} />
             </>
         );
     }
@@ -72,6 +76,7 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                     borderColor="rgba(255, 255, 255, 0.92)"
                     label={t("common.home")}
                     iconName="home-outline"
+                    hideText={isMobileBrowser}
                 />
 
                 {isOwnProfile && (
@@ -79,15 +84,16 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                         onPress={handleGoSettings}
                         minWidth={70}
                         borderColor="rgba(255, 255, 255, 0.92)"
-                        style={styles.logoutMargin}
+                        hideText={isMobileBrowser}
                     />
                 )}
 
-                <HeaderLanguageMenu style={styles.languageMiddleMargin} />
+                <HeaderLanguageMenu />
 
                 <FeedLogoutButton
                     onPress={handleLogout}
                     minWidth={70}
+                    hideText={isMobileBrowser}
                 />
             </>
         );
@@ -101,6 +107,7 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                 borderColor="rgba(255, 255, 255, 0.92)"
                 label={t("common.home")}
                 iconName="home-outline"
+                hideText={isMobileBrowser}
             />
 
             <UserSettingsButton
@@ -109,14 +116,15 @@ export function AppHeaderActions({ mode, username, isOwnProfile = false }: Props
                 borderColor="rgba(255, 255, 255, 0.92)"
                 label={t("common.profile")}
                 iconName="person-circle-outline"
-                style={styles.logoutMargin}
+                hideText={isMobileBrowser}
             />
 
-            <HeaderLanguageMenu style={styles.languageMiddleMargin} />
+            <HeaderLanguageMenu />
 
             <FeedLogoutButton
                 onPress={handleLogout}
                 minWidth={70}
+                hideText={isMobileBrowser}
             />
         </>
     );
