@@ -37,8 +37,9 @@ export class AuthResolver {
     }
 
     @Mutation(() => AuthPayload)
-    login(@Args() args: LoginArgs) {
-        return this.authService.login(args.identifier, args.password);
+    login(@Args() args: LoginArgs, @Context() context: { req?: { headers?: Record<string, string | string[] | undefined> } }) {
+        const language = this.getLanguageFromContext(context);
+        return this.authService.login(args.identifier, args.password, language);
     }
 
     @Mutation(() => AuthPayload)

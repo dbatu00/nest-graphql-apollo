@@ -24,12 +24,20 @@ export type VerificationPageCopy = {
 };
 
 type AuthI18n = {
+    login: {
+        invalidCredentials: string;
+        tooManyAttempts: (minutes: number) => string;
+    };
     verificationEmail: VerificationEmailCopy;
     verificationPage: VerificationPageCopy;
 };
 
 const AUTH_I18N: Record<BackendLanguage, AuthI18n> = {
     en: {
+        login: {
+            invalidCredentials: "Invalid credentials",
+            tooManyAttempts: (minutes: number) => `Too many login attempts. Please try again in ${minutes} minutes.`,
+        },
         verificationEmail: {
             subject: "Verify your email",
             title: "Verify your email",
@@ -53,6 +61,10 @@ const AUTH_I18N: Record<BackendLanguage, AuthI18n> = {
         },
     },
     tr: {
+        login: {
+            invalidCredentials: "Geçersiz giriş bilgileri",
+            tooManyAttempts: (minutes: number) => `Çok fazla giriş denemesi. Lütfen ${minutes} dakika sonra tekrar dene.`,
+        },
         verificationEmail: {
             subject: "E-postanı doğrula",
             title: "E-postanı doğrula",
@@ -76,6 +88,10 @@ const AUTH_I18N: Record<BackendLanguage, AuthI18n> = {
         },
     },
     de: {
+        login: {
+            invalidCredentials: "Ungültige Anmeldedaten",
+            tooManyAttempts: (minutes: number) => `Zu viele Anmeldeversuche. Bitte versuche es in ${minutes} Minuten erneut.`,
+        },
         verificationEmail: {
             subject: "E-Mail bestätigen",
             title: "E-Mail bestätigen",

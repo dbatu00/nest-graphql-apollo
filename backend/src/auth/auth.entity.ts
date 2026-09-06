@@ -18,6 +18,12 @@ export class Auth {
     @Column()
     password: string;
 
+    @Column({ default: 0 })
+    failedLoginAttempts: number;
+
+    @Column({ type: "timestamptz", nullable: true })
+    loginLockedUntil?: Date | null;
+
     @OneToOne(() => User, { onDelete: 'CASCADE' })
     @JoinColumn()
     user: User;

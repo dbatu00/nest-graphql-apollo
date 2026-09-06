@@ -40,6 +40,7 @@ import { LIKE_TYPE } from "src/likes/likes.constants";
 
 import { EmailSendResult } from "./verification/verification-email-send-result.enum";
 import { VerifyEmailResult } from "./verification/verify-email-result.enum";
+import { getAuthI18n } from "src/common/i18n/auth.i18n";
 
 
 @Injectable()
@@ -51,6 +52,8 @@ export class AuthService {
     private readonly resendCooldown: number;
     private readonly maxPerHour: number;
     private readonly minPasswordLength: number;
+    private readonly maxLoginAttempts: number;
+    private readonly loginLockoutMinutes: number;
 
     constructor(
         private readonly dataSource: DataSource,
@@ -72,6 +75,8 @@ export class AuthService {
         this.resendCooldown = this.getNonNegativeIntConfig("EMAIL_VERIFICATION_RESEND_COOLDOWN_MS");
         this.maxPerHour = this.getNonNegativeIntConfig("EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR");
         this.minPasswordLength = this.getPositiveIntConfig("AUTH_MIN_PASSWORD_LENGTH");
+        this.maxLoginAttempts = this.getPositiveIntConfig("AUTH_MAX_LOGIN_ATTEMPTS");
+        this.loginLockoutMinutes = this.getPositiveIntConfig("AUTH_LOGIN_LOCKOUT_MINUTES");
     }
 
     //------------------------------------------------
@@ -146,8 +151,9 @@ export class AuthService {
     // LOGIN
     //------------------------------------------------
 
-    async login(identifier: string, password: string): Promise<AuthPayload> {
+    async login(identifier: string, password: string, language?: string): Promise<AuthPayload> {
         const normalizedIdentifier = identifier.trim().toLowerCase();
+        const copy = getAuthI18n(language).login;
 
         const credential = await this.authRepo
             .createQueryBuilder("auth")
@@ -161,6 +167,15 @@ export class AuthService {
             )
             .getOne();
 
+        const lockedUntil = credential?.loginLockedUntil;
+        if (lockedUntil && lockedUntil.getTime() > Date.now()) {
+            const remainingMinutes = Math.max(
+                1,
+                Math.ceil((lockedUntil.getTime() - Date.now()) / 60000),
+            );
+            throw new UnauthorizedException(copy.tooManyAttempts(remainingMinutes));
+        }
+
         // Prevents timing attacks by always running argon2.verify even when the user doesn't exist 
         // -hash must remain a valid argon2id string or verify() will short-circuit and defeat the purpose
         const fakeHash =
@@ -168,7 +183,28 @@ export class AuthService {
         const hash = credential?.password ?? fakeHash;
         const valid = await argon2.verify(hash, password);
         if (!credential || !valid) {
-            throw new UnauthorizedException("Invalid credentials");
+            if (credential) {
+                const failedLoginAttempts = (credential.failedLoginAttempts ?? 0) + 1;
+                credential.failedLoginAttempts = failedLoginAttempts;
+
+                if (failedLoginAttempts >= this.maxLoginAttempts) {
+                    credential.loginLockedUntil = new Date(Date.now() + this.loginLockoutMinutes * 60_000);
+                }
+
+                await this.authRepo.save(credential);
+
+                if (credential.loginLockedUntil) {
+                    throw new UnauthorizedException(copy.tooManyAttempts(this.loginLockoutMinutes));
+                }
+            }
+
+            throw new UnauthorizedException(copy.invalidCredentials);
+        }
+
+        if ((credential.failedLoginAttempts ?? 0) !== 0 || credential.loginLockedUntil) {
+            credential.failedLoginAttempts = 0;
+            credential.loginLockedUntil = null;
+            await this.authRepo.save(credential);
         }
 
         return this.issueAuthPayload(credential.user);
