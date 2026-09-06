@@ -1,6 +1,7 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { Ionicons } from "@expo/vector-icons";
 import { commonStyles } from "@/styles";
 import { login } from "@/graphql/client";
@@ -12,6 +13,36 @@ import { PageShell } from "@/components/layout/PageShell";
 import { authFormStyles as styles } from "@/styles";
 
 const LANGUAGE_OPTIONS: Language[] = ["en", "tr", "de"];
+const LOGIN_SEEN_KEY = "login_seen_before";
+
+function canUseLocalStorage(): boolean {
+  return typeof globalThis !== "undefined" && "localStorage" in globalThis;
+}
+
+async function getLoginSeenBefore(): Promise<boolean> {
+  try {
+    if (canUseLocalStorage()) {
+      return globalThis.localStorage.getItem(LOGIN_SEEN_KEY) === "true";
+    }
+
+    return (await SecureStore.getItemAsync(LOGIN_SEEN_KEY)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+async function setLoginSeenBefore(): Promise<void> {
+  try {
+    if (canUseLocalStorage()) {
+      globalThis.localStorage.setItem(LOGIN_SEEN_KEY, "true");
+      return;
+    }
+
+    await SecureStore.setItemAsync(LOGIN_SEEN_KEY, "true");
+  } catch {
+    // ignore
+  }
+}
 
 export default function Login() {
   const { setSession } = useAuth();
@@ -21,7 +52,28 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [seenBefore, setSeenBefore] = useState<boolean | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      const seen = await getLoginSeenBefore();
+      if (!active) return;
+
+      setSeenBefore(seen);
+      if (!seen) {
+        void setLoginSeenBefore();
+      }
+    };
+
+    void load();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleLanguageSelect = async (option: Language) => {
     await setLanguage(option);
@@ -69,7 +121,7 @@ export default function Login() {
   return (
     <PageShell header={<View />} contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
       <View style={[commonStyles.container, commonStyles.center]}>
-        <AppLogo subtitle={t("auth.login.subtitle")} />
+        <AppLogo subtitle={seenBefore === false ? t("auth.login.subtitleFirstTime") : t("auth.login.subtitle")} />
         <View style={styles.titleRow}>
         <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.login.title")}</Text>
 

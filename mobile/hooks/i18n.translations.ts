@@ -7,6 +7,7 @@ export const translations = {
         "common.settings": "Settings",
 
         "auth.login.subtitle": "Welcome back",
+        "auth.login.subtitleFirstTime": "Welcome",
         "auth.login.title": "Login",
         "auth.login.identifierPlaceholder": "Username or Email",
         "auth.login.passwordPlaceholder": "Password",
@@ -149,6 +150,7 @@ export const translations = {
         "common.settings": "Ayarlar",
 
         "auth.login.subtitle": "Tekrar hoş geldin",
+        "auth.login.subtitleFirstTime": "Hoş geldin",
         "auth.login.title": "Giriş Yap",
         "auth.login.identifierPlaceholder": "Kullanıcı Adı veya E-posta",
         "auth.login.passwordPlaceholder": "Şifre",
@@ -291,6 +293,7 @@ export const translations = {
         "common.settings": "Einstellungen",
 
         "auth.login.subtitle": "Willkommen zurück",
+        "auth.login.subtitleFirstTime": "Willkommen",
         "auth.login.title": "Anmelden",
         "auth.login.identifierPlaceholder": "Benutzername oder E-Mail",
         "auth.login.passwordPlaceholder": "Passwort",
