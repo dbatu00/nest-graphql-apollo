@@ -1,5 +1,5 @@
 export const FEED_QUERY = `
-  query Feed($username: String, $types: [String!]) {
+  query Feed($username: String, $types: [ActivityType!]) {
     feed(username: $username, types: $types) {
       id
       type

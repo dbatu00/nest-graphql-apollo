@@ -30,7 +30,7 @@ import {
     USER_PROFILE_QUERY,
 } from "@/graphql/operations";
 import { EmailSendResult } from "@/types/Auth";
-import { Activity } from "@/types/Activity";
+import { Activity, ActivityType } from "@/types/Activity";
 import { Post } from "@/types/Post";
 import { getStoredAppLanguage } from "@/utils/appLanguage";
 import { graphqlFetch } from "@/utils/graphqlFetch";
@@ -275,7 +275,7 @@ export async function resendMyVerificationLink(): Promise<EmailSendResult> {
     return data.resendMyVerificationLink;
 }
 
-export async function fetchFeed(params: { username?: string; types?: string[] }): Promise<Activity[]> {
+export async function fetchFeed(params: { username?: string; types?: ActivityType[] }): Promise<Activity[]> {
     const normalizedUsername = normalizeText(params.username);
     if (normalizedUsername) {
         assertMaxLength(normalizedUsername, USERNAME_MAX_LENGTH, 'Username');

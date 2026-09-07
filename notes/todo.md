@@ -17,9 +17,7 @@ This file tracks only open work. Completed items are intentionally removed.
 
 ## API / GraphQL
 
-- Replace `types?: string[]` with shared `ActivityType` enum
 - Decide which computed fields should be client-derived
-- Remove redundant reads / defensive checks where contracts are strict
 
 ## Testing / CI
 

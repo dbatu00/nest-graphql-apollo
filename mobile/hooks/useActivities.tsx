@@ -28,7 +28,7 @@ TODO:
 - Move follow stuff to a dedicated hook
 */
 import { useEffect, useState, useCallback } from "react";
-import { Activity } from "@/types/Activity";
+import { Activity, ActivityType } from "@/types/Activity";
 import { useI18n } from "@/hooks/useI18n";
 import {
   addPost,
@@ -46,7 +46,7 @@ import {
 
 type Params = {
   username?: string;
-  types?: string[];
+  types?: ActivityType[];
 };
 
 

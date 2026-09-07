@@ -1,7 +1,9 @@
-import { ArgsType, Field } from '@nestjs/graphql';
+import { ArgsType, Field, registerEnumType } from '@nestjs/graphql';
 import { IsArray, IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { ACTIVITY_TYPE } from '../activity.constants';
 import type { ActivityType } from '../activity.constants';
+
+registerEnumType(ACTIVITY_TYPE, { name: 'ActivityType' });
 
 @ArgsType()
 export class FeedArgs {
@@ -11,7 +13,7 @@ export class FeedArgs {
     @MinLength(1)
     username?: string;
 
-    @Field(() => [String], { nullable: true })
+    @Field(() => [ACTIVITY_TYPE], { nullable: true })
     @IsOptional()
     @IsArray()
     @IsString({ each: true })
