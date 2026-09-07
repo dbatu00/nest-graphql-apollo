@@ -9,6 +9,25 @@ import { User } from "src/users/user.entity";
 import { Post } from "src/posts/post.entity";
 import { Comment } from "../comments/comment.entity";
 
+type LogActivityInput = {
+    type: ActivityType;
+    actor: User;
+    targetPost?: Post;
+    targetUser?: User;
+    targetComment?: Comment;
+    shouldBeActive?: boolean;
+};
+
+function assertActivityTargets(input: LogActivityInput) {
+    if (input.type === 'like' && !input.targetPost && !input.targetComment) {
+        throw new Error('Like activity requires a target post or comment');
+    }
+
+    if (input.type === 'follow' && !input.targetUser) {
+        throw new Error('Follow activity requires a target user');
+    }
+}
+
 
 @Injectable()
 export class ActivityService {
@@ -25,30 +44,17 @@ export class ActivityService {
         * and are not relation-hydrated (actor/target* relations are not loaded).
      */
     async logActivity(
-        input: {
-            type: ActivityType;
-            actor: User;
-            targetPost?: Post;
-            targetUser?: User;
-            targetComment?: Comment;
-            shouldBeActive?: boolean;
-        },
+        input: LogActivityInput,
         manager: EntityManager,
     ) {
         // Use the caller's transaction manager so writes stay atomic with the parent flow.
+        assertActivityTargets(input);
         return this._executeLogActivity(manager.getRepository(Activity), input);
     }
 
     private async _executeLogActivity(
         repo: Repository<Activity>,
-        input: {
-            type: ActivityType;
-            actor: User;
-            targetPost?: Post;
-            targetUser?: User;
-            targetComment?: Comment;
-            shouldBeActive?: boolean;
-        },
+        input: LogActivityInput,
     ) {
         try {
             const active = input.shouldBeActive !== undefined ? input.shouldBeActive : true;

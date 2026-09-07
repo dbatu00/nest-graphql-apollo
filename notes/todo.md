@@ -9,9 +9,6 @@ This file tracks only open work. Completed items are intentionally removed.
 - Add activity reconciliation for derived events
 - Cover empty DB + startup edge cases
 - Define GraphQL error propagation rules (bubble vs swallow, rollback expectations)
-- Add invariants:
-  - like → requires target post/comment
-  - follow → requires target user
 - Re-evaluate follow-state consistency under join duplication issues
 
 ---
