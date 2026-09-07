@@ -29,7 +29,6 @@ This file tracks only open work. Completed items are intentionally removed.
 
 # P2 — Mobile UX / Behavior
 
-- Fix router `as never` coercions (type safety broken)
 - Add optimistic post creation flow (local row + reconcile/rollback)
 - on login/signup show all errors/missing fields at once and highlight
 ---

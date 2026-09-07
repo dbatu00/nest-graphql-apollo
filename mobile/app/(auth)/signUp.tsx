@@ -90,7 +90,7 @@ export default function SignUp() {
       setSuccess(true);
 
       setTimeout(() => {
-        router.replace(authPayload.emailVerified ? "/(app)/feed" : ("/(auth)/verify-mail" as never));
+        router.replace(authPayload.emailVerified ? "/(app)/feed" : "/(auth)/verify-mail");
       }, 600);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : t("auth.signup.error.failed");

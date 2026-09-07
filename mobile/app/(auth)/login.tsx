@@ -120,7 +120,7 @@ export default function Login() {
       if (authPayload.emailVerified) {
         router.replace("/(app)/feed");
       } else {
-        router.replace("/(auth)/verify-mail" as never);
+        router.replace("/(auth)/verify-mail");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t("auth.login.error.invalidCredentials"));
