@@ -355,7 +355,7 @@ means this callback never needs to be recreated because it doesn't capture any c
   - Removes stored token.
   - Clears global auth state.
   It intentionally does NOT decide where the app should navigate afterwards.
-  Instead, the routing layer (AuthGate) should observe user becoming null and redirect appropriately.
+  Instead, the routing layer (app/_layout AppNavigator) observes user becoming null and redirects appropriately.
   */
   const logout = useCallback(async () => {
     //Remove the persisted token so that the next app launch will therefore begin unauthenticated.  

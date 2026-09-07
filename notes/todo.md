@@ -7,7 +7,7 @@ This file tracks only open work. Completed items are intentionally removed.
 ## Auth State
 
 
-- Keep `me.emailVerified` consistent across hydration + routing
+
 
 ## Backend consistency
 

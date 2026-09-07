@@ -23,6 +23,7 @@ function AppNavigator() {
   }
 
   const inAuthGroup = segments[0] === "(auth)";
+  const inAppGroup = segments[0] === "(app)";
   const authLeaf = segments[1] as string | undefined;
   const onVerifyMailPage = inAuthGroup && authLeaf === "verify-mail";
 
@@ -35,6 +36,10 @@ function AppNavigator() {
   }
 
   if (user && user.emailVerified && inAuthGroup) {
+    return <Redirect href="/(app)/feed" />;
+  }
+
+  if (user && user.emailVerified && !inAppGroup) {
     return <Redirect href="/(app)/feed" />;
   }
 
