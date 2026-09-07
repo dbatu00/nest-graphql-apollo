@@ -111,7 +111,7 @@ const ActivityBanner = ({ activity }: { activity: Activity }) => {
   const { t } = useI18n();
   const { type, actor, targetPost, createdAt } = activity;
 
-  const actorAvatarUri = resolveAvatarUri(activity.actor.displayName, activity.actor.avatarUrl);
+  const actorAvatarUri = resolveAvatarUri(actor.displayName, actor.avatarUrl);
 
   let verb = "";
   let noun = "";
@@ -119,7 +119,7 @@ const ActivityBanner = ({ activity }: { activity: Activity }) => {
 
   if (type === "post") return null;
   else if (targetPost) {
-    targetUser = targetPost.user!;
+    targetUser = targetPost.user;
     if (type === "comment") {
       verb = t("activity.banner.commentedOn");
       noun = t("activity.banner.postSuffix");
@@ -407,14 +407,14 @@ const PostCard = ({
   const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
 
   const { user } = useAuth();
-  if (!user || !post?.user) return null;
+  if (!user) return null;
 
-  const currentUserAvatarUri = resolveAvatarUri(user!.displayName, user!.avatarUrl);
+  const currentUserAvatarUri = resolveAvatarUri(user.displayName, user.avatarUrl);
   const authorAvatarUri = resolveAvatarUri(post.user.displayName, post.user.avatarUrl);
-  const isOwner = (user!.id === post.user.id);
+  const isOwner = (user.id === post.user.id);
   const likedByMe = post.likedByMe;
   const likesCount = post.likesCount;
-  const hasComments = post.comments!.length > 0;
+  const hasComments = post.comments.length > 0;
 
   const headerActions = () => {
     if (!isOwner && onToggleFollow) {
@@ -486,7 +486,7 @@ const PostCard = ({
         <View style={styles.commentsSection}>
           {hasComments && (
             <View style={styles.commentList}>
-              {post.comments?.map((comment) => (
+              {post.comments.map((comment) => (
                 <CommentRow
                   key={comment.id}
                   comment={comment}

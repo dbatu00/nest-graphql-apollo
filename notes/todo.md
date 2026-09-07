@@ -77,7 +77,6 @@ This file tracks only open work. Completed items are intentionally removed.
   - Fix router `as never` coercions (type safety broken)
   - Add optimistic post creation flow (local row + reconcile/rollback)
   - On login/signup, show all errors/missing fields at once and highlight
-  - `ActivityRow / ActivityBanner`: remove unjustified defensive chaining where schema guarantees non-null/non-empty
   - `commentInputWrapperFocused`: focused style currently matches unfocused background; add a visible focus difference
 
   ---
