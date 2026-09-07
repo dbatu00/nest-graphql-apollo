@@ -33,14 +33,10 @@ export class ActivityService {
             targetComment?: Comment;
             shouldBeActive?: boolean;
         },
-        manager?: EntityManager,
+        manager: EntityManager,
     ) {
-        if (manager) {
-            // Use provided transaction.
-            return this._executeLogActivity(manager.getRepository(Activity), input);
-        }
-
-        return this._executeLogActivity(this.activityRepo, input);
+        // Use the caller's transaction manager so writes stay atomic with the parent flow.
+        return this._executeLogActivity(manager.getRepository(Activity), input);
     }
 
     private async _executeLogActivity(

@@ -61,8 +61,8 @@ export class LikesService {
   //   - No row        → INSERT fires            → changed: true
   //   - Row, inactive → UPDATE fires            → changed: true
   //   - Row, active   → WHERE false, no-op      → changed: false
-  async like(userId: number, targetType: LikeType, targetId: number, manager?: EntityManager) {
-    const em = manager ?? this.likesRepo.manager;
+  async like(userId: number, targetType: LikeType, targetId: number, manager: EntityManager) {
+    const em = manager;
 
     const [row] = await em.query<Array<{ changed: boolean }>>(
       `INSERT INTO "like" ("userId", "targetType", "targetId", active, "createdAt", "updatedAt")
@@ -81,8 +81,8 @@ export class LikesService {
   // Mirrors like() with the active flag flipped off; kept as a separate method
   // for explicit API semantics and easier call-site readability.
   // Atomically updates only if active = true, so concurrent calls are safe.
-  async unlike(userId: number, targetType: LikeType, targetId: number, manager?: EntityManager) {
-    const repo = manager ? manager.getRepository(Like) : this.likesRepo;
+  async unlike(userId: number, targetType: LikeType, targetId: number, manager: EntityManager) {
+    const repo = manager.getRepository(Like);
 
     const result = await repo.update(
       { userId, targetType, targetId, active: true },
@@ -95,13 +95,13 @@ export class LikesService {
   async deleteLikes(
     targetType: LikeType,
     targetIdOrIds: number | number[],
-    manager?: EntityManager,
+    manager: EntityManager,
   ) {
     // WARNING: this only deletes Like rows.
     // It does not delete Activity rows.
     // Activities are cleaned up when the owning Post/Comment is deleted
     // via DB-level cascades on Activity.targetPost / Activity.targetComment.
-    const repo = manager ? manager.getRepository(Like) : this.likesRepo;
+    const repo = manager.getRepository(Like);
 
     if (Array.isArray(targetIdOrIds)) {
       if (targetIdOrIds.length === 0) return;

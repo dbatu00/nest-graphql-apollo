@@ -4,17 +4,11 @@ This file tracks only open work. Completed items are intentionally removed.
 
 # P1 — Core System Consistency (Auth + Backend Rules)
 
-## Auth State
-
-
-
-
 ## Backend consistency
 
 - Add activity reconciliation for derived events
 - Cover empty DB + startup edge cases
 - Define GraphQL error propagation rules (bubble vs swallow, rollback expectations)
-- Require `EntityManager` for shared write APIs (Likes/Activity services)
 - Add invariants:
   - like → requires target post/comment
   - follow → requires target user
