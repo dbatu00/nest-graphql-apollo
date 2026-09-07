@@ -72,8 +72,6 @@ This file tracks only open work. Completed items are intentionally removed.
     - like → requires target post/comment
     - follow → requires target user
   - Re-evaluate follow-state consistency under join duplication issues
-  - Check `likeComment` transaction note:
-    - verify whether `postExists` is redundant due to FK constraint on locked comment
 
   ### Mobile behavior correctness
   - Fix router `as never` coercions (type safety broken)

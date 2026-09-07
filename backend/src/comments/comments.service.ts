@@ -132,10 +132,8 @@ export class CommentsService {
             return await this.commentsRepo.manager.transaction(async manager => {
                 const userExists = await manager.exists(User, { where: { id: userId } });
                 const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const postExists = await manager.exists(Post, { where: { id: comment?.postId } });
 
                 if (!userExists) throw new NotFoundException('User not found');
-                if (!postExists) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.like(
                     userId,
@@ -175,10 +173,8 @@ export class CommentsService {
             return await this.commentsRepo.manager.transaction(async manager => {
                 const userExists = await manager.exists(User, { where: { id: userId } }); //not a required check but allows for a good error message instead of raw db error
                 const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const postExists = await manager.exists(Post, { where: { id: comment?.postId } }); //since comments get locked, its parent gets locked due to FK, redundant
 
                 if (!userExists) throw new NotFoundException('User not found');
-                if (!postExists) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.unlike(
                     userId,
