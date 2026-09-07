@@ -11,8 +11,6 @@ This file tracks only open work. Completed items are intentionally removed.
   - set user state first (sync)
   - then persist token (async)
 - Keep `me.emailVerified` consistent across hydration + routing
-- Remove redundant manual redirects → route guards handle navigation
-- Handle deleted-user session gracefully
 
 ## Backend consistency
 
@@ -47,19 +45,7 @@ This file tracks only open work. Completed items are intentionally removed.
 
 - Fix router `as never` coercions (type safety broken)
 - Add optimistic post creation flow (local row + reconcile/rollback)
-- Tighten owner/follow button logic in feed/profile
-- Improve form UX:
-  - inline validation
-  - enter submit
-  - disable save when unchanged
-- Add verify-email escape/back flow
-- Hide self-activity except posts
 - on login/signup show all errors/missing fields at once and highlight
-- Validate email format client-side before submitting change-email request
-- audit all screens for behaviour when window is squeezed
-- handle token expiration gracefully
-- audit settings.tsx
-- audit hooks
 ---
 
 # P3 — Architecture (Only if needed)
@@ -83,90 +69,99 @@ This file tracks only open work. Completed items are intentionally removed.
 # Open Questions (Design)
 
 - Should `me` query live in auth GraphQL surface?
-- Should signup payload be reduced further?
-- Should profile settings persist unsaved edits across tabs?
 - Feed comment cards:
-  - post context + highlighted comment + thread affordance?
-- Should GraphQL client validate responses at runtime (zod/valibot)?
-- Should cross-service mutation payloads be minimal (IDs only) to reduce coupling?
+  # TODO Roadmap (Active Only)
+  This file tracks only open work. Completed items are intentionally removed.
 
+  ## P1 — Core Consistency (Ship-Blockers)
 
-set linter:
-slint-plugin-react-hooks's exhaustive-deps
+  ### Auth state
+  - Fix `useAuth.setSession` ordering:
+    - set user state first (sync)
+    - then persist token (async)
+  - Keep `me.emailVerified` consistent across hydration + routing
 
-feed.tsx:
-- Move inline composer card style block into Composer (or a shared style/theme
-  constant) so Feed doesn't own presentation details like shadows/border radius
-- Move activity filter predicate (a.type !== "follow" || a.active) into
-  useActivities (e.g. feed.visibleActivities) or pass as config to ActivityList,
-  so Feed doesn't own feed business logic
-  --aka instead of foo().filter(bar), expose common filtered views
+  ### Backend consistency
+  - Add activity reconciliation for derived events
+  - Cover empty DB + startup edge cases
+  - Define GraphQL error propagation rules (bubble vs swallow, rollback expectations)
+  - Require `EntityManager` for shared write APIs (Likes/Activity services)
+  - Add invariants:
+    - like → requires target post/comment
+    - follow → requires target user
+  - Re-evaluate follow-state consistency under join duplication issues
+  - Check `likeComment` transaction note:
+    - verify whether `postExists` is redundant due to FK constraint on locked comment
 
-username.tsx:
-- Refactor into a tab coordinator:
-  - Keep profile info on the screen
-  - Own only the active tab state
-  - Posts/Likes → ActivityList + useActivities(types)
-  - Followers/Following → UserList + useFollow
+  ### Mobile behavior correctness
+  - Fix router `as never` coercions (type safety broken)
+  - Add optimistic post creation flow (local row + reconcile/rollback)
+  - On login/signup, show all errors/missing fields at once and highlight
+  - `ActivityRow / ActivityBanner`: remove unjustified defensive chaining where schema guarantees non-null/non-empty
+  - `commentInputWrapperFocused`: focused style currently matches unfocused background; add a visible focus difference
 
-useActivities.tsx:
-- Move relationship logic (follow/unfollow) into useFollow so activity and
-  relationship concerns are owned separately (same underlying point as
-  username.tsx's last TODO — avoid two independent optimistic-follow
-  implementations drifting out of sync)
+  ---
 
--ActivityRow / ActivityBanner:
-- Remove unjustified defensive chaining on fields the schema guarantees
-  non-null/non-empty: actor.username, targetUser.username (once targetUser
-  itself is confirmed present), targetPost.user.username (pending
-  confirmation of Post's type) — these are enforced at the DB column level
-  (unique, non-nullable), not just the TS type level. Keep only the
-  genuinely optional checks: targetUser existing at all, targetPost
-  existing at all.
--commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+  ## P2 — Refactor + API Cleanup
 
+  ### API / GraphQL shape
+  - Replace `types?: string[]` with shared `ActivityType` enum
+  - Decide which computed fields should be client-derived
+  - Remove redundant reads / defensive checks where contracts are strict
 
+  ### Mobile refactors
+  - `feed.tsx`:
+    - move activity filter predicate into `useActivities` (or pass as config)
+    - avoid screen-owned feed business logic (`foo().filter(bar)` pattern)
+  - `username.tsx` refactor into tab coordinator:
+    - keep profile info on screen
+    - own only active tab state
+    - Posts/Likes → `ActivityList` + `useActivities(types)`
+    - Followers/Following → `UserList` + `useFollow`
+  - `useActivities.tsx`:
+    - move relationship logic (follow/unfollow) into `useFollow`
+    - avoid two optimistic follow implementations drifting out of sync
+  - Rename `useactivityrow` → `useactivityinteractions`
+  - Unify patterns in `client.ts`
+  - `fetchgetProfileFollowersView`: fix/change naming in `client.ts`
+  - Use shared user type on mobile
 
-check nullabilities and fallbacks app wide
+  ---
 
+  ## P3 — Testing / Tooling
+  - Add CI for backend + mobile tests
+  - Add integration tests for feed/profile flows
+  - Add navigation tests for profile/link edge cases
+  - Set linter: `eslint-plugin-react-hooks` exhaustive-deps
+  - Audit `graphqlFetch.tsx`
+  - Audit `token.tsx`
 
+  ---
 
-### TODO: Handle email send failure after token creation
+  ## P4 — Pre-Production
+  - Build migration-first DB workflow
 
-The verification token is committed before the email is sent. If SMTP fails, the user may be throttled despite never receiving the email.
+  ---
 
-Possible solutions:
-- Accept this tradeoff (current behavior).
-- Use an outbox pattern with retries.
-- Invalidate the new token if sending fails.
-- Throttle based on successful sends instead of token creation.
+  ## Later
+  - Revisit mobile token storage strategy
 
+  ---
 
-async likeComment(userId: number, commentId: number): Promise<boolean> {
-        try {
-            return await this.commentsRepo.manager.transaction(async manager => {
-                const userExists = await manager.exists(User, { where: { id: userId } });
-                const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const postExists = await manager.exists(Post, { where: { id: comment?.postId } });
+  ## Open Questions (Design)
+  - Should `me` query live in auth GraphQL surface?
+  - Feed comment cards:
+    - post context + highlighted comment + thread affordance?
+  - Should GraphQL client validate responses at runtime (zod/valibot)?
+  - Should cross-service mutation payloads be minimal (IDs only) to reduce coupling?
 
-                postexists probabaly redundant due to fk coınstraint on comment which gets locked
+  ---
 
+  ## Decision TODO — Email Verification Delivery Failure
+  The verification token is committed before the email is sent. If SMTP fails, the user may be throttled despite never receiving the email.
 
-lightweight client validation for signup fields
-
-
- rename: useactivityrow -> useactivityinteractions
-
- unify patterns in client.ts
-
- audit graphgqlfetch.tsx
-
- audit token.tsx
-
- fetchgetProfileFollowersView fix/change naming. client.ts
-
- dedup headers
-
- use user type on mobile
-
- verify mail what happens if token gets deleted on the page?
+  Possible solutions:
+  - Accept this tradeoff (current behavior)
+  - Use an outbox pattern with retries
+  - Invalidate the new token if sending fails
+  - Throttle based on successful sends instead of token creation
