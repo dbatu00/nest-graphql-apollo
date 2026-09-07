@@ -1,6 +1,7 @@
 import { View, TextInput, TouchableOpacity, Text, Platform } from "react-native";
 import { useI18n } from "@/hooks/useI18n";
 import { composerStyles as styles, webNoOutlineStyle } from "@/styles";
+import { POST_CONTENT_MAX_LENGTH } from "@/config/inputLimits";
 
 type Props = {
   value: string;
@@ -19,6 +20,7 @@ export function Composer({ value, onChange, onPublish }: Props) {
         onChangeText={onChange}
         placeholder={t("feed.composer.placeholder")}
         placeholderTextColor="#d1d5db"
+        maxLength={POST_CONTENT_MAX_LENGTH}
         underlineColorAndroid="transparent"
         returnKeyType="send"
         blurOnSubmit

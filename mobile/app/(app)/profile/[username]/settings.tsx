@@ -35,6 +35,14 @@ import {
   profileSettingsStyles as local,
   profileSettingsSuccessToneStyle,
 } from "@/styles";
+import {
+  BIO_MAX_LENGTH,
+  DISPLAY_NAME_MAX_LENGTH,
+  EMAIL_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  URL_MAX_LENGTH,
+} from "@/config/inputLimits";
 
 const coverOptions = [
   "https://picsum.photos/seed/bookbook-cover-1/1200/600",
@@ -171,7 +179,10 @@ export default function ProfileSettingsScreen() {
     if (!email) return t("settings.error.email.enterNew");
     if (!confirm) return t("settings.error.email.confirm");
     if (!password) return t("settings.error.email.enterCurrentPassword");
-    if (password.length < 8) return t("settings.error.email.currentPasswordLength");
+    if (password.length < PASSWORD_MIN_LENGTH) return t("settings.error.email.currentPasswordLength");
+    if (password.length > PASSWORD_MAX_LENGTH) return `Current password must be at most ${PASSWORD_MAX_LENGTH} characters.`;
+    if (email.length > EMAIL_MAX_LENGTH) return `Email must be at most ${EMAIL_MAX_LENGTH} characters.`;
+    if (confirm.length > EMAIL_MAX_LENGTH) return `Email must be at most ${EMAIL_MAX_LENGTH} characters.`;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return t("settings.error.email.invalidAddress");
     if (email !== confirm) return t("settings.error.email.mismatch");
     if (email === profileMeta?.email) return t("settings.error.email.sameAsCurrent"); //profileMeta exists before exec comes here
@@ -181,10 +192,12 @@ export default function ProfileSettingsScreen() {
   const validatePasswordChange = (newPassword: string, confirmPassword: string, currentPassword: string): string | null => {
     if (!newPassword || !confirmPassword) return t("settings.error.password.enterAndConfirm");
     if (newPassword !== confirmPassword) return t("settings.error.password.mismatch");
-    if (newPassword.length < 8) return t("settings.error.password.length");
+    if (newPassword.length < PASSWORD_MIN_LENGTH) return t("settings.error.password.length");
+    if (newPassword.length > PASSWORD_MAX_LENGTH) return `Password must be at most ${PASSWORD_MAX_LENGTH} characters.`;
     if (!currentPassword) return t("settings.error.password.currentRequired");
     if (currentPassword === newPassword) return t("settings.error.password.sameAsCurrent");
-    if (currentPassword.length < 8) return t("settings.error.password.length");
+    if (currentPassword.length < PASSWORD_MIN_LENGTH) return t("settings.error.password.length");
+    if (currentPassword.length > PASSWORD_MAX_LENGTH) return `Current password must be at most ${PASSWORD_MAX_LENGTH} characters.`;
     return null;
   };
 
@@ -226,10 +239,10 @@ export default function ProfileSettingsScreen() {
     if (!profileMeta) return;
 
     setAboutDraft({
-      displayName: profileMeta.displayName,
-      bio: profileMeta.bio,
-      avatarUrl: profileMeta.avatarUrl,
-      coverUrl: profileMeta.coverUrl,
+      displayName: profileMeta.displayName ?? "",
+      bio: profileMeta.bio ?? "",
+      avatarUrl: profileMeta.avatarUrl ?? "",
+      coverUrl: profileMeta.coverUrl ?? "",
     });
   }, [profileMeta]);
 
@@ -267,11 +280,21 @@ export default function ProfileSettingsScreen() {
       return;
     }
 
+    const normalizedDisplayName = (aboutDraft.displayName ?? "").trim();
+    const normalizedBio = (aboutDraft.bio ?? "").trim();
+    const normalizedAvatarUrl = (aboutDraft.avatarUrl ?? "").trim();
+    const normalizedCoverUrl = (aboutDraft.coverUrl ?? "").trim();
+
+    const normalizedCurrentDisplayName = (profileMeta.displayName ?? "").trim();
+    const normalizedCurrentBio = (profileMeta.bio ?? "").trim();
+    const normalizedCurrentAvatarUrl = (profileMeta.avatarUrl ?? "").trim();
+    const normalizedCurrentCoverUrl = (profileMeta.coverUrl ?? "").trim();
+
     const aboutDraftChanged =
-      aboutDraft.displayName !== profileMeta.displayName ||
-      aboutDraft.bio !== profileMeta.bio ||
-      aboutDraft.avatarUrl !== profileMeta.avatarUrl ||
-      aboutDraft.coverUrl !== profileMeta.coverUrl;
+      normalizedDisplayName !== normalizedCurrentDisplayName ||
+      normalizedBio !== normalizedCurrentBio ||
+      normalizedAvatarUrl !== normalizedCurrentAvatarUrl ||
+      normalizedCoverUrl !== normalizedCurrentCoverUrl;
 
     if (!aboutDraftChanged) {
       setError(null);
@@ -285,10 +308,10 @@ export default function ProfileSettingsScreen() {
 
     try {
       await updateMyProfile({
-        displayName: aboutDraft.displayName,
-        bio: aboutDraft.bio,
-        avatarUrl: aboutDraft.avatarUrl,
-        coverUrl: aboutDraft.coverUrl,
+        displayName: normalizedDisplayName,
+        bio: normalizedBio,
+        avatarUrl: normalizedAvatarUrl,
+        coverUrl: normalizedCoverUrl,
       });
 
       await refreshProfileMeta();
@@ -303,9 +326,9 @@ export default function ProfileSettingsScreen() {
   const handleChangeEmail = async () => {
     setEmailError(null);
 
-    const email = accountForm.email.newEmail.trim();
-    const confirm = accountForm.email.confirmNewEmail.trim();
-    const password = accountForm.email.currentPassword.trim();
+    const email = (accountForm.email.newEmail ?? "").trim().toLowerCase();
+    const confirm = (accountForm.email.confirmNewEmail ?? "").trim().toLowerCase();
+    const password = accountForm.email.currentPassword ?? "";
 
     const validationError = validateEmailChange(email, confirm, password);
     if (validationError) {
@@ -340,9 +363,9 @@ export default function ProfileSettingsScreen() {
   const handleChangePassword = async () => {
     setPasswordError(null);
 
-    const newPassword = accountForm.password.newPassword.trim();
-    const confirmPassword = accountForm.password.confirmNewPassword.trim();
-    const currentPassword = accountForm.password.currentPassword.trim();
+    const newPassword = accountForm.password.newPassword;
+    const confirmPassword = accountForm.password.confirmNewPassword;
+    const currentPassword = accountForm.password.currentPassword;
 
     const validationError = validatePasswordChange(newPassword, confirmPassword, currentPassword);
     if (validationError) {
@@ -380,15 +403,20 @@ export default function ProfileSettingsScreen() {
 
     setDeleteError(null);
 
-    const currentPassword = deletePassword.trim();
+    const currentPassword = deletePassword ?? "";
 
     if (!currentPassword) {
       setDeleteError(t("settings.error.deletePasswordRequired"));
       return;
     }
 
-    if (currentPassword.length < 8) {
+    if (currentPassword.length < PASSWORD_MIN_LENGTH) {
       setDeleteError(t("settings.error.deletePasswordLength"));
+      return;
+    }
+
+    if (currentPassword.length > PASSWORD_MAX_LENGTH) {
+      setDeleteError(`Current password must be at most ${PASSWORD_MAX_LENGTH} characters.`);
       return;
     }
 
@@ -495,7 +523,7 @@ export default function ProfileSettingsScreen() {
                 onChangeText={displayName => setAboutDraft({ ...aboutDraft, displayName })}
                 placeholder={t("settings.about.displayNamePlaceholder")}
                 style={local.textInput}
-                maxLength={50}
+                maxLength={DISPLAY_NAME_MAX_LENGTH}
                 returnKeyType="next"
                 onSubmitEditing={() => aboutBioInputRef.current?.focus()}
               />
@@ -510,7 +538,7 @@ export default function ProfileSettingsScreen() {
                 multiline
                 textAlignVertical="top"
                 style={local.bioInput}
-                maxLength={160}
+                maxLength={BIO_MAX_LENGTH}
                 returnKeyType="done"
                 blurOnSubmit
                 onSubmitEditing={handleSave}
@@ -562,6 +590,7 @@ export default function ProfileSettingsScreen() {
                 onChangeText={(val) => updateAccountForm("email", "newEmail", val)}
                 placeholder={t("settings.account.newEmailPlaceholder")}
                 autoCapitalize="none"
+                maxLength={EMAIL_MAX_LENGTH}
                 keyboardType="email-address"
                 returnKeyType="next"
                 onSubmitEditing={() => emailConfirmInputRef.current?.focus()}
@@ -577,6 +606,7 @@ export default function ProfileSettingsScreen() {
                 onChangeText={(val) => updateAccountForm("email", "confirmNewEmail", val)}
                 placeholder={t("settings.account.confirmNewEmailPlaceholder")}
                 autoCapitalize="none"
+                maxLength={EMAIL_MAX_LENGTH}
                 keyboardType="email-address"
                 returnKeyType="next"
                 onSubmitEditing={() => emailCurrentPasswordInputRef.current?.focus()}
@@ -593,6 +623,7 @@ export default function ProfileSettingsScreen() {
                   onChangeText={(val) => updateAccountForm("email", "currentPassword", val)}
                   placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForEmailChange}
+                  maxLength={PASSWORD_MAX_LENGTH}
                   returnKeyType="go"
                   onSubmitEditing={() => void handleChangeEmail()}
                   style={[
@@ -642,6 +673,7 @@ export default function ProfileSettingsScreen() {
                   onChangeText={(val) => updateAccountForm("password", "newPassword", val)}
                   placeholder={t("settings.account.newPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showNewPassword}
+                  maxLength={PASSWORD_MAX_LENGTH}
                   returnKeyType="next"
                   onSubmitEditing={() => passwordConfirmInputRef.current?.focus()}
                   style={[
@@ -665,6 +697,7 @@ export default function ProfileSettingsScreen() {
                   onChangeText={(val) => updateAccountForm("password", "confirmNewPassword", val)}
                   placeholder={t("settings.account.confirmNewPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showConfirmNewPassword}
+                  maxLength={PASSWORD_MAX_LENGTH}
                   returnKeyType="next"
                   onSubmitEditing={() => passwordCurrentInputRef.current?.focus()}
                   style={[
@@ -690,6 +723,7 @@ export default function ProfileSettingsScreen() {
                   onChangeText={(val) => updateAccountForm("password", "currentPassword", val)}
                   placeholder={t("settings.account.currentPasswordPlaceholder")}
                   secureTextEntry={!accountUi.showCurrentPasswordForPasswordChange}
+                  maxLength={PASSWORD_MAX_LENGTH}
                   returnKeyType="go"
                   onSubmitEditing={() => void handleChangePassword()}
                   style={[
@@ -744,6 +778,7 @@ export default function ProfileSettingsScreen() {
                   returnKeyType="go"
                   onSubmitEditing={() => void handleDeleteAccount()}
                   secureTextEntry={!accountUi.showCurrentPasswordForDelete}
+                  maxLength={PASSWORD_MAX_LENGTH}
                   style={[
                     local.accountInput,
                     local.passwordInput,

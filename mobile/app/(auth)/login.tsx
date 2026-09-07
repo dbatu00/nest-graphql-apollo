@@ -11,6 +11,11 @@ import { useI18n } from "@/hooks/useI18n";
 import { AppLogo } from "@/components/common/AppLogo";
 import { PageShell } from "@/components/layout/PageShell";
 import { authFormStyles as styles } from "@/styles";
+import {
+  LOGIN_IDENTIFIER_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from "@/config/inputLimits";
 
 const LANGUAGE_OPTIONS: Language[] = ["en", "tr", "de"];
 const LOGIN_SEEN_KEY = "login_seen_before";
@@ -83,21 +88,27 @@ export default function Login() {
   const handleLogin = async () => {
     setError("");
 
+    const trimmedIdentifier = identifier.trim();
 
-    if (!identifier || !password) {
+    if (!trimmedIdentifier || !password) {
       setError(t("auth.login.error.required"));
       return;
     }
 
-    if (password.length < 8) {
+    if (password.length < PASSWORD_MIN_LENGTH) {
       setError(t("auth.login.error.passwordLength"));
+      return;
+    }
+
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`);
       return;
     }
 
     setLoading(true);
 
     try {
-      const authPayload = await login(identifier, password);
+      const authPayload = await login(trimmedIdentifier, password);
 
       await setSession({
         token: authPayload.token,
@@ -123,86 +134,88 @@ export default function Login() {
       <View style={[commonStyles.container, commonStyles.center]}>
         <AppLogo subtitle={seenBefore === false ? t("auth.login.subtitleFirstTime") : t("auth.login.subtitle")} />
         <View style={styles.titleRow}>
-        <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.login.title")}</Text>
+          <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.login.title")}</Text>
 
-        <View style={styles.titleLanguageMenuWrap}>
-          <Pressable
-            onPress={() => setLanguageMenuOpen((prev) => !prev)}
-            style={styles.titleLanguageIconButton}
-          >
-            <Ionicons name="globe-outline" size={18} color="#1d4ed8" />
-          </Pressable>
+          <View style={styles.titleLanguageMenuWrap}>
+            <Pressable
+              onPress={() => setLanguageMenuOpen((prev) => !prev)}
+              style={styles.titleLanguageIconButton}
+            >
+              <Ionicons name="globe-outline" size={18} color="#1d4ed8" />
+            </Pressable>
 
-          {languageMenuOpen && (
-            <View style={styles.titleLanguageDropdown}>
-              {LANGUAGE_OPTIONS.map((option) => {
-                const active = language === option;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => void handleLanguageSelect(option)}
-                    style={[styles.titleLanguageDropdownItem, active && styles.titleLanguageDropdownItemActive]}
-                  >
-                    <Text style={[styles.titleLanguageDropdownItemText, active && styles.titleLanguageDropdownItemTextActive]}>
-                      {t(`settings.language.${option}`)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+            {languageMenuOpen && (
+              <View style={styles.titleLanguageDropdown}>
+                {LANGUAGE_OPTIONS.map((option) => {
+                  const active = language === option;
+                  return (
+                    <Pressable
+                      key={option}
+                      onPress={() => void handleLanguageSelect(option)}
+                      style={[styles.titleLanguageDropdownItem, active && styles.titleLanguageDropdownItemActive]}
+                    >
+                      <Text style={[styles.titleLanguageDropdownItemText, active && styles.titleLanguageDropdownItemTextActive]}>
+                        {t(`settings.language.${option}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.formWrap}>
-        <TextInput
-          placeholder={t("auth.login.identifierPlaceholder")}
-          placeholderTextColor="#d1d5db"
-          value={identifier}
-          onChangeText={setIdentifier}
-          autoCapitalize="none"
-          returnKeyType="next"
-          onSubmitEditing={() => passwordInputRef.current?.focus()}
-          style={commonStyles.input}
-        />
+        <View style={styles.formWrap}>
+          <TextInput
+            placeholder={t("auth.login.identifierPlaceholder")}
+            placeholderTextColor="#d1d5db"
+            value={identifier}
+            onChangeText={setIdentifier}
+            autoCapitalize="none"
+            maxLength={LOGIN_IDENTIFIER_MAX_LENGTH}
+            returnKeyType="next"
+            onSubmitEditing={() => passwordInputRef.current?.focus()}
+            style={commonStyles.input}
+          />
 
-        <TextInput
-          ref={passwordInputRef}
-          placeholder={t("auth.login.passwordPlaceholder")}
-          placeholderTextColor="#d1d5db"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          returnKeyType="go"
-          onSubmitEditing={() => void handleLogin()}
-          style={[commonStyles.input, styles.inputTopGap]}
-        />
+          <TextInput
+            ref={passwordInputRef}
+            placeholder={t("auth.login.passwordPlaceholder")}
+            placeholderTextColor="#d1d5db"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            maxLength={PASSWORD_MAX_LENGTH}
+            returnKeyType="go"
+            onSubmitEditing={() => void handleLogin()}
+            style={[commonStyles.input, styles.inputTopGap]}
+          />
 
-        <View style={styles.actionsCenter}>
-          <Pressable
-            style={[commonStyles.button, styles.submitButton]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            <Text style={commonStyles.buttonText}>
-              {loading ? t("auth.login.submitting") : t("auth.login.submit")}
+          <View style={styles.actionsCenter}>
+            <Pressable
+              style={[commonStyles.button, styles.submitButton]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              <Text style={commonStyles.buttonText}>
+                {loading ? t("auth.login.submitting") : t("auth.login.submit")}
+              </Text>
+            </Pressable>
+          </View>
+
+          {error ? (
+            <Text style={styles.errorText}>
+              {error}
             </Text>
+          ) : null}
+
+          <Pressable
+            onPress={() => router.push("/(auth)/signUp")}
+            style={styles.navLinkWrap}
+          >
+            <Text style={styles.navLinkText}>{t("auth.login.signUpLink")}</Text>
           </Pressable>
         </View>
-
-        {error ? (
-          <Text style={styles.errorText}>
-            {error}
-          </Text>
-        ) : null}
-
-        <Pressable
-          onPress={() => router.push("/(auth)/signUp")}
-          style={styles.navLinkWrap}
-        >
-          <Text style={styles.navLinkText}>{t("auth.login.signUpLink")}</Text>
-        </Pressable>
-      </View>
       </View>
     </PageShell>
   );

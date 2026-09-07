@@ -47,8 +47,9 @@ export default function Feed() {
   const [content, setContent] = useState("");
 
   const handlePublish = async () => {
-    if (!content.trim()) return;
-    await feed.publishPost(content);
+    const normalizedContent = content.trim();
+    if (!normalizedContent) return;
+    await feed.publishPost(normalizedContent);
     setContent("");
   };
 

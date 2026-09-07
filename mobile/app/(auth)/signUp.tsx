@@ -10,6 +10,12 @@ import { useI18n } from "@/hooks/useI18n";
 import { AppLogo } from "@/components/common/AppLogo";
 import { PageShell } from "@/components/layout/PageShell";
 import { authFormStyles as styles } from "@/styles";
+import {
+  EMAIL_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+} from "@/config/inputLimits";
 
 const LANGUAGE_OPTIONS: Language[] = ["en", "tr", "de"];
 
@@ -40,12 +46,14 @@ export default function SignUp() {
     setUsernameError("");
     setEmailError("");
 
-    if (!username || !email || !password || !confirmPassword) {
+    const trimmedUsername = username.trim();
+    const trimmedLowerCaseEmail = email.trim().toLowerCase();
+
+    if (!trimmedUsername || !trimmedLowerCaseEmail || !password || !confirmPassword) {
       setError(t("auth.signup.error.required"));
       return;
     }
 
-    const trimmedLowerCaseEmail = email.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedLowerCaseEmail)) {
       setEmailError(t("auth.signup.error.invalidEmail"));
@@ -57,15 +65,20 @@ export default function SignUp() {
       return;
     }
 
-    if (password.length < 8) {
+    if (password.length < PASSWORD_MIN_LENGTH) {
       setError(t("auth.signup.error.passwordLength"));
+      return;
+    }
+
+    if (password.length > PASSWORD_MAX_LENGTH) {
+      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`);
       return;
     }
 
     setLoading(true);
 
     try {
-      const authPayload = await signUp(username, trimmedLowerCaseEmail, password);
+      const authPayload = await signUp(trimmedUsername, trimmedLowerCaseEmail, password);
 
       await setSession({
         token: authPayload.token,
@@ -94,122 +107,126 @@ export default function SignUp() {
       <View style={[commonStyles.container, commonStyles.center]}>
         <AppLogo subtitle={t("auth.signup.subtitle")} />
         <View style={styles.titleRow}>
-        <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.signup.title")}</Text>
+          <Text style={[commonStyles.title, styles.titleNoBottomMargin]}>{t("auth.signup.title")}</Text>
 
-        <View style={styles.titleLanguageMenuWrap}>
-          <Pressable
-            onPress={() => setLanguageMenuOpen((prev) => !prev)}
-            style={styles.titleLanguageIconButton}
-          >
-            <Ionicons name="globe-outline" size={18} color="#1d4ed8" />
-          </Pressable>
+          <View style={styles.titleLanguageMenuWrap}>
+            <Pressable
+              onPress={() => setLanguageMenuOpen((prev) => !prev)}
+              style={styles.titleLanguageIconButton}
+            >
+              <Ionicons name="globe-outline" size={18} color="#1d4ed8" />
+            </Pressable>
 
-          {languageMenuOpen && (
-            <View style={styles.titleLanguageDropdown}>
-              {LANGUAGE_OPTIONS.map((option) => {
-                const active = language === option;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => void handleLanguageSelect(option)}
-                    style={[styles.titleLanguageDropdownItem, active && styles.titleLanguageDropdownItemActive]}
-                  >
-                    <Text style={[styles.titleLanguageDropdownItemText, active && styles.titleLanguageDropdownItemTextActive]}>
-                      {t(`settings.language.${option}`)}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
+            {languageMenuOpen && (
+              <View style={styles.titleLanguageDropdown}>
+                {LANGUAGE_OPTIONS.map((option) => {
+                  const active = language === option;
+                  return (
+                    <Pressable
+                      key={option}
+                      onPress={() => void handleLanguageSelect(option)}
+                      style={[styles.titleLanguageDropdownItem, active && styles.titleLanguageDropdownItemActive]}
+                    >
+                      <Text style={[styles.titleLanguageDropdownItemText, active && styles.titleLanguageDropdownItemTextActive]}>
+                        {t(`settings.language.${option}`)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         </View>
-      </View>
 
-      <View style={styles.formWrap}>
-        <TextInput
-          placeholder={t("auth.signup.usernamePlaceholder")}
-          placeholderTextColor="#d1d5db"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          returnKeyType="next"
-          onSubmitEditing={() => emailInputRef.current?.focus()}
-          style={commonStyles.input}
-        />
-        {usernameError ? (
-          <Text style={styles.inlineErrorText}>{usernameError}</Text>
-        ) : null}
+        <View style={styles.formWrap}>
+          <TextInput
+            placeholder={t("auth.signup.usernamePlaceholder")}
+            placeholderTextColor="#d1d5db"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            maxLength={USERNAME_MAX_LENGTH}
+            returnKeyType="next"
+            onSubmitEditing={() => emailInputRef.current?.focus()}
+            style={commonStyles.input}
+          />
+          {usernameError ? (
+            <Text style={styles.inlineErrorText}>{usernameError}</Text>
+          ) : null}
 
-        <TextInput
-          ref={emailInputRef}
-          placeholder={t("auth.signup.emailPlaceholder")}
-          placeholderTextColor="#d1d5db"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          returnKeyType="next"
-          onSubmitEditing={() => passwordInputRef.current?.focus()}
-          style={[commonStyles.input, styles.inputTopGap]}
-        />
-        {emailError ? (
-          <Text style={styles.inlineErrorText}>{emailError}</Text>
-        ) : null}
+          <TextInput
+            ref={emailInputRef}
+            placeholder={t("auth.signup.emailPlaceholder")}
+            placeholderTextColor="#d1d5db"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            maxLength={EMAIL_MAX_LENGTH}
+            keyboardType="email-address"
+            returnKeyType="next"
+            onSubmitEditing={() => passwordInputRef.current?.focus()}
+            style={[commonStyles.input, styles.inputTopGap]}
+          />
+          {emailError ? (
+            <Text style={styles.inlineErrorText}>{emailError}</Text>
+          ) : null}
 
-        <TextInput
-          ref={passwordInputRef}
-          placeholder={t("auth.signup.passwordPlaceholder")}
-          placeholderTextColor="#d1d5db"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          returnKeyType="next"
-          onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
-          style={[commonStyles.input, styles.inputTopGap]}
-        />
+          <TextInput
+            ref={passwordInputRef}
+            placeholder={t("auth.signup.passwordPlaceholder")}
+            placeholderTextColor="#d1d5db"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            maxLength={PASSWORD_MAX_LENGTH}
+            returnKeyType="next"
+            onSubmitEditing={() => confirmPasswordInputRef.current?.focus()}
+            style={[commonStyles.input, styles.inputTopGap]}
+          />
 
-        <TextInput
-          ref={confirmPasswordInputRef}
-          placeholder={t("auth.signup.confirmPasswordPlaceholder")}
-          placeholderTextColor="#d1d5db"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-          returnKeyType="go"
-          onSubmitEditing={() => void handleSignUp()}
-          style={[commonStyles.input, styles.inputTopGap]}
-        />
+          <TextInput
+            ref={confirmPasswordInputRef}
+            placeholder={t("auth.signup.confirmPasswordPlaceholder")}
+            placeholderTextColor="#d1d5db"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+            maxLength={PASSWORD_MAX_LENGTH}
+            returnKeyType="go"
+            onSubmitEditing={() => void handleSignUp()}
+            style={[commonStyles.input, styles.inputTopGap]}
+          />
 
-        <View style={styles.actionsCenter}>
-          <Pressable
-            style={[commonStyles.button, styles.submitButton]}
-            onPress={handleSignUp}
-            disabled={loading}
-          >
-            <Text style={commonStyles.buttonText}>
-              {loading ? t("auth.signup.submitting") : t("auth.signup.submit")}
+          <View style={styles.actionsCenter}>
+            <Pressable
+              style={[commonStyles.button, styles.submitButton]}
+              onPress={handleSignUp}
+              disabled={loading}
+            >
+              <Text style={commonStyles.buttonText}>
+                {loading ? t("auth.signup.submitting") : t("auth.signup.submit")}
+              </Text>
+            </Pressable>
+          </View>
+
+          {error ? (
+            <Text style={styles.errorText}>
+              {error}
+            </Text>
+          ) : null}
+
+          {success ? (
+            <Text style={styles.successText}>
+              {t("auth.signup.successRedirect")}
+            </Text>
+          ) : null}
+
+          <Pressable onPress={() => router.push("/(auth)/login")} style={styles.navLinkWrap}>
+            <Text style={styles.navLinkText}>
+              {t("auth.signup.backToLogin")}
             </Text>
           </Pressable>
         </View>
-
-        {error ? (
-          <Text style={styles.errorText}>
-            {error}
-          </Text>
-        ) : null}
-
-        {success ? (
-          <Text style={styles.successText}>
-            {t("auth.signup.successRedirect")}
-          </Text>
-        ) : null}
-
-        <Pressable onPress={() => router.push("/(auth)/login")} style={styles.navLinkWrap}>
-          <Text style={styles.navLinkText}>
-            {t("auth.signup.backToLogin")}
-          </Text>
-        </Pressable>
-      </View>
       </View>
     </PageShell>
   );

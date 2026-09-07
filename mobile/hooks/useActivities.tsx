@@ -156,10 +156,11 @@ export function useActivities(params: Params = {}) {
 
   const publishPost = useCallback(
     async (content: string) => {
-      if (!content.trim()) return;
+      const normalizedContent = content.trim();
+      if (!normalizedContent) return;
 
       try {
-        await addPost(content);
+        await addPost(normalizedContent);
         refresh();
       } catch (err: unknown) {
         console.error("[useActivities] publishPost failed", err);
@@ -219,10 +220,11 @@ export function useActivities(params: Params = {}) {
 
   const publishComment = useCallback(
     async (postId: number, content: string) => {
-      if (!content.trim()) return;
+      const normalizedContent = content.trim();
+      if (!normalizedContent) return;
 
       try {
-        const result = await addComment(postId, content);
+        const result = await addComment(postId, normalizedContent);
 
         // Optimistically add comment to the post in the feed
         setActivities(prev =>

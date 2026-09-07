@@ -41,6 +41,11 @@ import { LIKE_TYPE } from "src/likes/likes.constants";
 import { EmailSendResult } from "./verification/verification-email-send-result.enum";
 import { VerifyEmailResult } from "./verification/verify-email-result.enum";
 import { getAuthI18n } from "src/common/i18n/auth.i18n";
+import {
+    EMAIL_MAX_LENGTH,
+    PASSWORD_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+} from "src/common/validation/input-limits";
 
 
 @Injectable()
@@ -94,14 +99,15 @@ export class AuthService {
     * Verification email is non-fatal: account is created regardless
     */
     async signUp(username: string, email: string, password: string, language?: string): Promise<AuthPayload> {
+        const normalizedUsername = (username ?? '').trim();
 
-        this.validateUsername(username);
+        this.validateUsername(normalizedUsername);
         this.validatePassword(password);
 
         const normalizedEmail = this.normalizeEmail(email);
 
         const [usernameExists, emailExists] = await Promise.all([
-            this.userRepo.exists({ where: { username } }),
+            this.userRepo.exists({ where: { username: normalizedUsername } }),
             this.userRepo.exists({ where: { email: normalizedEmail } })
         ]);
 
@@ -117,8 +123,8 @@ export class AuthService {
             user = await this.dataSource.transaction(async manager => {
 
                 const user = manager.create(User, {
-                    username,
-                    displayName: username,
+                    username: normalizedUsername,
+                    displayName: normalizedUsername,
                     email: normalizedEmail,
                     emailVerified: false
                 });
@@ -152,7 +158,8 @@ export class AuthService {
     //------------------------------------------------
 
     async login(identifier: string, password: string, language?: string): Promise<AuthPayload> {
-        const normalizedIdentifier = identifier.trim().toLowerCase();
+        const normalizedIdentifierValue = (identifier ?? '').trim();
+        const normalizedIdentifier = normalizedIdentifierValue.toLowerCase();
         const copy = getAuthI18n(language).login;
 
         const credential = await this.authRepo
@@ -161,7 +168,7 @@ export class AuthService {
             .where(
                 "user.username = :identifier OR LOWER(user.email) = :normalizedIdentifier",
                 {
-                    identifier,
+                    identifier: normalizedIdentifierValue,
                     normalizedIdentifier
                 }
             )
@@ -559,6 +566,10 @@ export class AuthService {
         if (!username?.trim()) {
             throw new BadRequestException("Username required");
         }
+
+        if (username.length > USERNAME_MAX_LENGTH) {
+            throw new BadRequestException(`Username must be at most ${USERNAME_MAX_LENGTH} characters`);
+        }
     }
 
     private validatePassword(password: string) {
@@ -566,6 +577,10 @@ export class AuthService {
             throw new BadRequestException(
                 `Password must be at least ${this.minPasswordLength} characters`
             );
+        }
+
+        if (password.length > PASSWORD_MAX_LENGTH) {
+            throw new BadRequestException(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`);
         }
     }
 
@@ -577,6 +592,10 @@ export class AuthService {
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!regex.test(normalized)) {
             throw new BadRequestException("Invalid email");
+        }
+
+        if (normalized.length > EMAIL_MAX_LENGTH) {
+            throw new BadRequestException(`Email must be at most ${EMAIL_MAX_LENGTH} characters`);
         }
 
         return normalized;

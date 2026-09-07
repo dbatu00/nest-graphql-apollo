@@ -1,6 +1,7 @@
 import { ArgsType, Field, Int } from '@nestjs/graphql';
-import { IsInt, IsString, Min, MinLength } from 'class-validator';
+import { IsInt, IsString, MaxLength, Min, MinLength } from 'class-validator';
 import { NotBlank, Trim } from '../../common/validation/string.decorators';
+import { COMMENT_CONTENT_MAX_LENGTH } from '../../common/validation/input-limits';
 
 @ArgsType()
 export class AddCommentArgs {
@@ -13,6 +14,7 @@ export class AddCommentArgs {
     @Trim()
     @IsString()
     @MinLength(1)
+    @MaxLength(COMMENT_CONTENT_MAX_LENGTH)
     @NotBlank('content must not be empty')
     content: string;
 }

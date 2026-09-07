@@ -69,6 +69,7 @@ import {
   getRelativeDateLabel,
   resolveAvatarUri,
 } from "@/utils/activityHelpers";
+import { COMMENT_CONTENT_MAX_LENGTH } from "@/config/inputLimits";
 import { LikedUser, useActivityRow } from "./useActivityRow";
 import {
   activityRowColor as color,
@@ -512,6 +513,7 @@ const PostCard = ({
                   placeholderTextColor="#8a8d91"
                   value={commentText}
                   onChangeText={setCommentText}
+                  maxLength={COMMENT_CONTENT_MAX_LENGTH}
                   editable={!commentLoading}
                   onFocus={() => setCommentInputFocused(true)}
                   onBlur={() => setCommentInputFocused(false)}

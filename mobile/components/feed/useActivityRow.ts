@@ -112,7 +112,7 @@ export const useActivityRow = ({
 
     const handleAddComment = async () => {
         const content = commentText.trim();
-        if (!content || !targetPostId || !onAddComment || commentLoading) return;
+        if (!content || targetPostId == null || !onAddComment || commentLoading) return;
         try {
             setCommentLoading(true);
             await onAddComment(targetPostId, content);
