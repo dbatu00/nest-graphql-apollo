@@ -7,9 +7,6 @@ This file tracks only open work. Completed items are intentionally removed.
 ## Auth State
 
 
-- Fix `useAuth.setSession`:
-  - set user state first (sync)
-  - then persist token (async)
 - Keep `me.emailVerified` consistent across hydration + routing
 
 ## Backend consistency
@@ -76,9 +73,6 @@ This file tracks only open work. Completed items are intentionally removed.
   ## P1 — Core Consistency (Ship-Blockers)
 
   ### Auth state
-  - Fix `useAuth.setSession` ordering:
-    - set user state first (sync)
-    - then persist token (async)
   - Keep `me.emailVerified` consistent across hydration + routing
 
   ### Backend consistency

@@ -327,8 +327,8 @@ means this callback never needs to be recreated because it doesn't capture any c
 
   /*
   Called after a successful login or signup.
-  1. Persists the token.
-  2. Updates global auth state.
+  1. Updates global auth state.
+  2. Persists tokens asynchronously.
   */
   const setSession = useCallback(async (args: {
     token: string;
@@ -336,11 +336,18 @@ means this callback never needs to be recreated because it doesn't capture any c
     user: RawAuthUser;
     emailVerified: boolean;
   }) => {
-    await saveToken(args.token);
-    if (args.refreshToken) {
-      await saveRefreshToken(args.refreshToken);
-    }
     setUser(toAuthUser(args.user, args.emailVerified));
+
+    void (async () => {
+      try {
+        await saveToken(args.token);
+        if (args.refreshToken) {
+          await saveRefreshToken(args.refreshToken);
+        }
+      } catch (err: unknown) {
+        console.warn("[useAuth] token persistence failed after setSession", err);
+      }
+    })();
   }, []);
 
   /*
