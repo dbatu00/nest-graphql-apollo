@@ -108,7 +108,7 @@ function TabFeed({
   isOwnProfile: boolean;
 }) {
   const type = useMemo<ActivityType[]>(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
-  const feed = useActivities({ username, types: type });
+  const feed = useActivities(type);
   return (
     <ActivityList
       feed={feed}

@@ -26,13 +26,11 @@ Delegates:
 Used by:
 - Feed
 - Username screen
-
-TODO:
-- Move current user identity into useAuth (or another dedicated identity hook)
 */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Activity, ActivityType } from "@/types/Activity";
 import { useI18n } from "@/hooks/useI18n";
+import { useAuth } from "@/hooks/useAuth";
 import { useFollow } from "@/hooks/useFollow";
 import {
   optimisticToggle,
@@ -50,16 +48,12 @@ import {
   addComment,
 } from "@/graphql/client";
 
-type Params = {
-  username?: string;
-  types?: ActivityType[];
-};
 
 
 
-export function useActivities(params: Params = {}) {
-  const { username, types } = params;
+export function useActivities(types?: ActivityType[]) {
   const { t } = useI18n();
+  const { user } = useAuth();
 
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -73,7 +67,6 @@ export function useActivities(params: Params = {}) {
 
     try {
       const feed = await fetchFeed({
-        username,
         types,
       });
 
@@ -84,11 +77,25 @@ export function useActivities(params: Params = {}) {
     } finally {
       setLoading(false);
     }
-  }, [username, types]);
+  }, [types]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const visibleActivities = useMemo(() => {
+    if (!user?.username) {
+      return undefined;
+    }
+
+    return activities.filter(a => {
+      if (a.type === "post") return true;
+      if (a.actor?.username === user.username) return false;
+      if (a.type === "like" && a.actor?.username === a.targetPost?.user?.username) return false;
+      if (a.type === "comment" && a.actor?.username === a.targetPost?.user?.username) return false;
+      return a.type !== "follow" || a.active;
+    });
+  }, [activities, user?.username]);
 
   // Wrapper for optimistic updates to activities state
   const appliedOptimisticToggle = useCallback(
@@ -308,6 +315,7 @@ export function useActivities(params: Params = {}) {
 
   return {
     activities,
+    visibleActivities,
     loading,
     error,
     refresh,

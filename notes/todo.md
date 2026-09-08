@@ -1,9 +1,7 @@
 # TODO Roadmap — Active Only
 
 ### Mobile Refactors
-- `feed.tsx`
-  - Move activity filter predicate into `useActivities` (or pass as config)
-  - Avoid screen-owned functionality rules (`foo().filter(bar)` pattern)
+
 - `username.tsx`
   - Refactor into a tab coordinator
   - Keep profile info on screen
