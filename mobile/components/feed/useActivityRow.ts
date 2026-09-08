@@ -3,13 +3,13 @@ Kind:
 Hook
 
 Role:
-Local UI state for ActivityRow(extracted for readability)
+Local UI state for ActivityRow (extracted for readability)
 
 Responsibility:
 - Own ephemeral, non-persisted UI state for a single ActivityRow: the likes
   modal (post or comment likes) and the comment input
 - Fetch liked-users lists on demand and expose loading/data to the view
-- Perform optimistic follow-toggle updates against the fetched likes list
+- Perform optimistic follow-toggle updates against the fetched likes list with error rollback
 - Submit new comments via the injected onAddComment callback
 
 Owns:
@@ -18,7 +18,7 @@ Owns:
 
 Delegates:
 - Liked-user data fetching → fetchLikedUsers / fetchCommentLikedUsers (graphql/client)
-- Follow mutation → onToggleFollow (via props, owned by caller)
+- Follow mutations → useFollow hook
 - Comment mutation → onAddComment (via props, owned by caller)
 
 Used by:
@@ -33,10 +33,6 @@ TODO:
 - No user-visible error state on fetch failure. Both handlers swallow errors
   into console.error + likedUsers = [], which is indistinguishable from "zero
   likes" in the UI. Consider returning/exposing an error field.
-- handleToggleFollowInModal has no try/catch: the optimistic followedByMe flip
-  is never rolled back on failure, and a rejected onToggleFollow becomes an
-  unhandled promise rejection at the call site. Wrap in try/catch and revert
-  optimistic state on error, consistent with handleAddComment's pattern.
 - handleOpenLikesModal and handleOpenCommentLikesModal are identical apart
   from which fetch function they call. Collapse into one helper that takes
   the fetcher as a parameter.
@@ -44,8 +40,9 @@ TODO:
   Almost certainly never hit with real DB ids, but == null would be more
   precise about intent if that ever changes.
 */
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { fetchCommentLikedUsers, fetchLikedUsers } from "@/graphql/client";
+import { useFollow } from "@/hooks/useFollow";
 
 export type LikedUser = {
     id: number;
@@ -56,13 +53,11 @@ export type LikedUser = {
 };
 
 type UseActivityRowOptions = {
-    onToggleFollow?: (username: string, shouldFollow: boolean) => void;
     onAddComment?: (postId: number, content: string) => Promise<void>;
     targetPostId?: number;
 };
 
 export const useActivityRow = ({
-    onToggleFollow,
     onAddComment,
     targetPostId,
 }: UseActivityRowOptions) => {
@@ -74,6 +69,16 @@ export const useActivityRow = ({
     /* ---------- COMMENT INPUT STATE ---------- */
     const [commentText, setCommentText] = useState("");
     const [commentLoading, setCommentLoading] = useState(false);
+
+    /* ---------- FOLLOW MUTATION ---------- */
+    const { toggleFollow } = useFollow({
+        apply: (username: string, shouldFollow: boolean) =>
+            (prev: LikedUser[]) =>
+                prev.map(u =>
+                    u.username === username ? { ...u, followedByMe: shouldFollow } : u
+                ),
+        setState: setLikedUsers,
+    });
 
     const handleOpenLikesModal = async (postId: number) => {
         try {
@@ -103,12 +108,12 @@ export const useActivityRow = ({
         }
     };
 
-    const handleToggleFollowInModal = async (username: string, shouldFollow: boolean) => {
-        setLikedUsers(prev =>
-            prev.map(u => u.username === username ? { ...u, followedByMe: shouldFollow } : u)
-        );
-        if (onToggleFollow) await onToggleFollow(username, shouldFollow);
-    };
+    const handleToggleFollowInModal = useCallback(
+        async (username: string, shouldFollow: boolean) => {
+            await toggleFollow(username, shouldFollow);
+        },
+        [toggleFollow]
+    );
 
     const handleAddComment = async () => {
         const content = commentText.trim();

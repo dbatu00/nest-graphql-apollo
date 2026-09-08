@@ -281,9 +281,12 @@ export async function fetchFeed(params: { username?: string; types?: ActivityTyp
         assertMaxLength(normalizedUsername, USERNAME_MAX_LENGTH, 'Username');
     }
 
+    const normalizedTypes = params.types?.map(type => type.toUpperCase() as Uppercase<ActivityType>);
+
     const normalizedParams = {
         ...params,
         ...(normalizedUsername ? { username: normalizedUsername } : {}),
+        ...(normalizedTypes ? { types: normalizedTypes } : {}),
     };
 
     if (!normalizedUsername && "username" in normalizedParams) {
@@ -291,7 +294,10 @@ export async function fetchFeed(params: { username?: string; types?: ActivityTyp
     }
 
     const data = await graphqlFetch<{ feed: Activity[] }>(FEED_QUERY, normalizedParams);
-    return data.feed ?? [];
+    return (data.feed ?? []).map(activity => ({
+        ...activity,
+        type: activity.type.toLowerCase() as ActivityType,
+    }));
 }
 
 export async function followUser(username: string): Promise<boolean> {

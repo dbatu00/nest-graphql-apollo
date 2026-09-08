@@ -9,15 +9,19 @@ Responsibility:
 - Fetch activity feeds
 - Own feed state and mutations
 - Bridge UI components to the backend
+- Coordinate like/comment mutations with optimistic updates
 
 Owns:
 - Activities
 - Loading state
 - Error state
+- Post/comment mutation logic
 
 Delegates:
 - Network requests → graphql/client
 - Activity model → Activity type
+- Follow mutations → useFollow hook
+- Optimistic update patterns → optimisticUpdate utils
 
 Used by:
 - Feed
@@ -25,20 +29,22 @@ Used by:
 
 TODO:
 - Move current user identity into useAuth (or another dedicated identity hook)
-- Move follow stuff to a dedicated hook
 */
 import { useEffect, useState, useCallback } from "react";
 import { Activity, ActivityType } from "@/types/Activity";
 import { useI18n } from "@/hooks/useI18n";
+import { useFollow } from "@/hooks/useFollow";
+import {
+  optimisticToggle,
+  optimisticDelete,
+} from "@/utils/optimisticUpdate";
 import {
   addPost,
   deleteComment as deleteCommentMutation,
   deletePost as deletePostMutation,
   fetchFeed,
-  followUser,
   likeComment,
   likePost,
-  unfollowUser,
   unlikeComment,
   unlikePost,
   addComment,
@@ -84,70 +90,25 @@ export function useActivities(params: Params = {}) {
     refresh();
   }, [refresh]);
 
-  /**
-   * Shared shape for all "flip a boolean, hit one of two endpoints,
-   * recover on failure" actions (post like, comment like, follow).
-   *
-   * `apply` is the optimistic state transform, computed from the *current*
-   * activities so each caller can build it as a plain closure.
-   * `isOn` decides which of onFn/offFn to call.
-   * `rollback`, if provided, restores exact prior state on failure instead
-   * of doing a full server refresh (cheaper + no flash of stale data).
-   */
-  const optimisticToggle = useCallback(
+  // Wrapper for optimistic updates to activities state
+  const appliedOptimisticToggle = useCallback(
     async (
       apply: (prev: Activity[]) => Activity[],
       isOn: boolean,
       onFn: () => Promise<unknown>,
-      offFn: () => Promise<unknown>,
-      rollback?: (prev: Activity[]) => void
+      offFn: () => Promise<unknown>
     ) => {
-      let previousState: Activity[] | null = null;
-
-      setActivities(prev => {
-        previousState = prev;
-        return apply(prev);
-      });
-
-      try {
-        await (isOn ? offFn() : onFn());
-      } catch (err: unknown) {
-        console.error("[useActivities] optimistic toggle failed", err);
-        if (rollback && previousState) {
-          rollback(previousState);
-        } else {
-          refresh();
-        }
-      }
+      await optimisticToggle(apply, isOn, onFn, offFn, setActivities, undefined);
     },
-    [refresh]
+    []
   );
 
-  /**
-   * Shared shape for delete actions: optimistically remove something from
-   * `activities`, and roll back to the exact prior state on failure rather
-   * than triggering a full refresh.
-   */
-  const optimisticDelete = useCallback(
+  const appliedOptimisticDelete = useCallback(
     async (
       apply: (prev: Activity[]) => Activity[],
       deleteFn: () => Promise<unknown>
     ) => {
-      let previousState: Activity[] | null = null;
-
-      setActivities(prev => {
-        previousState = prev;
-        return apply(prev);
-      });
-
-      try {
-        await deleteFn();
-      } catch (err: unknown) {
-        console.error("[useActivities] delete failed", err);
-        if (previousState) {
-          setActivities(previousState);
-        }
-      }
+      await optimisticDelete(apply, deleteFn, setActivities);
     },
     []
   );
@@ -172,12 +133,12 @@ export function useActivities(params: Params = {}) {
 
   const deletePost = useCallback(
     async (postId: number) => {
-      await optimisticDelete(
+      await appliedOptimisticDelete(
         prev => prev.filter(a => a.targetPost?.id !== postId),
         () => deletePostMutation(postId)
       );
     },
-    [optimisticDelete]
+    [appliedOptimisticDelete]
   );
 
   const togglePostLike = useCallback(
@@ -206,14 +167,14 @@ export function useActivities(params: Params = {}) {
             return true;
           })
 
-      await optimisticToggle(
+      await appliedOptimisticToggle(
         apply,
         currentlyLiked,
         () => likePost(postId),
         () => unlikePost(postId)
       );
     },
-    [types, optimisticToggle]
+    [types, appliedOptimisticToggle]
   );
 
   /* COMMENT STUFF */
@@ -266,7 +227,7 @@ export function useActivities(params: Params = {}) {
 
   const deleteComment = useCallback(
     async (commentId: number, postId: number) => {
-      await optimisticDelete(
+      await appliedOptimisticDelete(
         prev =>
           prev.map(a => {
             if (a.targetPost?.id !== postId) return a;
@@ -284,7 +245,7 @@ export function useActivities(params: Params = {}) {
         () => deleteCommentMutation(commentId)
       );
     },
-    [optimisticDelete]
+    [appliedOptimisticDelete]
   );
 
   const toggleCommentLike = useCallback(
@@ -312,22 +273,21 @@ export function useActivities(params: Params = {}) {
           };
         });
 
-      await optimisticToggle(
+      await appliedOptimisticToggle(
         apply,
         currentlyLiked,
         () => likeComment(commentId),
         () => unlikeComment(commentId)
       );
     },
-    [optimisticToggle]
+    [appliedOptimisticToggle]
   );
 
   /* FOLLOW */
 
-  const toggleFollow = useCallback(
-    async (targetUsername: string, shouldFollow: boolean) => {
-      // Optimistically propagate follow state through every user reference in feed rows.
-      const apply = (prev: Activity[]) =>
+  const { toggleFollow } = useFollow({
+    apply: (targetUsername: string, shouldFollow: boolean) =>
+      (prev: Activity[]) =>
         prev.map(a => {
           const updated = { ...a };
 
@@ -342,19 +302,9 @@ export function useActivities(params: Params = {}) {
           }
 
           return updated;
-        });
-
-      // shouldFollow is the *target* state here (not "currentlyOn"), so we
-      // invert it before handing it to optimisticToggle's isOn param.
-      await optimisticToggle(
-        apply,
-        !shouldFollow,
-        () => followUser(targetUsername),
-        () => unfollowUser(targetUsername)
-      );
-    },
-    [optimisticToggle]
-  );
+        }),
+    setState: setActivities,
+  });
 
   return {
     activities,

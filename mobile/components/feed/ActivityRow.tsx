@@ -648,7 +648,7 @@ export const ActivityRow = ({
     setCommentText,
     commentLoading,
     handleAddComment,
-  } = useActivityRow({ onToggleFollow, onAddComment, targetPostId: targetPost?.id });
+  } = useActivityRow({ onAddComment, targetPostId: targetPost?.id });
 
   return (
     <>

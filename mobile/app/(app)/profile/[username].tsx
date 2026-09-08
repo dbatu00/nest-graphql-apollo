@@ -57,6 +57,7 @@ import { PageShell } from "@/components/layout/PageShell";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
 import { useI18n } from "@/hooks/useI18n";
+import { ActivityType } from "@/types/Activity";
 import {
   fetchFollowers,
   fetchFollowing,
@@ -106,7 +107,7 @@ function TabFeed({
   tab: "posts" | "likes";
   isOwnProfile: boolean;
 }) {
-  const type = useMemo(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
+  const type = useMemo<ActivityType[]>(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
   const feed = useActivities({ username, types: type });
   return (
     <ActivityList
