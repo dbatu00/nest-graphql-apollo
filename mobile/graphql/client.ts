@@ -423,7 +423,7 @@ export async function fetchFollowing(username: string): Promise<FollowUser[]> {
     return data.following ?? [];
 }
 
-export async function fetchgetProfileFollowersView(username: string): Promise<FollowStateRow[]> {
+export async function fetchProfileFollowersView(username: string): Promise<FollowStateRow[]> {
     const normalizedUsername = normalizeAndValidateUsername(username);
     const data = await graphqlFetch<{ getProfileFollowersView: FollowStateRow[] }>(
         FOLLOWERS_WITH_FOLLOW_STATE_QUERY,
@@ -433,7 +433,7 @@ export async function fetchgetProfileFollowersView(username: string): Promise<Fo
     return data.getProfileFollowersView ?? [];
 }
 
-export async function fetchgetProfileFollowingView(username: string): Promise<FollowStateRow[]> {
+export async function fetchProfileFollowingView(username: string): Promise<FollowStateRow[]> {
     const normalizedUsername = normalizeAndValidateUsername(username);
     const data = await graphqlFetch<{ getProfileFollowingView: FollowStateRow[] }>(
         FOLLOWING_WITH_FOLLOW_STATE_QUERY,

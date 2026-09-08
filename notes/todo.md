@@ -10,7 +10,7 @@
   - Own only active tab state
   - Posts/Likes → `ActivityList` + `useActivities(types)`
   - Followers/Following → `UserList` + `useFollow`
-- Fix/change `fetchgetProfileFollowersView` naming in `client.ts`
+
 
 
 
