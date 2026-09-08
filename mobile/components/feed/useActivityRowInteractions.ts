@@ -52,15 +52,15 @@ export type LikedUser = {
     followedByMe?: boolean;
 };
 
-type UseActivityRowOptions = {
+type useActivityRowInteractionsOptions = {
     onAddComment?: (postId: number, content: string) => Promise<void>;
     targetPostId?: number;
 };
 
-export const useActivityRow = ({
+export const useActivityRowInteractions = ({
     onAddComment,
     targetPostId,
-}: UseActivityRowOptions) => {
+}: useActivityRowInteractionsOptions) => {
     /* ---------- LIKES MODAL STATE ---------- */
     const [likedUsers, setLikedUsers] = useState<LikedUser[]>([]);
     const [likedModalVisible, setLikedModalVisible] = useState(false);

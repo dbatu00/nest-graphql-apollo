@@ -22,7 +22,7 @@ Delegates:
 
 Used by:
 - useActivities (for feed state)
-- useActivityRow (for likedUsers modal state)
+- useActivityRowInteractions (for likedUsers modal state)
 - useProfile (for profile user state, future)
 
 Pattern:

@@ -21,7 +21,7 @@ Owns:
 
 Delegates:
 - Feed mutations → useActivities (via props)
-- Activity-specific UI state → useActivityRow
+- Activity-specific UI state → useActivityRowInteractions
 - Banner rendering → ActivityBanner
 - Post rendering → PostCard
 - Likes modal → LikedUsersModal
@@ -70,7 +70,7 @@ import {
   resolveAvatarUri,
 } from "@/utils/activityHelpers";
 import { COMMENT_CONTENT_MAX_LENGTH } from "@/config/inputLimits";
-import { LikedUser, useActivityRow } from "./useActivityRow";
+import { LikedUser, useActivityRowInteractions } from "./useActivityRowInteractions";
 import {
   activityRowColor as color,
   activityRowStyles as styles,
@@ -648,7 +648,7 @@ export const ActivityRow = ({
     setCommentText,
     commentLoading,
     handleAddComment,
-  } = useActivityRow({ onAddComment, targetPostId: targetPost?.id });
+  } = useActivityRowInteractions({ onAddComment, targetPostId: targetPost?.id });
 
   return (
     <>
