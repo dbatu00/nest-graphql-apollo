@@ -258,6 +258,7 @@ const CommentRow = ({
   if (!user) return null;
 
   const avatarUri = resolveAvatarUri(comment.user.displayName, comment.user.avatarUrl);
+  const isPendingComment = !!comment.pending;
   const canDelete = (user.id === comment.user.id)
   const likedByMe = comment.likedByMe;
   const likesCount = comment.likesCount;
@@ -281,7 +282,7 @@ const CommentRow = ({
         </ProfileLink>
 
         <View style={styles.flexOne}>
-          <Pressable style={styles.commentBubbleHoverArea}>
+          <Pressable style={[styles.commentBubbleHoverArea, isPendingComment && styles.pendingDim]} disabled={isPendingComment}>
             {({ hovered }) => (
               <View style={styles.commentBubbleRow}>
                 <View style={styles.commentBubble}>
@@ -291,7 +292,7 @@ const CommentRow = ({
                   <Text style={styles.commentContent}>{comment.content}</Text>
                 </View>
 
-                {canDelete && (hovered || optionsOpen) && (
+                {!isPendingComment && canDelete && (hovered || optionsOpen) && (
                   <View style={styles.commentOptionsWrap}>
                     <TouchableOpacity
                       style={styles.commentOptionsBtn}
@@ -325,7 +326,7 @@ const CommentRow = ({
               <DateToggleText date={comment.createdAt} />
             </View>
 
-            {onToggleCommentLike && (
+            {onToggleCommentLike && !isPendingComment && (
               <TouchableOpacity
                 style={styles.commentLikeBtn}
                 onPress={() => onToggleCommentLike(comment.id, postId, likedByMe)}
@@ -338,7 +339,7 @@ const CommentRow = ({
               </TouchableOpacity>
             )}
 
-            {likesCount > 0 && (
+            {likesCount > 0 && !isPendingComment && (
               <Pressable
                 onPress={() => onOpenCommentLikes(comment.id)}
                 style={({ hovered }) => [
@@ -372,6 +373,7 @@ const CommentRow = ({
 
 type PostCardProps = {
   post: NonNullable<Activity["targetPost"]>;
+  isPending: boolean;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
@@ -389,6 +391,7 @@ type PostCardProps = {
 
 const PostCard = ({
   post,
+  isPending,
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
@@ -417,7 +420,7 @@ const PostCard = ({
   const hasComments = post.comments.length > 0;
 
   const headerActions = () => {
-    if (!isOwner && onToggleFollow) {
+    if (!isPending && !isOwner && onToggleFollow) {
       return (
         <TouchableOpacity
           onPress={() => onToggleFollow(post.user.username, !post.user.followedByMe)}
@@ -429,7 +432,7 @@ const PostCard = ({
         </TouchableOpacity>
       );
     }
-    if (isOwner && onDeletePost) {
+    if (!isPending && isOwner && onDeletePost) {
       return (
         <TouchableOpacity onPress={() => setDeleteConfirmVisible(true)} style={styles.deleteBtn}>
           <Text style={styles.deleteBtnText}>✕</Text>
@@ -440,7 +443,7 @@ const PostCard = ({
   };
 
   return (
-    <View style={styles.postCard}>
+    <View style={[styles.postCard, isPending && styles.pendingDim]} pointerEvents={isPending ? "none" : "auto"}>
       <View style={styles.postHeader}>
         <ProfileLink username={post.user.username}>
           <Image source={{ uri: authorAvatarUri }} style={styles.avatarMd} />
@@ -457,7 +460,7 @@ const PostCard = ({
       <Text style={styles.postContent}>{post.content}</Text>
 
       <View style={styles.engagementRow}>
-        {onTogglePostLike ? (
+        {onTogglePostLike && !isPending ? (
           <TouchableOpacity style={styles.likeBtn} onPress={() => onTogglePostLike(post.id, likedByMe)}>
             <MaterialCommunityIcons
               name={likedByMe ? "thumb-up" : "thumb-up-outline"}
@@ -469,7 +472,7 @@ const PostCard = ({
           <View style={styles.likeBtnPlaceholder} />
         )}
 
-        {likesCount > 0 && (
+        {likesCount > 0 && !isPending && (
           <Pressable
             onPress={() => onOpenPostLikes(post.id)}
             style={({ hovered }) => [
@@ -625,6 +628,7 @@ export const ActivityRow = ({
 }: Props) => {
   const { targetPost } = activity;
   const targetPostId = targetPost?.id;
+  const isPendingPost = !!targetPost?.pending;
 
   const [likedModalVisible, setLikedModalVisible] = React.useState(false);
   const [likedByTarget, setLikedByTarget] = React.useState<{
@@ -651,7 +655,7 @@ export const ActivityRow = ({
 
   const handleAddComment = React.useCallback(async () => {
     const content = commentText.trim();
-    if (!content || targetPostId == null || !onAddComment || commentLoading) return;
+    if (!content || targetPostId == null || isPendingPost || !onAddComment || commentLoading) return;
 
     try {
       setCommentLoading(true);
@@ -662,7 +666,7 @@ export const ActivityRow = ({
     } finally {
       setCommentLoading(false);
     }
-  }, [commentLoading, commentText, onAddComment, targetPostId]);
+  }, [commentLoading, commentText, isPendingPost, onAddComment, targetPostId]);
 
   const likedByUsers = useFollow({
     type: "likedBy",
@@ -680,6 +684,7 @@ export const ActivityRow = ({
           <View style={styles.postContainer}>
             <PostCard
               post={targetPost}
+              isPending={isPendingPost}
               onToggleFollow={onToggleFollow}
               onDeletePost={onDeletePost}
               onDeleteComment={onDeleteComment}

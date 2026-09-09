@@ -8,6 +8,7 @@ Encapsulate common patterns for optimistic updates with rollback support
 Responsibility:
 - Provide generic optimisticToggle for binary state changes (on/off, like/unlike, follow/unfollow)
 - Provide generic optimisticDelete for removal operations
+- Provide generic optimisticCreate for create/write operations with reconcile
 - Decouple optimistic UI patterns from specific state shapes (feed, modal, etc)
 
 Used by:
@@ -90,5 +91,42 @@ export const optimisticDelete = async <T>(
         if (previousState) {
             setState(previousState);
         }
+    }
+};
+
+/**
+ * Generic optimistic update for create/write operations.
+ *
+ * Applies a local optimistic insert/update first, then runs the request.
+ * On success, caller may reconcile with server response; on failure, state is rolled back.
+ */
+export const optimisticCreate = async <T, TResult>(
+    applyOptimistic: (prev: T) => T,
+    request: () => Promise<TResult>,
+    setState: (newState: T | ((prev: T) => T)) => void,
+    reconcile?: (prev: T, result: TResult) => T,
+    rollback?: (prev: T) => void
+) => {
+    let previousState: T | null = null;
+
+    setState(prev => {
+        previousState = prev;
+        return applyOptimistic(prev);
+    });
+
+    try {
+        const result = await request();
+        if (reconcile) {
+            setState(prev => reconcile(prev, result));
+        }
+        return result;
+    } catch (err: unknown) {
+        console.error("[optimisticCreate] mutation failed", err);
+        if (rollback && previousState) {
+            rollback(previousState);
+        } else if (previousState) {
+            setState(previousState);
+        }
+        throw err;
     }
 };

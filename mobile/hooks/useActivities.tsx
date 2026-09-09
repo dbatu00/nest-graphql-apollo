@@ -27,11 +27,12 @@ Used by:
 - Feed
 - Username screen
 */
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { Activity, ActivityType } from "@/types/Activity";
 import { useI18n } from "@/hooks/useI18n";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  optimisticCreate,
   optimisticToggle,
   optimisticDelete,
 } from "@/utils/optimisticUpdate";
@@ -69,10 +70,22 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const refreshRequestIdRef = useRef(0);
+  const mutationVersionRef = useRef(0);
+
+  const markMutation = useCallback(() => {
+    mutationVersionRef.current += 1;
+  }, []);
 
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (refreshOptions?: { silent?: boolean }) => {
+    const isSilent = !!refreshOptions?.silent;
+    const requestId = ++refreshRequestIdRef.current;
+    const mutationVersionAtStart = mutationVersionRef.current;
+
+    if (!isSilent) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -80,14 +93,24 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
         types,
       });
 
+      if (requestId !== refreshRequestIdRef.current) {
+        return;
+      }
+
+      if (mutationVersionRef.current !== mutationVersionAtStart) {
+        return;
+      }
+
       setActivities(feed);
     } catch (err: unknown) {
       console.error("[useActivities] feed refresh failed", err);
       setError(t("feed.error.loadFailed"));
     } finally {
-      setLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+      }
     }
-  }, [types]);
+  }, [t, types]);
 
   useEffect(() => {
     refresh();
@@ -170,15 +193,82 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
       const normalizedContent = content.trim();
       if (!normalizedContent) return;
 
+      if (!user) {
+        try {
+          await addPost(normalizedContent);
+          refresh();
+        } catch (err: unknown) {
+          console.error("[useActivities] publishPost failed", err);
+          refresh();
+        }
+        return;
+      }
+
+      const tempActivityId = -Date.now();
+      const tempPostId = tempActivityId;
+      const createdAt = new Date().toISOString();
+
+      const optimisticActivity: Activity = {
+        id: tempActivityId,
+        type: "post",
+        createdAt,
+        active: true,
+        actor: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName ?? user.username,
+          avatarUrl: user.avatarUrl ?? "",
+        },
+        targetUser: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName ?? user.username,
+          avatarUrl: user.avatarUrl ?? "",
+        },
+        targetPost: {
+          id: tempPostId,
+          content: normalizedContent,
+          createdAt,
+          pending: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName ?? user.username,
+            avatarUrl: user.avatarUrl ?? "",
+            followedByMe: false,
+          },
+          likedByMe: false,
+          likesCount: 0,
+          comments: [],
+        },
+      };
+
       try {
-        await addPost(normalizedContent);
-        refresh();
+        markMutation();
+        await optimisticCreate(
+          prev => [optimisticActivity, ...prev],
+          () => addPost(normalizedContent),
+          setActivities,
+          (prev, persistedPostId) =>
+            prev.map(activity =>
+              activity.id === tempActivityId && activity.targetPost
+                ? {
+                  ...activity,
+                  targetPost: {
+                    ...activity.targetPost,
+                    id: persistedPostId,
+                    pending: false,
+                  },
+                }
+                : activity
+            )
+        );
+        refresh({ silent: true });
       } catch (err: unknown) {
         console.error("[useActivities] publishPost failed", err);
-        refresh();
       }
     },
-    [refresh]
+    [refresh, user, markMutation]
   );
 
   const deletePost = useCallback(
@@ -217,6 +307,7 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
             return true;
           })
 
+      markMutation();
       await appliedOptimisticToggle(
         apply,
         currentlyLiked,
@@ -224,7 +315,7 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
         () => unlikePost(postId)
       );
     },
-    [types, appliedOptimisticToggle]
+    [types, appliedOptimisticToggle, markMutation]
   );
 
   /* COMMENT STUFF */
@@ -234,45 +325,83 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
       const normalizedContent = content.trim();
       if (!normalizedContent) return;
 
+      if (!user) {
+        refresh();
+        return;
+      }
+
+      const tempCommentId = -Date.now();
+      const createdAt = new Date().toISOString();
+
       try {
-        const result = await addComment(postId, normalizedContent);
+        markMutation();
+        await optimisticCreate(
+          prev =>
+            prev.map(activity => {
+              if (activity.targetPost?.id !== postId) return activity;
 
-        // Optimistically add comment to the post in the feed
-        setActivities(prev =>
-          prev.map(a => {
-            if (a.targetPost?.id !== postId) return a;
-
-            return {
-              ...a,
-              targetPost: {
-                ...a.targetPost,
-                comments: [
-                  ...(a.targetPost.comments ?? []),
-                  {
-                    id: result.id,
-                    content: result.content,
-                    createdAt: result.createdAt,
-                    updatedAt: result.createdAt,
-                    likesCount: 0,
-                    likedByMe: false,
-                    user: {
-                      id: result.user.id,
-                      username: result.user.username,
-                      displayName: result.user.displayName ?? "",
-                      avatarUrl: result.user.avatarUrl ?? "",
+              return {
+                ...activity,
+                targetPost: {
+                  ...activity.targetPost,
+                  comments: [
+                    ...(activity.targetPost.comments ?? []),
+                    {
+                      id: tempCommentId,
+                      content: normalizedContent,
+                      createdAt,
+                      updatedAt: createdAt,
+                      pending: true,
+                      likesCount: 0,
+                      likedByMe: false,
+                      user: {
+                        id: user.id,
+                        username: user.username,
+                        displayName: user.displayName ?? user.username,
+                        avatarUrl: user.avatarUrl ?? "",
+                      },
                     },
-                  },
-                ],
-              },
-            };
-          })
+                  ],
+                },
+              };
+            }),
+          () => addComment(postId, normalizedContent),
+          setActivities,
+          (prev, result) =>
+            prev.map(activity => {
+              if (activity.targetPost?.id !== postId) return activity;
+
+              return {
+                ...activity,
+                targetPost: {
+                  ...activity.targetPost,
+                  comments: (activity.targetPost.comments ?? []).map(comment =>
+                    comment.id !== tempCommentId
+                      ? comment
+                      : {
+                        ...comment,
+                        id: result.id,
+                        content: result.content,
+                        createdAt: result.createdAt,
+                        updatedAt: result.createdAt,
+                        pending: false,
+                        user: {
+                          id: result.user.id,
+                          username: result.user.username,
+                          displayName: result.user.displayName ?? "",
+                          avatarUrl: result.user.avatarUrl ?? "",
+                        },
+                      }
+                  ),
+                },
+              };
+            })
         );
       } catch (err: unknown) {
         console.error("[useActivities] add comment failed", err);
-        refresh();
       }
     },
-    [refresh]
+    [refresh, user, markMutation]
   );
 
   const deleteComment = useCallback(
@@ -323,6 +452,7 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
           };
         });
 
+      markMutation();
       await appliedOptimisticToggle(
         apply,
         currentlyLiked,
@@ -330,7 +460,7 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
         () => unlikeComment(commentId)
       );
     },
-    [appliedOptimisticToggle]
+    [appliedOptimisticToggle, markMutation]
   );
 
   /* FOLLOW */
@@ -355,6 +485,7 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
           };
         });
 
+      markMutation();
       await appliedOptimisticToggle(
         apply,
         !shouldFollow,
@@ -362,7 +493,7 @@ export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
         () => unfollowUser(targetUsername)
       );
     },
-    [appliedOptimisticToggle]
+    [appliedOptimisticToggle, markMutation]
   );
 
   return {

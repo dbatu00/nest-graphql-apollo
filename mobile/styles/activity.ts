@@ -62,6 +62,7 @@ export const activityRowStyles = StyleSheet.create({
     commentLikeCountBtn: { marginLeft: 3, borderWidth: 1, borderColor: activityRowColor.divider, borderRadius: activity.sm, paddingHorizontal: activity.xs, paddingVertical: 1, minHeight: 16, ...center },
     commentLikeCountBtnHover: { backgroundColor: activityRowColor.bgComment },
     commentLikeCountText: { fontSize: 11, lineHeight: 11, textAlign: "center", color: activityRowColor.textSecondary },
+    pendingDim: { opacity: 0.55 },
     commentInputRow: { ...rowCenter, gap: activity.sm, marginTop: activity.xs },
     commentInputWrapper: activityInputBase,
     commentInputWrapperFocused: activityInputBase,

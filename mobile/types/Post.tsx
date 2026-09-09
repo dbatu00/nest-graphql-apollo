@@ -4,6 +4,7 @@ export type Post = {
   id: number;
   content: string;
   createdAt: string;
+  pending?: boolean;
   user: {
     id: number;
     username: string;
