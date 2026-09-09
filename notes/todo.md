@@ -1,10 +1,5 @@
 # TODO Roadmap — Active Only
 
-## P2 — Mobile UX / Behavior
-
-- On login/signup, show all errors/missing fields at once and highlight them
-
-
 ## P3 — Testing & Tooling
 
 ### Testing / CI
