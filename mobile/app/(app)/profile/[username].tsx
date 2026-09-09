@@ -3,40 +3,28 @@ Kind:
 Component
 
 Role:
-User profile
+Profile screen coordinator
 
 Responsibility:
-- Display user profile
-- Display and own switchable tabs(post/like/following/followers)
-- Display feed-lings for post/like
-- Display user lists for following/followers
-- Delegate feed logic and rendering
-- Delegate user list logic and rendering
+- Keep profile metadata visible
+- Own active tab state (posts / likes / followers / following)
+- Route posts/likes tabs to ActivityList + useActivities(types)
+- Route followers/following tabs to UserList + useFollow
 
 Owns:
-- Profile meta
-- Current tab info
-- Followers/following info
+- Profile metadata
+- Active tab state
 
 Delegates:
 - Auth state → useAuth
 - Layout → PageShell
-- Feed state → useActivities
+- Feed state + mutations → useActivities
+- Follow-list state + mutations → useFollow
 - Activity rendering → ActivityList
-- User(not user list) rendering → UserRow
+- User-list rendering → UserList
 
 Used by:
 - Expo Router
-
-TODO:
-change the shape to 
-->
-profile info stays. there isnt anything to handle anyway
-keep a tab state
-if tab is posts: call activitylist with types as post
-if tab is likes: call activitylist with types as likes
-if tab is followers: call a useFollow , call a userList(list=usefollow.followers)
-if tab is followers: call a useFollow , call a userList(list=usefollow.following)
 */
 
 import React, { useState, useMemo, useEffect } from "react";
@@ -44,26 +32,22 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
-import { UserRow } from "@/components/user/UserRow";
+import { UserList } from "@/components/user/UserList";
 import { ActivityList } from "@/components/feed/ActivityList";
 import { Header } from "@/components/layout/Header";
 import { AppHeaderActions } from "@/components/layout/AppHeaderActions";
 import { PageShell } from "@/components/layout/PageShell";
 import { useActivities } from "@/hooks/useActivities";
 import { useAuth } from "@/hooks/useAuth";
+import { useFollow } from "@/hooks/useFollow";
 import { useI18n } from "@/hooks/useI18n";
 import { ActivityType } from "@/types/Activity";
 import {
-  fetchFollowers,
-  fetchFollowing,
   fetchUserProfileMeta,
-  followUser,
-  unfollowUser,
 } from "@/graphql/client";
 import {
   profileBioColorStyle,
@@ -75,14 +59,6 @@ type Tab =
   | "likes"
   | "followers"
   | "following";
-
-type FollowUser = {
-  id: number;
-  username: string;
-  displayName?: string;
-  avatarUrl?: string;
-  followedByMe?: boolean;
-};
 
 type ProfileMeta = {
   displayName?: string;
@@ -109,14 +85,26 @@ function TabFeed({
 }) {
   const type = useMemo<ActivityType[]>(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
   const feed = useActivities(type);
+
+  const filter = useMemo(() => {
+    if (!username) {
+      return undefined;
+    }
+
+    if (tab === "posts") {
+      return (activity: ReturnType<typeof useActivities>["activities"][number]) =>
+        activity.targetPost?.user?.username === username;
+    }
+
+    return (activity: ReturnType<typeof useActivities>["activities"][number]) =>
+      activity.actor?.username === username
+      && (isOwnProfile || activity.targetPost?.user?.id !== activity.actor?.id);
+  }, [isOwnProfile, tab, username]);
+
   return (
     <ActivityList
       feed={feed}
-      filter={
-        tab === "likes"
-          ? (activity) => isOwnProfile || activity.targetPost?.user?.id !== activity.actor?.id
-          : undefined
-      }
+      filter={filter}
     />
   );
 }
@@ -166,53 +154,19 @@ export default function UsernameScreen() {
   const [tab, setTab] = useState<Tab>("posts"); //default is posts tab
 
 
-  /* ---------------- FOLLOW STUFF ---------------- */
+  const followers = useFollow({
+    type: "followers",
+    username,
+    enabled: tab === "followers",
+  });
 
-  const [followUsers, setFollowUsers] = useState<FollowUser[]>([]);
-  const [followLoading, setFollowLoading] = useState(false);
+  const following = useFollow({
+    type: "following",
+    username,
+    enabled: tab === "following",
+  });
 
-  useEffect(() => {
-    if (tab !== "followers" && tab !== "following") return;
-
-    const load = async () => {
-      setFollowLoading(true);
-      try {
-        const rows = tab === "followers"
-          ? await fetchFollowers(username)
-          : await fetchFollowing(username);
-        setFollowUsers(rows);
-      } catch {
-        setFollowUsers([]);
-      } finally {
-        setFollowLoading(false);
-      }
-    };
-
-    load();
-  }, [tab, username]);
-
-  const handleToggleFollowInList = async (
-    targetUsername: string,
-    shouldFollow: boolean
-  ) => {
-    setFollowUsers(prev =>
-      prev.map(u =>
-        u.username === targetUsername
-          ? { ...u, followedByMe: shouldFollow }
-          : u
-      )
-    );
-
-    try {
-      if (shouldFollow) {
-        await followUser(targetUsername);
-      } else {
-        await unfollowUser(targetUsername);
-      }
-    } catch (err: unknown) {
-      console.error("[UsernameScreen] follow toggle failed", err);
-    }
-  };
+  const activeUserList = tab === "followers" ? followers : following;
 
 
   /* ---------------- RENDER ---------------- */
@@ -289,32 +243,11 @@ export default function UsernameScreen() {
       {/* Followers / Following */}
       {(tab === "followers" || tab === "following") && (
         <View style={styles.followListContainer}>
-          {followLoading && (
-            <View style={styles.followLoadingContainer}>
-              <ActivityIndicator size="large" color="#2563eb" />
-            </View>
-          )}
-
-          {!followLoading && (
-            <View style={styles.followListInner}>
-              {followUsers.length === 0 ? (
-                <Text style={styles.emptyText}>
-                  {t("feed.empty")}
-                </Text>
-              ) : (
-                followUsers.map(followUser => (
-                  <View key={followUser.id} style={styles.followUserCard}>
-                    <UserRow
-                      user={followUser}
-                      currentUserId={user?.id}
-                      onToggleFollow={handleToggleFollowInList}
-                      isCompact={false}
-                    />
-                  </View>
-                ))
-              )}
-            </View>
-          )}
+          <UserList
+            follow={activeUserList}
+            currentUserId={user?.id}
+            isCompact={false}
+          />
         </View>
       )}
 

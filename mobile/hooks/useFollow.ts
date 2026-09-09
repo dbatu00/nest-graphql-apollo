@@ -1,93 +1,156 @@
-/*
-Kind:
-Hook
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    fetchCommentLikedUsers,
+    fetchFollowers,
+    fetchFollowing,
+    fetchLikedUsers,
+    FollowUser,
+    followUser,
+    unfollowUser,
+} from "@/graphql/client";
 
-Role:
-Encapsulate follow/unfollow mutations with optimistic updates
-
-Responsibility:
-- Accept caller's state shape via apply function
-- Toggle followedByMe on any state, on any user reference
-- Handle errors with rollback (never leave UI in inconsistent state)
-- Dispatch mutations to backend
-
-Owns:
-- Follow mutations (followUser, unfollowUser)
-- Optimistic apply logic
-- Error handling
-
-Delegates:
-- State management to caller (feed, modal, profile, etc)
-- Network → graphql/client
-
-Used by:
-- useActivities (for feed state)
-- useActivityRowInteractions (for likedUsers modal state)
-- useProfile (for profile user state, future)
-
-Pattern:
-Accepts any state container via apply closure. Caller computes the transform
-from their *current* state. Returns just toggleFollow function (no state exposed,
-caller owns state).
-*/
-
-import { useCallback } from "react";
-import { followUser, unfollowUser } from "@/graphql/client";
-import { optimisticToggle } from "@/utils/optimisticUpdate";
-
-export type UseFollowArgs<T> = {
-    /**
-     * Factory that computes optimistic state transform given username + target state.
-     * Returns a function that transforms the current state for the given username.
-     */
-    apply: (username: string, shouldFollow: boolean) => (prev: T) => T;
-    /**
-     * State setter (setState dispatch). Can be from useState or any state management.
-     */
-    setState: (newState: T | ((prev: T) => T)) => void;
-    /**
-     * Optional: restore exact prior state on mutation failure.
-     * If not provided, optimisticToggle falls back to setState(previousState).
-     */
-    rollback?: (prev: T) => void;
+type ProfileFollowArgs = {
+    type: "followers" | "following";
+    username?: string;
+    enabled?: boolean;
 };
 
-/**
- * Follow/unfollow a user with optimistic UI updates.
- *
- * Caller provides an apply factory that knows how to update their state shape
- * for a given username. useFollow handles the mutation + optimistic toggle logic.
- *
- * Usage:
- *   const { toggleFollow } = useFollow({
- *     apply: (username, shouldFollow) => (prev) => ({
- *       ...prev,
- *       users: prev.users.map(u => 
- *         u.username === username ? { ...u, followedByMe: shouldFollow } : u
- *       )
- *     }),
- *     setState: setUsers,
- *   });
- *
- *   await toggleFollow("alice", true);   // follow alice
- *   await toggleFollow("bob", false);    // unfollow bob
- */
-export function useFollow<T>(args: UseFollowArgs<T>) {
-    const { apply, setState, rollback } = args;
+type LikedByArgs = {
+    type: "likedBy";
+    postId?: number;
+    commentId?: number;
+    enabled?: boolean;
+};
+
+export type UseFollowArgs = ProfileFollowArgs | LikedByArgs;
+
+export function useFollow(args: UseFollowArgs) {
+    const { enabled = true, type } = args;
+    const username = type === "followers" || type === "following" ? args.username : undefined;
+    const postId = type === "likedBy" ? args.postId : undefined;
+    const commentId = type === "likedBy" ? args.commentId : undefined;
+
+    const [users, setUsers] = useState<FollowUser[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const requestIdRef = useRef(0);
+
+    const sourceKey = `${type}:${username ?? ""}:${postId ?? ""}:${commentId ?? ""}`;
+
+    useEffect(() => {
+        requestIdRef.current += 1;
+
+        if (!enabled) {
+            setUsers([]);
+            setError(null);
+            setLoading(false);
+            return;
+        }
+
+        setUsers([]);
+        setError(null);
+    }, [enabled, sourceKey]);
+
+    const refresh = useCallback(async () => {
+        if (!enabled) return;
+        const requestId = ++requestIdRef.current;
+
+        if (type === "followers" || type === "following") {
+            if (!username) {
+                if (requestId === requestIdRef.current) {
+                    setUsers([]);
+                    setError(null);
+                    setLoading(false);
+                }
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
+
+            try {
+                const nextUsers = type === "followers"
+                    ? await fetchFollowers(username)
+                    : await fetchFollowing(username);
+                if (requestId !== requestIdRef.current) return;
+                setUsers(nextUsers);
+            } catch (err: unknown) {
+                if (requestId !== requestIdRef.current) return;
+                console.error("[useFollow] failed to refresh users", err);
+                setUsers([]);
+                setError(err instanceof Error ? err.message : "Failed to load users");
+            } finally {
+                if (requestId !== requestIdRef.current) return;
+                setLoading(false);
+            }
+
+            return;
+        }
+
+        if (postId == null && commentId == null) {
+            if (requestId === requestIdRef.current) {
+                setUsers([]);
+                setError(null);
+                setLoading(false);
+            }
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            let nextUsers: FollowUser[] = [];
+
+            if (commentId != null) {
+                nextUsers = await fetchCommentLikedUsers(commentId);
+            } else if (postId != null) {
+                nextUsers = await fetchLikedUsers(postId);
+            }
+
+            if (requestId !== requestIdRef.current) return;
+            setUsers(nextUsers);
+        } catch (err: unknown) {
+            if (requestId !== requestIdRef.current) return;
+            console.error("[useFollow] failed to refresh users", err);
+            setUsers([]);
+            setError(err instanceof Error ? err.message : "Failed to load users");
+        } finally {
+            if (requestId !== requestIdRef.current) return;
+            setLoading(false);
+        }
+    }, [commentId, enabled, postId, type, username]);
+
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
 
     const toggleFollow = useCallback(
         async (username: string, shouldFollow: boolean) => {
-            await optimisticToggle(
-                apply(username, shouldFollow),
-                !shouldFollow,  // isOn = currentState (invert because shouldFollow is target state)
-                () => followUser(username),
-                () => unfollowUser(username),
-                setState,
-                rollback
-            );
+            let previousUsers: FollowUser[] = [];
+
+            setUsers(prev => {
+                previousUsers = prev;
+                return prev.map(user =>
+                    user.username === username
+                        ? { ...user, followedByMe: shouldFollow }
+                        : user
+                );
+            });
+
+            try {
+                if (shouldFollow) {
+                    await followUser(username);
+                } else {
+                    await unfollowUser(username);
+                }
+            } catch (err: unknown) {
+                console.error("[useFollow] failed to toggle follow", err);
+                setUsers(previousUsers);
+            }
         },
-        [apply, setState, rollback]
+        []
     );
 
-    return { toggleFollow };
+    return { users, loading, error, toggleFollow, refresh };
 }

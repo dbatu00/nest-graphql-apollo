@@ -55,13 +55,15 @@ export function UserRow({
           />
         </ProfileLink>
 
-        <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
-          <Text
-            style={[styles.nameText, userRowNameSizeStyle(isCompact)]}
-          >
-            {label}
-          </Text>
-        </ProfileLink>
+        <View style={styles.nameWrap}>
+          <ProfileLink username={user.username} onNavigate={onProfileNavigate}>
+            <Text
+              style={[styles.nameText, userRowNameSizeStyle(isCompact)]}
+            >
+              {label}
+            </Text>
+          </ProfileLink>
+        </View>
       </View>
 
       {/* Action button */}

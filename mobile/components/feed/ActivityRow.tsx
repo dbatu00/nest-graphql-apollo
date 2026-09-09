@@ -14,14 +14,15 @@ Responsibility:
 Owns:
 - Activity-specific presentation
 - Composition of ActivityBanner, PostCard and LikedUsersModal
-- Local, ephemeral UI state scoped to subcomponents defined in this file:
+- Local, ephemeral UI state in this file:
+  - ActivityRow → liked-users modal target/visibility + comment draft/submission
   - CommentRow → comment options menu visibility
   - PostCard → comment input focus
   - DateToggleText → relative/absolute date toggle
 
 Delegates:
 - Feed mutations → useActivities (via props)
-- Activity-specific UI state → useActivityRowInteractions
+- Activity-specific UI state → local state in ActivityRow
 - Banner rendering → ActivityBanner
 - Post rendering → PostCard
 - Likes modal → LikedUsersModal
@@ -32,17 +33,16 @@ Used by:
 
 TODO:
 - Consider extracting remaining self-contained UI concepts only if they reduce
-  mental load rather than merely moving JSX into new files *
-  currently favoring this because i would like to open activityrow.tsx and see logic only
-- - Remove unjustified defensive chaining on fields the schema guarantees
+  mental load rather than merely moving JSX into new files.
+- Remove unjustified defensive chaining on fields the schema guarantees
   non-null/non-empty: actor.username, targetUser.username (once targetUser
   itself is confirmed present), targetPost.user.username (pending
   confirmation of Post's type) — these are enforced at the DB column level
   (unique, non-nullable), not just the TS type level. Keep only the
   genuinely optional checks: targetUser existing at all, targetPost
   existing at all.
-
--commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+- commentInputWrapperFocused sets the same background as the unfocused wrapper.
+  Focus state currently has little visible difference and may need a stronger cue.
 */
 
 import React from "react";
@@ -60,8 +60,9 @@ import {
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { ProfileLink } from "@/components/common/ProfileLink";
-import { UserRow } from "@/components/user/UserRow";
+import { UserList } from "@/components/user/UserList";
 import { useAuth } from "@/hooks/useAuth";
+import { useFollow } from "@/hooks/useFollow";
 import { useI18n } from "@/hooks/useI18n";
 import { Activity } from "@/types/Activity";
 import { Comment } from "@/types/Comment";
@@ -70,7 +71,6 @@ import {
   resolveAvatarUri,
 } from "@/utils/activityHelpers";
 import { COMMENT_CONTENT_MAX_LENGTH } from "@/config/inputLimits";
-import { LikedUser, useActivityRowInteractions } from "./useActivityRowInteractions";
 import {
   activityRowColor as color,
   activityRowStyles as styles,
@@ -559,18 +559,14 @@ const PostCard = ({
 
 type LikedUsersModalProps = {
   visible: boolean;
-  likedUsers: LikedUser[];
-  loading: boolean;
+  follow: ReturnType<typeof useFollow>;
   onClose: () => void;
-  onToggleFollow: (username: string, shouldFollow: boolean) => void | Promise<void>;
 };
 
 const LikedUsersModal = ({
   visible,
-  likedUsers,
-  loading,
+  follow,
   onClose,
-  onToggleFollow,
 }: LikedUsersModalProps) => {
   const { t } = useI18n();
   const { user } = useAuth();
@@ -586,21 +582,14 @@ const LikedUsersModal = ({
             <Text style={styles.modalCloseBtnText}>{t("activity.modal.close")}</Text>
           </TouchableOpacity>
         </View>
-        {!loading && (
-          <ScrollView style={styles.modalScroll}>
-            {likedUsers.map((user) => (
-              <View key={user.id} style={styles.modalUserRow}>
-                <UserRow
-                  user={user}
-                  currentUserId={currentUser.id}
-                  onToggleFollow={onToggleFollow}
-                  isCompact={false}
-                  onProfileNavigate={onClose}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        )}
+        <ScrollView style={styles.modalScroll}>
+          <UserList
+            follow={follow}
+            currentUserId={currentUser.id}
+            isCompact={false}
+            onProfileNavigate={onClose}
+          />
+        </ScrollView>
       </View>
     </Modal>
   )
@@ -635,20 +624,52 @@ export const ActivityRow = ({
   onAddComment,
 }: Props) => {
   const { targetPost } = activity;
+  const targetPostId = targetPost?.id;
 
-  const {
-    likedUsers,
-    likedModalVisible,
-    likedLoading,
-    closeLikedModal,
-    handleOpenLikesModal,
-    handleOpenCommentLikesModal,
-    handleToggleFollowInModal,
-    commentText,
-    setCommentText,
-    commentLoading,
-    handleAddComment,
-  } = useActivityRowInteractions({ onAddComment, targetPostId: targetPost?.id });
+  const [likedModalVisible, setLikedModalVisible] = React.useState(false);
+  const [likedByTarget, setLikedByTarget] = React.useState<{
+    postId?: number;
+    commentId?: number;
+  } | null>(null);
+  const [commentText, setCommentText] = React.useState("");
+  const [commentLoading, setCommentLoading] = React.useState(false);
+
+  const handleOpenLikesModal = React.useCallback((postId: number) => {
+    setLikedByTarget({ postId });
+    setLikedModalVisible(true);
+  }, []);
+
+  const handleOpenCommentLikesModal = React.useCallback((commentId: number) => {
+    setLikedByTarget({ commentId });
+    setLikedModalVisible(true);
+  }, []);
+
+  const closeLikedModal = React.useCallback(() => {
+    setLikedModalVisible(false);
+    setLikedByTarget(null);
+  }, []);
+
+  const handleAddComment = React.useCallback(async () => {
+    const content = commentText.trim();
+    if (!content || targetPostId == null || !onAddComment || commentLoading) return;
+
+    try {
+      setCommentLoading(true);
+      await onAddComment(targetPostId, content);
+      setCommentText("");
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to add comment", err);
+    } finally {
+      setCommentLoading(false);
+    }
+  }, [commentLoading, commentText, onAddComment, targetPostId]);
+
+  const likedByUsers = useFollow({
+    type: "likedBy",
+    postId: likedByTarget?.postId,
+    commentId: likedByTarget?.commentId,
+    enabled: likedModalVisible && likedByTarget != null,
+  });
 
   return (
     <>
@@ -678,10 +699,8 @@ export const ActivityRow = ({
 
       <LikedUsersModal
         visible={likedModalVisible}
-        likedUsers={likedUsers}
-        loading={likedLoading}
+        follow={likedByUsers}
         onClose={closeLikedModal}
-        onToggleFollow={handleToggleFollowInModal}
       />
     </>
   );

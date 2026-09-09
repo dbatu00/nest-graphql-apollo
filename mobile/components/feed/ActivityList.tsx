@@ -12,9 +12,8 @@ type Props = {
 
 export function ActivityList({ feed, filter }: Props) {
     const { t } = useI18n();
-    const activities = feed.visibleActivities ?? (filter
-        ? feed.activities.filter(filter)
-        : feed.activities);
+    const baseActivities = filter ? feed.activities : (feed.visibleActivities ?? feed.activities);
+    const activities = filter ? baseActivities.filter(filter) : baseActivities;
 
     return (
         <View>

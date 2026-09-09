@@ -20,7 +20,7 @@ Owns:
 Delegates:
 - Network requests → graphql/client
 - Activity model → Activity type
-- Follow mutations → useFollow hook
+- Follow mutations → followUser / unfollowUser
 - Optimistic update patterns → optimisticUpdate utils
 
 Used by:
@@ -31,7 +31,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Activity, ActivityType } from "@/types/Activity";
 import { useI18n } from "@/hooks/useI18n";
 import { useAuth } from "@/hooks/useAuth";
-import { useFollow } from "@/hooks/useFollow";
 import {
   optimisticToggle,
   optimisticDelete,
@@ -43,7 +42,9 @@ import {
   fetchFeed,
   likeComment,
   likePost,
+  followUser,
   unlikeComment,
+  unfollowUser,
   unlikePost,
   addComment,
 } from "@/graphql/client";
@@ -292,26 +293,35 @@ export function useActivities(types?: ActivityType[]) {
 
   /* FOLLOW */
 
-  const { toggleFollow } = useFollow({
-    apply: (targetUsername: string, shouldFollow: boolean) =>
-      (prev: Activity[]) =>
+  const toggleFollow = useCallback(
+    async (targetUsername: string, shouldFollow: boolean) => {
+      const apply = (prev: Activity[]) =>
         prev.map(a => {
-          const updated = { ...a };
+          if (a.targetPost?.user?.username !== targetUsername) {
+            return a;
+          }
 
-          if (a.targetPost?.user?.username === targetUsername) {
-            updated.targetPost = {
+          return {
+            ...a,
+            targetPost: {
               ...a.targetPost,
               user: {
                 ...a.targetPost.user,
                 followedByMe: shouldFollow,
               },
-            };
-          }
+            },
+          };
+        });
 
-          return updated;
-        }),
-    setState: setActivities,
-  });
+      await appliedOptimisticToggle(
+        apply,
+        !shouldFollow,
+        () => followUser(targetUsername),
+        () => unfollowUser(targetUsername)
+      );
+    },
+    [appliedOptimisticToggle]
+  );
 
   return {
     activities,
