@@ -1,17 +1,5 @@
 # TODO Roadmap — Active Only
 
-### Mobile Refactors
-
-- `username.tsx`
-  - Refactor into a tab coordinator
-  - Keep profile info on screen
-  - Own only active tab state
-  - Posts/Likes → `ActivityList` + `useActivities(types)`
-  - Followers/Following → `UserList` + `useFollow`
-
-
-
-
 ## P2 — Mobile UX / Behavior
 
 - Add optimistic post creation flow: local row + reconcile/rollback

@@ -49,12 +49,21 @@ import {
   addComment,
 } from "@/graphql/client";
 
+type UseActivitiesOptions = {
+  types?: ActivityType[];
+  scopeUsername?: string;
+  includeSelfLikes?: boolean;
+};
 
 
 
-export function useActivities(types?: ActivityType[]) {
+export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
   const { t } = useI18n();
   const { user } = useAuth();
+
+  const types = Array.isArray(options) ? options : options?.types;
+  const scopeUsername = Array.isArray(options) ? undefined : options?.scopeUsername;
+  const includeSelfLikes = Array.isArray(options) ? false : !!options?.includeSelfLikes;
 
 
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -84,19 +93,52 @@ export function useActivities(types?: ActivityType[]) {
     refresh();
   }, [refresh]);
 
+  const scopedActivities = useMemo(() => {
+    if (!scopeUsername) {
+      return activities;
+    }
+
+    return activities.filter(activity => {
+      if (activity.type === "post") {
+        return activity.targetPost?.user?.username === scopeUsername;
+      }
+
+      if (activity.type === "like") {
+        const isActorMatch = activity.actor?.username === scopeUsername;
+        if (!isActorMatch) return false;
+        if (includeSelfLikes) return true;
+        return activity.targetPost?.user?.id !== activity.actor?.id;
+      }
+
+      if (activity.type === "comment") {
+        return activity.actor?.username === scopeUsername;
+      }
+
+      if (activity.type === "follow") {
+        return activity.actor?.username === scopeUsername || activity.targetUser?.username === scopeUsername;
+      }
+
+      return false;
+    });
+  }, [activities, includeSelfLikes, scopeUsername]);
+
   const visibleActivities = useMemo(() => {
+    if (scopeUsername) {
+      return scopedActivities;
+    }
+
     if (!user?.username) {
       return undefined;
     }
 
-    return activities.filter(a => {
+    return scopedActivities.filter(a => {
       if (a.type === "post") return true;
       if (a.actor?.username === user.username) return false;
       if (a.type === "like" && a.actor?.username === a.targetPost?.user?.username) return false;
       if (a.type === "comment" && a.actor?.username === a.targetPost?.user?.username) return false;
       return a.type !== "follow" || a.active;
     });
-  }, [activities, user?.username]);
+  }, [scopeUsername, scopedActivities, user?.username]);
 
   // Wrapper for optimistic updates to activities state
   const appliedOptimisticToggle = useCallback(
@@ -324,7 +366,7 @@ export function useActivities(types?: ActivityType[]) {
   );
 
   return {
-    activities,
+    activities: scopedActivities,
     visibleActivities,
     loading,
     error,

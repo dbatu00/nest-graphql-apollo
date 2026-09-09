@@ -84,28 +84,14 @@ function TabFeed({
   isOwnProfile: boolean;
 }) {
   const type = useMemo<ActivityType[]>(() => (tab === "posts" ? ["post"] : ["like"]), [tab]);
-  const feed = useActivities(type);
-
-  const filter = useMemo(() => {
-    if (!username) {
-      return undefined;
-    }
-
-    if (tab === "posts") {
-      return (activity: ReturnType<typeof useActivities>["activities"][number]) =>
-        activity.targetPost?.user?.username === username;
-    }
-
-    return (activity: ReturnType<typeof useActivities>["activities"][number]) =>
-      activity.actor?.username === username
-      && (isOwnProfile || activity.targetPost?.user?.id !== activity.actor?.id);
-  }, [isOwnProfile, tab, username]);
+  const feed = useActivities({
+    types: type,
+    scopeUsername: username,
+    includeSelfLikes: isOwnProfile,
+  });
 
   return (
-    <ActivityList
-      feed={feed}
-      filter={filter}
-    />
+    <ActivityList feed={feed} />
   );
 }
 
