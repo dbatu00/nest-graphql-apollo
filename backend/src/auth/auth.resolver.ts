@@ -76,14 +76,11 @@ export class AuthResolver {
         return this.authService.deleteMyAccount(user.id, args.currentPassword);
     }
 
-    @UseGuards(GqlAuthGuard)
     @Throttle({
         default: {
             limit: 50,
             ttl: 60 * 60 * 1000,
-            getTracker: (req) => req.user?.id != null
-                ? `user:${String(req.user.id)}`
-                : (req.ip ?? req.ips?.[0] ?? "anonymous"),
+            getTracker: (req) => (req.ip ?? req.ips?.[0] ?? "anonymous"),
         },
     })
     @Query(() => Boolean)

@@ -2,7 +2,6 @@
 
 ## P2 — Mobile UX / Behavior
 
-- Add optimistic post creation flow: local row + reconcile/rollback
 - On login/signup, show all errors/missing fields at once and highlight them
 
 

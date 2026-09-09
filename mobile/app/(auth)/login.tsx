@@ -18,6 +18,11 @@ import {
 } from "@/config/inputLimits";
 
 const LANGUAGE_OPTIONS: Language[] = ["en", "tr", "de"];
+const LANGUAGE_NAMES: Record<Language, string> = {
+  en: "English",
+  tr: "Türkçe",
+  de: "Deutsch",
+};
 const LOGIN_SEEN_KEY = "login_seen_before";
 
 function canUseLocalStorage(): boolean {
@@ -57,8 +62,11 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [identifierError, setIdentifierError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [seenBefore, setSeenBefore] = useState<boolean | null>(null);
   const passwordInputRef = useRef<TextInput>(null);
+  const passwordDebounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     let active = true;
@@ -80,6 +88,26 @@ export default function Login() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!password) {
+      setPasswordError(null);
+      if (passwordDebounceRef.current) clearTimeout(passwordDebounceRef.current);
+      return;
+    }
+
+    if (passwordDebounceRef.current) clearTimeout(passwordDebounceRef.current);
+
+    passwordDebounceRef.current = setTimeout(() => {
+      if (password.length < PASSWORD_MIN_LENGTH) {
+        setPasswordError(t("auth.login.error.passwordLength"));
+      } else if (password.length > PASSWORD_MAX_LENGTH) {
+        setPasswordError(t("auth.login.error.passwordMax"));
+      } else {
+        setPasswordError(null);
+      }
+    }, 300);
+  }, [password, t]);
+
   const handleLanguageSelect = async (option: Language) => {
     await setLanguage(option);
     setLanguageMenuOpen(false);
@@ -87,21 +115,30 @@ export default function Login() {
 
   const handleLogin = async () => {
     setError("");
+    setIdentifierError(null);
+    setPasswordError(null);
 
     const trimmedIdentifier = identifier.trim();
 
-    if (!trimmedIdentifier || !password) {
-      setError(t("auth.login.error.required"));
-      return;
-    }
+    const nextIdentifierError = trimmedIdentifier
+      ? null
+      : t("auth.login.error.identifierRequired");
+    const nextPasswordError = !password
+      ? t("auth.login.error.passwordRequired")
+      : password.length < PASSWORD_MIN_LENGTH
+        ? t("auth.login.error.passwordLength")
+        : password.length > PASSWORD_MAX_LENGTH
+          ? t("auth.login.error.passwordMax")
+          : null;
 
-    if (password.length < PASSWORD_MIN_LENGTH) {
-      setError(t("auth.login.error.passwordLength"));
-      return;
-    }
+    const validationMessages = [nextIdentifierError, nextPasswordError].filter(
+      (message): message is string => Boolean(message),
+    );
 
-    if (password.length > PASSWORD_MAX_LENGTH) {
-      setError(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`);
+    if (validationMessages.length > 0) {
+      setIdentifierError(nextIdentifierError);
+      setPasswordError(nextPasswordError);
+      setError(Array.from(new Set(validationMessages)).join("\n"));
       return;
     }
 
@@ -155,7 +192,7 @@ export default function Login() {
                       style={[styles.titleLanguageDropdownItem, active && styles.titleLanguageDropdownItemActive]}
                     >
                       <Text style={[styles.titleLanguageDropdownItemText, active && styles.titleLanguageDropdownItemTextActive]}>
-                        {t(`settings.language.${option}`)}
+                        {LANGUAGE_NAMES[option]}
                       </Text>
                     </Pressable>
                   );
@@ -170,26 +207,34 @@ export default function Login() {
             placeholder={t("auth.login.identifierPlaceholder")}
             placeholderTextColor="#d1d5db"
             value={identifier}
-            onChangeText={setIdentifier}
+            onChangeText={(value) => {
+              setIdentifier(value);
+              if (error) setError("");
+            }}
             autoCapitalize="none"
             maxLength={LOGIN_IDENTIFIER_MAX_LENGTH}
             returnKeyType="next"
             onSubmitEditing={() => passwordInputRef.current?.focus()}
             style={commonStyles.input}
           />
+          {identifierError ? <Text style={styles.inlineErrorText}>{identifierError}</Text> : null}
 
           <TextInput
             ref={passwordInputRef}
             placeholder={t("auth.login.passwordPlaceholder")}
             placeholderTextColor="#d1d5db"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(value) => {
+              setPassword(value);
+              if (error) setError("");
+            }}
             secureTextEntry
             maxLength={PASSWORD_MAX_LENGTH}
             returnKeyType="go"
             onSubmitEditing={() => void handleLogin()}
             style={[commonStyles.input, styles.inputTopGap]}
           />
+          {passwordError ? <Text style={styles.inlineErrorText}>{passwordError}</Text> : null}
 
           <View style={styles.actionsCenter}>
             <Pressable

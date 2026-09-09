@@ -236,6 +236,17 @@ export async function isEmailUsed(email: string): Promise<boolean> {
     return data.isEmailUsed;
 }
 
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+    try {
+        const normalizedUsername = normalizeText(username).trim();
+        const data = await graphqlFetch<{ userByUsername: ProfileData | null }>(USER_PROFILE_QUERY, { username: normalizedUsername });
+        return data.userByUsername === null;
+    } catch {
+        // If query fails, assume username is available to not block signup
+        return true;
+    }
+}
+
 export async function changeMyEmail(currentPassword: string, newEmail: string): Promise<boolean> {
     const language = await getStoredAppLanguage();
     validatePassword(currentPassword, 'Current password');
