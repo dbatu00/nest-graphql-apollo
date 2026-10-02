@@ -24,6 +24,8 @@
     "types/**/*.tsx",
     "utils/**/*.ts",
     "utils/**/*.tsx",
+    "test-utils/**/*.ts",
+    "test-utils/**/*.tsx",
     "__tests__/**/*.ts",
     "__tests__/**/*.tsx",
     ".expo/types/**/*.ts",
