@@ -14,14 +14,15 @@ Responsibility:
 Owns:
 - Activity-specific presentation
 - Composition of ActivityBanner, PostCard and LikedUsersModal
-- Local, ephemeral UI state scoped to subcomponents defined in this file:
+- Local, ephemeral UI state in this file:
+  - ActivityRow → liked-users modal target/visibility + comment draft/submission
   - CommentRow → comment options menu visibility
   - PostCard → comment input focus
   - DateToggleText → relative/absolute date toggle
 
 Delegates:
 - Feed mutations → useActivities (via props)
-- Activity-specific UI state → useActivityRow
+- Activity-specific UI state → local state in ActivityRow
 - Banner rendering → ActivityBanner
 - Post rendering → PostCard
 - Likes modal → LikedUsersModal
@@ -32,17 +33,16 @@ Used by:
 
 TODO:
 - Consider extracting remaining self-contained UI concepts only if they reduce
-  mental load rather than merely moving JSX into new files *
-  currently favoring this because i would like to open activityrow.tsx and see logic only
-- - Remove unjustified defensive chaining on fields the schema guarantees
+  mental load rather than merely moving JSX into new files.
+- Remove unjustified defensive chaining on fields the schema guarantees
   non-null/non-empty: actor.username, targetUser.username (once targetUser
   itself is confirmed present), targetPost.user.username (pending
   confirmation of Post's type) — these are enforced at the DB column level
   (unique, non-nullable), not just the TS type level. Keep only the
   genuinely optional checks: targetUser existing at all, targetPost
   existing at all.
-
--commentInputWrapperFocused sets backgroundColor: color.bgComment, which is identical to the unfocused wrapper's background. Right now focusing the comment input has no visible effect. Probably meant to add a border color or shadow.
+- commentInputWrapperFocused sets the same background as the unfocused wrapper.
+  Focus state currently has little visible difference and may need a stronger cue.
 */
 
 import React from "react";
@@ -56,49 +56,25 @@ import {
   Platform,
   Image,
   TextInput,
-  StyleSheet,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { ProfileLink } from "@/components/common/ProfileLink";
-import { UserRow } from "@/components/user/UserRow";
+import { UserList } from "@/components/user/UserList";
 import { useAuth } from "@/hooks/useAuth";
+import { useFollow } from "@/hooks/useFollow";
+import { useI18n } from "@/hooks/useI18n";
 import { Activity } from "@/types/Activity";
 import { Comment } from "@/types/Comment";
 import {
   getRelativeDateLabel,
   resolveAvatarUri,
 } from "@/utils/activityHelpers";
-import { LikedUser, useActivityRow } from "./useActivityRow";
-
-// ─────────────────────────────────────────────
-// Design tokens
-// ─────────────────────────────────────────────
-
-const color = {
-  blue: "#1877f2",
-  blueBg: "#e7f0fd",
-  textPrimary: "#050505",
-  textSecondary: "#65676b",
-  divider: "#ced0d4",
-  bgComment: "#f0f2f5",
-  bgWhite: "#fff",
-  deleteRed: "#e41e3f",
-} as const;
-
-const size = {
-  avatarMd: 40,
-  avatarSm: 32,
-  radiusMd: 20,
-  radiusSm: 16,
-} as const;
-
-const space = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 18,
-} as const;
+import { COMMENT_CONTENT_MAX_LENGTH } from "@/config/inputLimits";
+import {
+  activityRowColor as color,
+  activityRowStyles as styles,
+} from "@/styles";
 
 // ─────────────────────────────────────────────
 // Types
@@ -132,9 +108,10 @@ const ClickableName = (username: string, label: string) => {
 // ─────────────────────────────────────────────
 
 const ActivityBanner = ({ activity }: { activity: Activity }) => {
+  const { t } = useI18n();
   const { type, actor, targetPost, createdAt } = activity;
 
-  const actorAvatarUri = resolveAvatarUri(activity.actor.displayName, activity.actor.avatarUrl);
+  const actorAvatarUri = resolveAvatarUri(actor.displayName, actor.avatarUrl);
 
   let verb = "";
   let noun = "";
@@ -142,20 +119,20 @@ const ActivityBanner = ({ activity }: { activity: Activity }) => {
 
   if (type === "post") return null;
   else if (targetPost) {
-    targetUser = targetPost.user!;
+    targetUser = targetPost.user;
     if (type === "comment") {
-      verb = "commented on";
-      noun = "'s post";
+      verb = t("activity.banner.commentedOn");
+      noun = t("activity.banner.postSuffix");
     } else if (type === "share") {
-      verb = "shared";
-      noun = "'s post";
+      verb = t("activity.banner.shared");
+      noun = t("activity.banner.postSuffix");
     } else if (type === "like") {
-      verb = "liked";
-      noun = "'s post";
+      verb = t("activity.banner.liked");
+      noun = t("activity.banner.postSuffix");
     }
   }
   else if (type === "follow") {
-    verb = "followed";
+    verb = t("activity.banner.followed");
     noun = "";
   }
   else {
@@ -200,6 +177,71 @@ type CommentRowProps = {
   onOpenCommentLikes: (commentId: number) => void;
 };
 
+type DeleteConfirmModalProps = {
+  visible: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  loading?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void | Promise<void>;
+};
+
+const DeleteConfirmModal = ({
+  visible,
+  title,
+  message,
+  confirmLabel,
+  loading = false,
+  onCancel,
+  onConfirm,
+}: DeleteConfirmModalProps) => {
+  const { t } = useI18n();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.confirmOverlay}>
+        <View
+          style={styles.confirmBackdrop}
+          onStartShouldSetResponder={() => true}
+          onResponderRelease={() => {
+            if (!loading) onCancel();
+          }}
+        >
+          <BlurView intensity={18} tint="dark" style={styles.confirmBlur} />
+        </View>
+        <View style={styles.confirmCard}>
+          <Text style={styles.confirmTitle}>{title}</Text>
+          <Text style={styles.confirmMessage}>{message}</Text>
+
+          <View style={styles.confirmActions}>
+            <TouchableOpacity
+              onPress={onCancel}
+              disabled={loading}
+              style={[styles.confirmCancelBtn, loading && styles.confirmBtnDisabled]}
+            >
+              <Text style={styles.confirmCancelText}>{t("activity.confirm.cancel")}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={onConfirm}
+              disabled={loading}
+              style={[styles.confirmDeleteBtn, loading && styles.confirmBtnDisabled]}
+            >
+              <Text style={styles.confirmDeleteText}>{loading ? t("activity.confirm.deleting") : confirmLabel}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const CommentRow = ({
   comment,
   postId,
@@ -207,97 +249,121 @@ const CommentRow = ({
   onToggleCommentLike,
   onOpenCommentLikes,
 }: CommentRowProps) => {
+  const { t } = useI18n();
   const [optionsOpen, setOptionsOpen] = React.useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
+  const [deletingComment, setDeletingComment] = React.useState(false);
 
   const { user } = useAuth();
   if (!user) return null;
 
   const avatarUri = resolveAvatarUri(comment.user.displayName, comment.user.avatarUrl);
+  const isPendingComment = !!comment.pending;
   const canDelete = (user.id === comment.user.id)
   const likedByMe = comment.likedByMe;
   const likesCount = comment.likesCount;
 
+  const handleConfirmDeleteComment = async () => {
+    setDeletingComment(true);
+    try {
+      await onDeleteComment?.(comment.id, postId);
+    } finally {
+      setDeletingComment(false);
+      setDeleteConfirmVisible(false);
+      setOptionsOpen(false);
+    }
+  };
+
   return (
-    <View style={styles.commentRow}>
-      <ProfileLink username={comment.user.username}>
-        <Image source={{ uri: avatarUri }} style={styles.avatarSm} />
-      </ProfileLink>
+    <>
+      <View style={styles.commentRow}>
+        <ProfileLink username={comment.user.username}>
+          <Image source={{ uri: avatarUri }} style={styles.avatarSm} />
+        </ProfileLink>
 
-      <View style={styles.flexOne}>
-        <Pressable style={styles.commentBubbleHoverArea}>
-          {({ hovered }) => (
-            <View style={styles.commentBubbleRow}>
-              <View style={styles.commentBubble}>
-                <ProfileLink username={comment.user.username}>
-                  <Text style={styles.commentAuthor}>{comment.user.displayName}</Text>
-                </ProfileLink>
-                <Text style={styles.commentContent}>{comment.content}</Text>
-              </View>
-
-              {canDelete && (hovered || optionsOpen) && (
-                <View style={styles.commentOptionsWrap}>
-                  <TouchableOpacity
-                    style={styles.commentOptionsBtn}
-                    onPress={() => setOptionsOpen(o => !o)}
-                  >
-                    <Ionicons name="ellipsis-horizontal" size={14} color={color.textSecondary} />
-                  </TouchableOpacity>
-
-                  {optionsOpen && (
-                    <View style={styles.commentOptionsMenu}>
-                      <TouchableOpacity
-                        style={styles.commentOptionsMenuItem}
-                        onPress={async () => {
-                          try {
-                            await onDeleteComment?.(comment.id, postId);
-                          } finally {
-                            setOptionsOpen(false);
-                          }
-                        }}
-                      >
-                        <MaterialCommunityIcons name="trash-can-outline" size={14} color={color.deleteRed} />
-                        <Text style={styles.commentDeleteText}>Delete</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+        <View style={styles.flexOne}>
+          <Pressable style={[styles.commentBubbleHoverArea, isPendingComment && styles.pendingDim]} disabled={isPendingComment}>
+            {({ hovered }) => (
+              <View style={styles.commentBubbleRow}>
+                <View style={styles.commentBubble}>
+                  <ProfileLink username={comment.user.username}>
+                    <Text style={styles.commentAuthor}>{comment.user.displayName}</Text>
+                  </ProfileLink>
+                  <Text style={styles.commentContent}>{comment.content}</Text>
                 </View>
-              )}
+
+                {!isPendingComment && canDelete && (hovered || optionsOpen) && (
+                  <View style={styles.commentOptionsWrap}>
+                    <TouchableOpacity
+                      style={styles.commentOptionsBtn}
+                      onPress={() => setOptionsOpen(o => !o)}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={14} color={color.textSecondary} />
+                    </TouchableOpacity>
+
+                    {optionsOpen && (
+                      <View style={styles.commentOptionsMenu}>
+                        <TouchableOpacity
+                          style={styles.commentOptionsMenuItem}
+                          onPress={() => {
+                            setOptionsOpen(false);
+                            setDeleteConfirmVisible(true);
+                          }}
+                        >
+                          <MaterialCommunityIcons name="trash-can-outline" size={14} color={color.deleteRed} />
+                          <Text style={styles.commentDeleteText}>{t("activity.confirm.delete")}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+          </Pressable>
+
+          <View style={styles.commentActions}>
+            <View style={styles.commentDateWrapper}>
+              <DateToggleText date={comment.createdAt} />
             </View>
-          )}
-        </Pressable>
 
-        <View style={styles.commentActions}>
-          <View style={styles.commentDateWrapper}>
-            <DateToggleText date={comment.createdAt} />
+            {onToggleCommentLike && !isPendingComment && (
+              <TouchableOpacity
+                style={styles.commentLikeBtn}
+                onPress={() => onToggleCommentLike(comment.id, postId, likedByMe)}
+              >
+                <MaterialCommunityIcons
+                  name={likedByMe ? "thumb-up" : "thumb-up-outline"}
+                  size={12}
+                  color={likedByMe ? color.blue : color.textSecondary}
+                />
+              </TouchableOpacity>
+            )}
+
+            {likesCount > 0 && !isPendingComment && (
+              <Pressable
+                onPress={() => onOpenCommentLikes(comment.id)}
+                style={({ hovered }) => [
+                  styles.commentLikeCountBtn,
+                  hovered && styles.commentLikeCountBtnHover,
+                ]}
+              >
+                <Text style={styles.commentLikeCountText}>{likesCount}</Text>
+              </Pressable>
+            )}
           </View>
-
-          {onToggleCommentLike && (
-            <TouchableOpacity
-              style={styles.commentLikeBtn}
-              onPress={() => onToggleCommentLike(comment.id, postId, likedByMe)}
-            >
-              <MaterialCommunityIcons
-                name={likedByMe ? "thumb-up" : "thumb-up-outline"}
-                size={12}
-                color={likedByMe ? color.blue : color.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-
-          {likesCount > 0 && (
-            <Pressable
-              onPress={() => onOpenCommentLikes(comment.id)}
-              style={({ hovered }) => [
-                styles.commentLikeCountBtn,
-                hovered && styles.commentLikeCountBtnHover,
-              ]}
-            >
-              <Text style={styles.commentLikeCountText}>{likesCount}</Text>
-            </Pressable>
-          )}
         </View>
       </View>
-    </View>
+
+      <DeleteConfirmModal
+        visible={deleteConfirmVisible}
+        title={t("activity.confirm.deleteCommentTitle")}
+        message={t("activity.confirm.deleteCommentMessage")}
+        confirmLabel={t("activity.confirm.delete")}
+        loading={deletingComment}
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={handleConfirmDeleteComment}
+      />
+    </>
   );
 };
 
@@ -307,6 +373,7 @@ const CommentRow = ({
 
 type PostCardProps = {
   post: NonNullable<Activity["targetPost"]>;
+  isPending: boolean;
   onToggleFollow?: (username: string, shouldFollow: boolean) => void;
   onDeletePost?: (postId: number) => void;
   onDeleteComment?: (commentId: number, postId: number) => Promise<void>;
@@ -324,6 +391,7 @@ type PostCardProps = {
 
 const PostCard = ({
   post,
+  isPending,
   onToggleFollow,
   onDeletePost,
   onDeleteComment,
@@ -337,34 +405,36 @@ const PostCard = ({
   commentLoading,
   onSubmitComment,
 }: PostCardProps) => {
+  const { t } = useI18n();
   const [commentInputFocused, setCommentInputFocused] = React.useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = React.useState(false);
 
   const { user } = useAuth();
-  if (!user || !post?.user) return null;
+  if (!user) return null;
 
-  const currentUserAvatarUri = resolveAvatarUri(user!.displayName, user!.avatarUrl);
+  const currentUserAvatarUri = resolveAvatarUri(user.displayName, user.avatarUrl);
   const authorAvatarUri = resolveAvatarUri(post.user.displayName, post.user.avatarUrl);
-  const isOwner = (user!.id === post.user.id);
+  const isOwner = (user.id === post.user.id);
   const likedByMe = post.likedByMe;
   const likesCount = post.likesCount;
-  const hasComments = post.comments!.length > 0;
+  const hasComments = post.comments.length > 0;
 
   const headerActions = () => {
-    if (!isOwner && onToggleFollow) {
+    if (!isPending && !isOwner && onToggleFollow) {
       return (
         <TouchableOpacity
           onPress={() => onToggleFollow(post.user.username, !post.user.followedByMe)}
           style={[styles.followBtn, post.user.followedByMe && styles.followBtnActive]}
         >
           <Text style={[styles.followBtnText, post.user.followedByMe && styles.followBtnTextActive]}>
-            {post.user.followedByMe ? "Following" : "Follow"}
+            {post.user.followedByMe ? t("user.following") : t("user.follow")}
           </Text>
         </TouchableOpacity>
       );
     }
-    if (isOwner && onDeletePost) {
+    if (!isPending && isOwner && onDeletePost) {
       return (
-        <TouchableOpacity onPress={() => onDeletePost(post.id)} style={styles.deleteBtn}>
+        <TouchableOpacity onPress={() => setDeleteConfirmVisible(true)} style={styles.deleteBtn}>
           <Text style={styles.deleteBtnText}>✕</Text>
         </TouchableOpacity>
       );
@@ -373,7 +443,7 @@ const PostCard = ({
   };
 
   return (
-    <View style={styles.postCard}>
+    <View style={[styles.postCard, isPending && styles.pendingDim]} pointerEvents={isPending ? "none" : "auto"}>
       <View style={styles.postHeader}>
         <ProfileLink username={post.user.username}>
           <Image source={{ uri: authorAvatarUri }} style={styles.avatarMd} />
@@ -390,7 +460,7 @@ const PostCard = ({
       <Text style={styles.postContent}>{post.content}</Text>
 
       <View style={styles.engagementRow}>
-        {onTogglePostLike ? (
+        {onTogglePostLike && !isPending ? (
           <TouchableOpacity style={styles.likeBtn} onPress={() => onTogglePostLike(post.id, likedByMe)}>
             <MaterialCommunityIcons
               name={likedByMe ? "thumb-up" : "thumb-up-outline"}
@@ -402,7 +472,7 @@ const PostCard = ({
           <View style={styles.likeBtnPlaceholder} />
         )}
 
-        {likesCount > 0 && (
+        {likesCount > 0 && !isPending && (
           <Pressable
             onPress={() => onOpenPostLikes(post.id)}
             style={({ hovered }) => [
@@ -419,7 +489,7 @@ const PostCard = ({
         <View style={styles.commentsSection}>
           {hasComments && (
             <View style={styles.commentList}>
-              {post.comments?.map((comment) => (
+              {post.comments.map((comment) => (
                 <CommentRow
                   key={comment.id}
                   comment={comment}
@@ -442,10 +512,11 @@ const PostCard = ({
                 ]}
               >
                 <TextInput
-                  placeholder="Write a comment..."
+                  placeholder={t("activity.comment.placeholder")}
                   placeholderTextColor="#8a8d91"
                   value={commentText}
                   onChangeText={setCommentText}
+                  maxLength={COMMENT_CONTENT_MAX_LENGTH}
                   editable={!commentLoading}
                   onFocus={() => setCommentInputFocused(true)}
                   onBlur={() => setCommentInputFocused(false)}
@@ -469,6 +540,18 @@ const PostCard = ({
           )}
         </View>
       )}
+
+      <DeleteConfirmModal
+        visible={deleteConfirmVisible}
+        title={t("activity.confirm.deletePostTitle")}
+        message={t("activity.confirm.deletePostMessage")}
+        confirmLabel={t("activity.confirm.delete")}
+        onCancel={() => setDeleteConfirmVisible(false)}
+        onConfirm={() => {
+          onDeletePost?.(post.id);
+          setDeleteConfirmVisible(false);
+        }}
+      />
     </View>
   );
 };
@@ -479,19 +562,16 @@ const PostCard = ({
 
 type LikedUsersModalProps = {
   visible: boolean;
-  likedUsers: LikedUser[];
-  loading: boolean;
+  follow: ReturnType<typeof useFollow>;
   onClose: () => void;
-  onToggleFollow: (username: string, shouldFollow: boolean) => void | Promise<void>;
 };
 
 const LikedUsersModal = ({
   visible,
-  likedUsers,
-  loading,
+  follow,
   onClose,
-  onToggleFollow,
 }: LikedUsersModalProps) => {
+  const { t } = useI18n();
   const { user } = useAuth();
   const currentUser = user;
   if (!currentUser) return null;
@@ -500,26 +580,19 @@ const LikedUsersModal = ({
     <Modal visible={visible} animationType="slide">
       <View style={styles.modalBody}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Liked by</Text>
+          <Text style={styles.modalTitle}>{t("activity.modal.likedBy")}</Text>
           <TouchableOpacity onPress={onClose} style={styles.modalCloseBtn}>
-            <Text style={styles.modalCloseBtnText}>Close</Text>
+            <Text style={styles.modalCloseBtnText}>{t("activity.modal.close")}</Text>
           </TouchableOpacity>
         </View>
-        {!loading && (
-          <ScrollView style={styles.modalScroll}>
-            {likedUsers.map((user) => (
-              <View key={user.id} style={styles.modalUserRow}>
-                <UserRow
-                  user={user}
-                  currentUserId={currentUser.id}
-                  onToggleFollow={onToggleFollow}
-                  isCompact={false}
-                  onProfileNavigate={onClose}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        )}
+        <ScrollView style={styles.modalScroll}>
+          <UserList
+            follow={follow}
+            currentUserId={currentUser.id}
+            isCompact={false}
+            onProfileNavigate={onClose}
+          />
+        </ScrollView>
       </View>
     </Modal>
   )
@@ -554,20 +627,53 @@ export const ActivityRow = ({
   onAddComment,
 }: Props) => {
   const { targetPost } = activity;
+  const targetPostId = targetPost?.id;
+  const isPendingPost = !!targetPost?.pending;
 
-  const {
-    likedUsers,
-    likedModalVisible,
-    likedLoading,
-    closeLikedModal,
-    handleOpenLikesModal,
-    handleOpenCommentLikesModal,
-    handleToggleFollowInModal,
-    commentText,
-    setCommentText,
-    commentLoading,
-    handleAddComment,
-  } = useActivityRow({ onToggleFollow, onAddComment, targetPostId: targetPost?.id });
+  const [likedModalVisible, setLikedModalVisible] = React.useState(false);
+  const [likedByTarget, setLikedByTarget] = React.useState<{
+    postId?: number;
+    commentId?: number;
+  } | null>(null);
+  const [commentText, setCommentText] = React.useState("");
+  const [commentLoading, setCommentLoading] = React.useState(false);
+
+  const handleOpenLikesModal = React.useCallback((postId: number) => {
+    setLikedByTarget({ postId });
+    setLikedModalVisible(true);
+  }, []);
+
+  const handleOpenCommentLikesModal = React.useCallback((commentId: number) => {
+    setLikedByTarget({ commentId });
+    setLikedModalVisible(true);
+  }, []);
+
+  const closeLikedModal = React.useCallback(() => {
+    setLikedModalVisible(false);
+    setLikedByTarget(null);
+  }, []);
+
+  const handleAddComment = React.useCallback(async () => {
+    const content = commentText.trim();
+    if (!content || targetPostId == null || isPendingPost || !onAddComment || commentLoading) return;
+
+    try {
+      setCommentLoading(true);
+      await onAddComment(targetPostId, content);
+      setCommentText("");
+    } catch (err: unknown) {
+      console.error("[ActivityRow] failed to add comment", err);
+    } finally {
+      setCommentLoading(false);
+    }
+  }, [commentLoading, commentText, isPendingPost, onAddComment, targetPostId]);
+
+  const likedByUsers = useFollow({
+    type: "likedBy",
+    postId: likedByTarget?.postId,
+    commentId: likedByTarget?.commentId,
+    enabled: likedModalVisible && likedByTarget != null,
+  });
 
   return (
     <>
@@ -578,6 +684,7 @@ export const ActivityRow = ({
           <View style={styles.postContainer}>
             <PostCard
               post={targetPost}
+              isPending={isPendingPost}
               onToggleFollow={onToggleFollow}
               onDeletePost={onDeletePost}
               onDeleteComment={onDeleteComment}
@@ -597,383 +704,10 @@ export const ActivityRow = ({
 
       <LikedUsersModal
         visible={likedModalVisible}
-        likedUsers={likedUsers}
-        loading={likedLoading}
+        follow={likedByUsers}
         onClose={closeLikedModal}
-        onToggleFollow={handleToggleFollowInModal}
       />
     </>
   );
 };
 
-// ─────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  // Layout
-  activityContainer: {
-    backgroundColor: color.bgWhite,
-    marginVertical: space.sm - 2,
-    borderRadius: space.md,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 3 },
-      android: { elevation: 2 },
-    }),
-  },
-  postContainer: {
-    marginLeft: space.sm,
-    marginVertical: space.sm,
-  },
-
-  // Avatars
-  avatarMd: {
-    width: size.avatarMd,
-    height: size.avatarMd,
-    borderRadius: size.radiusMd,
-  },
-  avatarSm: {
-    width: size.avatarSm,
-    height: size.avatarSm,
-    borderRadius: size.radiusSm,
-  },
-
-  // Activity banner
-  activityBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: color.bgComment,
-  },
-  bannerContent: {
-    marginLeft: 10,
-    alignSelf: "flex-start",
-  },
-  followBannerAvatar: {
-    width: size.avatarMd,
-    height: size.avatarMd,
-    borderRadius: size.radiusMd,
-    marginLeft: space.sm,
-  },
-  bannerText: {
-    fontSize: 15,
-    color: color.textPrimary,
-    lineHeight: 20,
-  },
-  bannerName: {
-    fontWeight: "600" as const,
-    color: color.textPrimary,
-  },
-
-  // Post card
-  postCard: {
-    backgroundColor: color.bgWhite,
-  },
-  postHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: space.md,
-    paddingTop: space.md,
-    paddingBottom: space.sm,
-  },
-  postHeaderContent: {
-    flex: 1,
-    marginLeft: 10,
-    alignSelf: "flex-start",
-  },
-  postAuthorName: {
-    fontSize: 15,
-    fontWeight: "600" as const,
-    color: color.textPrimary,
-  },
-  postContent: {
-    fontSize: 15,
-    color: color.textPrimary,
-    lineHeight: 22,
-    minHeight: 66,
-    paddingHorizontal: space.md,
-    paddingBottom: space.xs + 2,
-  },
-
-  // Engagement row
-  engagementRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingBottom: space.xs,
-  },
-  likeBtn: {
-    paddingVertical: space.xs,
-    paddingLeft: space.md,
-    borderRadius: space.xs,
-  },
-  likeBtnPlaceholder: {
-    width: 60,
-  },
-  likeCountBtn: {
-    marginLeft: space.sm,
-    borderWidth: 1,
-    borderColor: color.divider,
-    borderRadius: 10,
-    paddingHorizontal: space.xs + 2,
-    paddingVertical: 2,
-  },
-  likeCountBtnHover: {
-    backgroundColor: color.bgComment,
-  },
-  likeCountText: {
-    fontSize: 13,
-    color: color.textSecondary,
-  },
-
-  // Follow / delete actions
-  followBtn: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs + 1,
-    borderRadius: space.xs - 2,
-    backgroundColor: color.blueBg,
-  },
-  followBtnActive: {
-    backgroundColor: "#e4e6eb",
-  },
-  followBtnText: {
-    fontSize: 13,
-    fontWeight: "600" as const,
-    color: color.blue,
-  },
-  followBtnTextActive: {
-    color: color.textPrimary,
-  },
-  deleteBtn: {
-    padding: space.sm,
-  },
-  deleteBtnText: {
-    fontSize: 14,
-    color: color.textSecondary,
-  },
-
-  // Comments section
-  commentsSection: {
-    backgroundColor: color.bgWhite,
-    paddingHorizontal: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.md,
-    gap: space.sm,
-  },
-  commentList: {
-    gap: space.sm,
-  },
-  commentRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: space.sm,
-  },
-  flexOne: {
-    flex: 1,
-  },
-  commentBubbleHoverArea: {
-    width: "100%",
-  },
-  commentBubbleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    width: "100%",
-  },
-  commentBubble: {
-    backgroundColor: color.bgComment,
-    borderRadius: space.xl,
-    paddingHorizontal: 10,
-    paddingVertical: space.xs + 2,
-    alignSelf: "flex-start",
-    flexShrink: 1,
-  },
-  commentAuthor: {
-    fontSize: 12,
-    fontWeight: "600" as const,
-    color: color.textPrimary,
-  },
-  commentContent: {
-    fontSize: 14,
-    color: color.textPrimary,
-    lineHeight: 19,
-  },
-
-  // Comment options (delete menu)
-  commentOptionsWrap: {
-    marginLeft: space.sm,
-    position: "relative",
-  },
-  commentOptionsBtn: {
-    marginLeft: space.sm,
-    paddingHorizontal: space.xs + 2,
-    paddingVertical: 1,
-    borderRadius: space.sm,
-    backgroundColor: color.bgComment,
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: 24,
-    minHeight: 20,
-  },
-  commentOptionsMenu: {
-    position: "absolute",
-    top: 24,
-    right: 0,
-    backgroundColor: color.bgWhite,
-    borderRadius: space.sm,
-    borderWidth: 1,
-    borderColor: color.divider,
-    paddingVertical: space.xs,
-    minWidth: 110,
-    zIndex: 10,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.08, shadowRadius: 2 },
-      android: { elevation: 2 },
-    }),
-  },
-  commentOptionsMenuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: space.xs + 2,
-    gap: space.xs + 2,
-  },
-  commentDeleteText: {
-    fontSize: 13,
-    color: color.deleteRed,
-    fontWeight: "600" as const,
-  },
-
-  // Comment actions (date + like)
-  commentActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: space.xs,
-  },
-  commentDateWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: space.sm,
-    marginTop: -2,
-  },
-  commentLikeBtn: {
-    paddingTop: 3,
-    paddingBottom: 2,
-    paddingRight: space.xs,
-    borderRadius: 2,
-  },
-  commentLikeCountBtn: {
-    marginLeft: 3,
-    borderWidth: 1,
-    borderColor: color.divider,
-    borderRadius: space.sm,
-    paddingHorizontal: space.xs,
-    paddingVertical: 1,
-    minHeight: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  commentLikeCountBtnHover: {
-    backgroundColor: color.bgComment,
-  },
-  commentLikeCountText: {
-    fontSize: 11,
-    lineHeight: 11,
-    textAlign: "center",
-    color: color.textSecondary,
-  },
-
-  // Comment input
-  commentInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.sm,
-    marginTop: space.xs,
-  },
-  commentInputWrapper: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    height: size.avatarSm,
-    backgroundColor: color.bgComment,
-    borderRadius: size.radiusMd,
-    borderWidth: 1,
-    borderColor: "transparent",
-    paddingHorizontal: space.md,
-  },
-  commentInputWrapperFocused: {
-    backgroundColor: color.bgComment,
-  },
-  commentInput: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: space.xl,
-    color: color.textPrimary,
-    textAlignVertical: "center",
-  },
-  commentSendBtn: {
-    marginLeft: space.xs + 2,
-  },
-  commentSendBtnText: {
-    fontSize: 16,
-    color: color.blue,
-  },
-
-  // Date
-  dateToggleTouch: {
-    alignSelf: "flex-start",
-  },
-  dateText: {
-    fontSize: 12,
-    color: color.textSecondary,
-    marginTop: 1,
-  },
-
-  // Modal
-  modalBody: {
-    flex: 1,
-    backgroundColor: color.bgComment,
-  },
-  modalHeader: {
-    paddingHorizontal: space.lg,
-    paddingVertical: 14,
-    backgroundColor: color.bgWhite,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: color.divider,
-  },
-  modalTitle: {
-    fontSize: space.xl,
-    fontWeight: "700" as const,
-    color: color.textPrimary,
-  },
-  modalCloseBtn: {
-    paddingHorizontal: space.md,
-    paddingVertical: space.xs + 2,
-    borderRadius: space.xs - 2,
-    backgroundColor: color.bgComment,
-  },
-  modalCloseBtnText: {
-    fontWeight: "600" as const,
-    color: color.textPrimary,
-    fontSize: 13,
-  },
-  modalScroll: {
-    flex: 1,
-    paddingTop: space.sm,
-  },
-  modalUserRow: {
-    backgroundColor: color.bgWhite,
-    marginHorizontal: space.md,
-    marginVertical: space.xs,
-    borderRadius: 10,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 2 },
-      android: { elevation: 1 },
-    }),
-  },
-});

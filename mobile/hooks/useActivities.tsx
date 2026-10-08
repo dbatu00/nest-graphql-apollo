@@ -9,143 +9,179 @@ Responsibility:
 - Fetch activity feeds
 - Own feed state and mutations
 - Bridge UI components to the backend
+- Coordinate like/comment mutations with optimistic updates
 
 Owns:
 - Activities
 - Loading state
 - Error state
+- Post/comment mutation logic
 
 Delegates:
 - Network requests → graphql/client
 - Activity model → Activity type
+- Follow mutations → followUser / unfollowUser
+- Optimistic update patterns → optimisticUpdate utils
 
 Used by:
 - Feed
 - Username screen
-
-TODO:
-- Move current user identity into useAuth (or another dedicated identity hook)
-- Move follow stuff to a dedicated hook
 */
-import { useEffect, useState, useCallback } from "react";
-import { Activity } from "@/types/Activity";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { Activity, ActivityType } from "@/types/Activity";
+import { useI18n } from "@/hooks/useI18n";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  optimisticCreate,
+  optimisticToggle,
+  optimisticDelete,
+} from "@/utils/optimisticUpdate";
 import {
   addPost,
   deleteComment as deleteCommentMutation,
   deletePost as deletePostMutation,
   fetchFeed,
-  followUser,
   likeComment,
   likePost,
-  unfollowUser,
+  followUser,
   unlikeComment,
+  unfollowUser,
   unlikePost,
   addComment,
 } from "@/graphql/client";
 
-type Params = {
-  username?: string;
-  types?: string[];
+type UseActivitiesOptions = {
+  types?: ActivityType[];
+  scopeUsername?: string;
+  includeSelfLikes?: boolean;
 };
 
 
 
-export function useActivities(params: Params = {}) {
-  const { username, types } = params;
+export function useActivities(options?: ActivityType[] | UseActivitiesOptions) {
+  const { t } = useI18n();
+  const { user } = useAuth();
+
+  const types = Array.isArray(options) ? options : options?.types;
+  const scopeUsername = Array.isArray(options) ? undefined : options?.scopeUsername;
+  const includeSelfLikes = Array.isArray(options) ? false : !!options?.includeSelfLikes;
 
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const refreshRequestIdRef = useRef(0);
+  const mutationVersionRef = useRef(0);
+
+  const markMutation = useCallback(() => {
+    mutationVersionRef.current += 1;
+  }, []);
 
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (refreshOptions?: { silent?: boolean }) => {
+    const isSilent = !!refreshOptions?.silent;
+    const requestId = ++refreshRequestIdRef.current;
+    const mutationVersionAtStart = mutationVersionRef.current;
+
+    if (!isSilent) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
       const feed = await fetchFeed({
-        username,
         types,
       });
+
+      if (requestId !== refreshRequestIdRef.current) {
+        return;
+      }
+
+      if (mutationVersionRef.current !== mutationVersionAtStart) {
+        return;
+      }
 
       setActivities(feed);
     } catch (err: unknown) {
       console.error("[useActivities] feed refresh failed", err);
-      setError("Failed to load feed");
+      setError(t("feed.error.loadFailed"));
     } finally {
-      setLoading(false);
+      if (!isSilent) {
+        setLoading(false);
+      }
     }
-  }, [username, types]);
+  }, [t, types]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  /**
-   * Shared shape for all "flip a boolean, hit one of two endpoints,
-   * recover on failure" actions (post like, comment like, follow).
-   *
-   * `apply` is the optimistic state transform, computed from the *current*
-   * activities so each caller can build it as a plain closure.
-   * `isOn` decides which of onFn/offFn to call.
-   * `rollback`, if provided, restores exact prior state on failure instead
-   * of doing a full server refresh (cheaper + no flash of stale data).
-   */
-  const optimisticToggle = useCallback(
+  const scopedActivities = useMemo(() => {
+    if (!scopeUsername) {
+      return activities;
+    }
+
+    return activities.filter(activity => {
+      if (activity.type === "post") {
+        return activity.targetPost?.user?.username === scopeUsername;
+      }
+
+      if (activity.type === "like") {
+        const isActorMatch = activity.actor?.username === scopeUsername;
+        if (!isActorMatch) return false;
+        if (includeSelfLikes) return true;
+        return activity.targetPost?.user?.id !== activity.actor?.id;
+      }
+
+      if (activity.type === "comment") {
+        return activity.actor?.username === scopeUsername;
+      }
+
+      if (activity.type === "follow") {
+        return activity.actor?.username === scopeUsername || activity.targetUser?.username === scopeUsername;
+      }
+
+      return false;
+    });
+  }, [activities, includeSelfLikes, scopeUsername]);
+
+  const visibleActivities = useMemo(() => {
+    if (scopeUsername) {
+      return scopedActivities;
+    }
+
+    if (!user?.username) {
+      return undefined;
+    }
+
+    return scopedActivities.filter(a => {
+      if (a.type === "post") return true;
+      if (a.actor?.username === user.username) return false;
+      if (a.type === "like" && a.actor?.username === a.targetPost?.user?.username) return false;
+      if (a.type === "comment" && a.actor?.username === a.targetPost?.user?.username) return false;
+      return a.type !== "follow" || a.active;
+    });
+  }, [scopeUsername, scopedActivities, user?.username]);
+
+  // Wrapper for optimistic updates to activities state
+  const appliedOptimisticToggle = useCallback(
     async (
       apply: (prev: Activity[]) => Activity[],
       isOn: boolean,
       onFn: () => Promise<unknown>,
-      offFn: () => Promise<unknown>,
-      rollback?: (prev: Activity[]) => void
+      offFn: () => Promise<unknown>
     ) => {
-      let previousState: Activity[] | null = null;
-
-      setActivities(prev => {
-        previousState = prev;
-        return apply(prev);
-      });
-
-      try {
-        await (isOn ? offFn() : onFn());
-      } catch (err: unknown) {
-        console.error("[useActivities] optimistic toggle failed", err);
-        if (rollback && previousState) {
-          rollback(previousState);
-        } else {
-          refresh();
-        }
-      }
+      await optimisticToggle(apply, isOn, onFn, offFn, setActivities, undefined);
     },
-    [refresh]
+    []
   );
 
-  /**
-   * Shared shape for delete actions: optimistically remove something from
-   * `activities`, and roll back to the exact prior state on failure rather
-   * than triggering a full refresh.
-   */
-  const optimisticDelete = useCallback(
+  const appliedOptimisticDelete = useCallback(
     async (
       apply: (prev: Activity[]) => Activity[],
       deleteFn: () => Promise<unknown>
     ) => {
-      let previousState: Activity[] | null = null;
-
-      setActivities(prev => {
-        previousState = prev;
-        return apply(prev);
-      });
-
-      try {
-        await deleteFn();
-      } catch (err: unknown) {
-        console.error("[useActivities] delete failed", err);
-        if (previousState) {
-          setActivities(previousState);
-        }
-      }
+      await optimisticDelete(apply, deleteFn, setActivities);
     },
     []
   );
@@ -154,27 +190,95 @@ export function useActivities(params: Params = {}) {
 
   const publishPost = useCallback(
     async (content: string) => {
-      if (!content.trim()) return;
+      const normalizedContent = content.trim();
+      if (!normalizedContent) return;
+
+      if (!user) {
+        try {
+          await addPost(normalizedContent);
+          refresh();
+        } catch (err: unknown) {
+          console.error("[useActivities] publishPost failed", err);
+          refresh();
+        }
+        return;
+      }
+
+      const tempActivityId = -Date.now();
+      const tempPostId = tempActivityId;
+      const createdAt = new Date().toISOString();
+
+      const optimisticActivity: Activity = {
+        id: tempActivityId,
+        type: "post",
+        createdAt,
+        active: true,
+        actor: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName ?? user.username,
+          avatarUrl: user.avatarUrl ?? "",
+        },
+        targetUser: {
+          id: user.id,
+          username: user.username,
+          displayName: user.displayName ?? user.username,
+          avatarUrl: user.avatarUrl ?? "",
+        },
+        targetPost: {
+          id: tempPostId,
+          content: normalizedContent,
+          createdAt,
+          pending: true,
+          user: {
+            id: user.id,
+            username: user.username,
+            displayName: user.displayName ?? user.username,
+            avatarUrl: user.avatarUrl ?? "",
+            followedByMe: false,
+          },
+          likedByMe: false,
+          likesCount: 0,
+          comments: [],
+        },
+      };
 
       try {
-        await addPost(content);
-        refresh();
+        markMutation();
+        await optimisticCreate(
+          prev => [optimisticActivity, ...prev],
+          () => addPost(normalizedContent),
+          setActivities,
+          (prev, persistedPostId) =>
+            prev.map(activity =>
+              activity.id === tempActivityId && activity.targetPost
+                ? {
+                  ...activity,
+                  targetPost: {
+                    ...activity.targetPost,
+                    id: persistedPostId,
+                    pending: false,
+                  },
+                }
+                : activity
+            )
+        );
+        refresh({ silent: true });
       } catch (err: unknown) {
         console.error("[useActivities] publishPost failed", err);
-        refresh();
       }
     },
-    [refresh]
+    [refresh, user, markMutation]
   );
 
   const deletePost = useCallback(
     async (postId: number) => {
-      await optimisticDelete(
+      await appliedOptimisticDelete(
         prev => prev.filter(a => a.targetPost?.id !== postId),
         () => deletePostMutation(postId)
       );
     },
-    [optimisticDelete]
+    [appliedOptimisticDelete]
   );
 
   const togglePostLike = useCallback(
@@ -203,53 +307,106 @@ export function useActivities(params: Params = {}) {
             return true;
           })
 
-      await optimisticToggle(
+      markMutation();
+      await appliedOptimisticToggle(
         apply,
         currentlyLiked,
         () => likePost(postId),
         () => unlikePost(postId)
       );
     },
-    [types, optimisticToggle]
+    [types, appliedOptimisticToggle, markMutation]
   );
 
   /* COMMENT STUFF */
 
   const publishComment = useCallback(
     async (postId: number, content: string) => {
-      if (!content.trim()) return;
+      const normalizedContent = content.trim();
+      if (!normalizedContent) return;
+
+      if (!user) {
+        refresh();
+        return;
+      }
+
+      const tempCommentId = -Date.now();
+      const createdAt = new Date().toISOString();
 
       try {
-        const result = await addComment(postId, content);
+        markMutation();
+        await optimisticCreate(
+          prev =>
+            prev.map(activity => {
+              if (activity.targetPost?.id !== postId) return activity;
 
-        // Optimistically add comment to the post in the feed
-        setActivities(prev =>
-          prev.map(a => {
-            if (a.targetPost?.id !== postId) return a;
+              return {
+                ...activity,
+                targetPost: {
+                  ...activity.targetPost,
+                  comments: [
+                    ...(activity.targetPost.comments ?? []),
+                    {
+                      id: tempCommentId,
+                      content: normalizedContent,
+                      createdAt,
+                      updatedAt: createdAt,
+                      pending: true,
+                      likesCount: 0,
+                      likedByMe: false,
+                      user: {
+                        id: user.id,
+                        username: user.username,
+                        displayName: user.displayName ?? user.username,
+                        avatarUrl: user.avatarUrl ?? "",
+                      },
+                    },
+                  ],
+                },
+              };
+            }),
+          () => addComment(postId, normalizedContent),
+          setActivities,
+          (prev, result) =>
+            prev.map(activity => {
+              if (activity.targetPost?.id !== postId) return activity;
 
-            return {
-              ...a,
-              targetPost: {
-                ...a.targetPost,
-                comments: [
-                  ...(a.targetPost.comments ?? []),
-                  result,
-                ],
-              },
-            };
-          })
+              return {
+                ...activity,
+                targetPost: {
+                  ...activity.targetPost,
+                  comments: (activity.targetPost.comments ?? []).map(comment =>
+                    comment.id !== tempCommentId
+                      ? comment
+                      : {
+                        ...comment,
+                        id: result.id,
+                        content: result.content,
+                        createdAt: result.createdAt,
+                        updatedAt: result.createdAt,
+                        pending: false,
+                        user: {
+                          id: result.user.id,
+                          username: result.user.username,
+                          displayName: result.user.displayName ?? "",
+                          avatarUrl: result.user.avatarUrl ?? "",
+                        },
+                      }
+                  ),
+                },
+              };
+            })
         );
       } catch (err: unknown) {
         console.error("[useActivities] add comment failed", err);
-        refresh();
       }
     },
-    [refresh]
+    [refresh, user, markMutation]
   );
 
   const deleteComment = useCallback(
     async (commentId: number, postId: number) => {
-      await optimisticDelete(
+      await appliedOptimisticDelete(
         prev =>
           prev.map(a => {
             if (a.targetPost?.id !== postId) return a;
@@ -267,7 +424,7 @@ export function useActivities(params: Params = {}) {
         () => deleteCommentMutation(commentId)
       );
     },
-    [optimisticDelete]
+    [appliedOptimisticDelete]
   );
 
   const toggleCommentLike = useCallback(
@@ -295,52 +452,53 @@ export function useActivities(params: Params = {}) {
           };
         });
 
-      await optimisticToggle(
+      markMutation();
+      await appliedOptimisticToggle(
         apply,
         currentlyLiked,
         () => likeComment(commentId),
         () => unlikeComment(commentId)
       );
     },
-    [optimisticToggle]
+    [appliedOptimisticToggle, markMutation]
   );
 
   /* FOLLOW */
 
   const toggleFollow = useCallback(
     async (targetUsername: string, shouldFollow: boolean) => {
-      // Optimistically propagate follow state through every user reference in feed rows.
       const apply = (prev: Activity[]) =>
         prev.map(a => {
-          const updated = { ...a };
+          if (a.targetPost?.user?.username !== targetUsername) {
+            return a;
+          }
 
-          if (a.targetPost?.user?.username === targetUsername) {
-            updated.targetPost = {
+          return {
+            ...a,
+            targetPost: {
               ...a.targetPost,
               user: {
                 ...a.targetPost.user,
                 followedByMe: shouldFollow,
               },
-            };
-          }
-
-          return updated;
+            },
+          };
         });
 
-      // shouldFollow is the *target* state here (not "currentlyOn"), so we
-      // invert it before handing it to optimisticToggle's isOn param.
-      await optimisticToggle(
+      markMutation();
+      await appliedOptimisticToggle(
         apply,
         !shouldFollow,
         () => followUser(targetUsername),
         () => unfollowUser(targetUsername)
       );
     },
-    [optimisticToggle]
+    [appliedOptimisticToggle, markMutation]
   );
 
   return {
-    activities,
+    activities: scopedActivities,
+    visibleActivities,
     loading,
     error,
     refresh,

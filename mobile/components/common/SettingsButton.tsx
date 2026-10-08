@@ -1,5 +1,7 @@
 import { Text, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useI18n } from "@/hooks/useI18n";
+import { buildSettingsButtonContainerStyle, settingsButtonStyles as styles } from "@/styles";
 
 type Props = {
   onPress: () => void;
@@ -11,6 +13,7 @@ type Props = {
   backgroundColor?: string;
   textColor?: string;
   iconColor?: string;
+  hideText?: boolean;
 };
 
 export function UserSettingsButton({
@@ -18,34 +21,33 @@ export function UserSettingsButton({
   style,
   minWidth = 80,
   borderColor = "#fff",
-  label = "Settings",
+  label,
   iconName = "settings-outline",
   backgroundColor = "#fff",
   textColor = "#1d4ed8",
   iconColor = "#1d4ed8",
+  hideText = false,
 }: Props) {
+  const { t } = useI18n();
+  
+  const compactStyle = hideText ? { minWidth: 0, paddingHorizontal: 4, paddingVertical: 4 } : {};
+
   return (
     <TouchableOpacity
       onPress={onPress}
       style={[
-        {
-          paddingHorizontal: 14,
-          paddingVertical: 8,
-          borderWidth: 1,
-          borderColor,
-          borderRadius: 8,
-          backgroundColor,
-          minWidth,
-          alignItems: "center",
-        },
+        buildSettingsButtonContainerStyle(hideText ? 0 : minWidth, borderColor, backgroundColor),
+        compactStyle,
         style,
       ]}
     >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <View style={styles.contentRow}>
         <Ionicons name={iconName} size={14} color={iconColor} />
-        <Text style={{ fontWeight: "600", color: textColor, fontSize: 13, marginLeft: 6 }}>
-          {label}
-        </Text>
+        {!hideText && (
+          <Text style={[styles.text, { color: textColor }]}>
+            {label ?? t("common.settings")}
+          </Text>
+        )}
       </View>
     </TouchableOpacity>
   );

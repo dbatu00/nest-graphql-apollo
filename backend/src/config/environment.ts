@@ -178,11 +178,14 @@ export function validateEnvironment(config: RawEnv): RawEnv {
         APP_BASE_URL: asUrl(config.APP_BASE_URL, 'http://localhost:3000'),
 
         AUTH_MIN_PASSWORD_LENGTH: asPositiveInt(config.AUTH_MIN_PASSWORD_LENGTH, 8),
+        AUTH_MAX_LOGIN_ATTEMPTS: asPositiveInt(config.AUTH_MAX_LOGIN_ATTEMPTS, 5),
+        AUTH_LOGIN_LOCKOUT_MINUTES: asPositiveInt(config.AUTH_LOGIN_LOCKOUT_MINUTES, 15),
 
         JWT_SECRET: jwtSecret,
 
         // Kept configurable so we can rotate expiry policy without code changes.
         JWT_EXPIRES_IN: asJwtDuration(config.JWT_EXPIRES_IN, '15m'),
+        JWT_REFRESH_EXPIRES_IN: asJwtDuration(config.JWT_REFRESH_EXPIRES_IN, '30d'),
 
         DB_HOST: asString(config.DB_HOST) ?? 'localhost',
 

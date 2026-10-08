@@ -15,6 +15,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import {
     Repository,
     DataSource,
+    In,
     MoreThan,
     QueryFailedError,
 } from "typeorm";
@@ -32,9 +33,19 @@ import { AuthPayload } from "./auth.types";
 import { VerificationToken } from "./verification/verification-token.entity";
 import { VerificationEmailService } from "./verification/verification-email.service";
 import { VerificationLinkResult } from "./verification/verification-link-result.enum";
+import { Post } from "src/posts/post.entity";
+import { Comment } from "src/comments/comment.entity";
+import { Like } from "src/likes/like.entity";
+import { LIKE_TYPE } from "src/likes/likes.constants";
 
 import { EmailSendResult } from "./verification/verification-email-send-result.enum";
 import { VerifyEmailResult } from "./verification/verify-email-result.enum";
+import { getAuthI18n } from "src/common/i18n/auth.i18n";
+import {
+    EMAIL_MAX_LENGTH,
+    PASSWORD_MAX_LENGTH,
+    USERNAME_MAX_LENGTH,
+} from "src/common/validation/input-limits";
 
 
 @Injectable()
@@ -46,6 +57,8 @@ export class AuthService {
     private readonly resendCooldown: number;
     private readonly maxPerHour: number;
     private readonly minPasswordLength: number;
+    private readonly maxLoginAttempts: number;
+    private readonly loginLockoutMinutes: number;
 
     constructor(
         private readonly dataSource: DataSource,
@@ -67,6 +80,8 @@ export class AuthService {
         this.resendCooldown = this.getNonNegativeIntConfig("EMAIL_VERIFICATION_RESEND_COOLDOWN_MS");
         this.maxPerHour = this.getNonNegativeIntConfig("EMAIL_VERIFICATION_RESEND_MAX_PER_HOUR");
         this.minPasswordLength = this.getPositiveIntConfig("AUTH_MIN_PASSWORD_LENGTH");
+        this.maxLoginAttempts = this.getPositiveIntConfig("AUTH_MAX_LOGIN_ATTEMPTS");
+        this.loginLockoutMinutes = this.getPositiveIntConfig("AUTH_LOGIN_LOCKOUT_MINUTES");
     }
 
     //------------------------------------------------
@@ -83,15 +98,16 @@ export class AuthService {
     *
     * Verification email is non-fatal: account is created regardless
     */
-    async signUp(username: string, email: string, password: string): Promise<AuthPayload> {
+    async signUp(username: string, email: string, password: string, language?: string): Promise<AuthPayload> {
+        const normalizedUsername = (username ?? '').trim();
 
-        this.validateUsername(username);
+        this.validateUsername(normalizedUsername);
         this.validatePassword(password);
 
         const normalizedEmail = this.normalizeEmail(email);
 
         const [usernameExists, emailExists] = await Promise.all([
-            this.userRepo.exists({ where: { username } }),
+            this.userRepo.exists({ where: { username: normalizedUsername } }),
             this.userRepo.exists({ where: { email: normalizedEmail } })
         ]);
 
@@ -107,8 +123,8 @@ export class AuthService {
             user = await this.dataSource.transaction(async manager => {
 
                 const user = manager.create(User, {
-                    username,
-                    displayName: username,
+                    username: normalizedUsername,
+                    displayName: normalizedUsername,
                     email: normalizedEmail,
                     emailVerified: false
                 });
@@ -132,21 +148,19 @@ export class AuthService {
             throw err;
         }
 
-        await this.issueVerificationTokenAndSendEmail(user);
+        await this.issueVerificationTokenAndSendEmail(user, language);
 
-        return {
-            user,
-            token: this.issueAccessToken(user),
-            emailVerified: user.emailVerified ?? false
-        };
+        return this.issueAuthPayload(user);
     }
 
     //------------------------------------------------
     // LOGIN
     //------------------------------------------------
 
-    async login(identifier: string, password: string): Promise<AuthPayload> {
-        const normalizedIdentifier = identifier.trim().toLowerCase();
+    async login(identifier: string, password: string, language?: string): Promise<AuthPayload> {
+        const normalizedIdentifierValue = (identifier ?? '').trim();
+        const normalizedIdentifier = normalizedIdentifierValue.toLowerCase();
+        const copy = getAuthI18n(language).login;
 
         const credential = await this.authRepo
             .createQueryBuilder("auth")
@@ -154,11 +168,20 @@ export class AuthService {
             .where(
                 "user.username = :identifier OR LOWER(user.email) = :normalizedIdentifier",
                 {
-                    identifier,
+                    identifier: normalizedIdentifierValue,
                     normalizedIdentifier
                 }
             )
             .getOne();
+
+        const lockedUntil = credential?.loginLockedUntil;
+        if (lockedUntil && lockedUntil.getTime() > Date.now()) {
+            const remainingMinutes = Math.max(
+                1,
+                Math.ceil((lockedUntil.getTime() - Date.now()) / 60000),
+            );
+            throw new UnauthorizedException(copy.tooManyAttempts(remainingMinutes));
+        }
 
         // Prevents timing attacks by always running argon2.verify even when the user doesn't exist 
         // -hash must remain a valid argon2id string or verify() will short-circuit and defeat the purpose
@@ -167,14 +190,31 @@ export class AuthService {
         const hash = credential?.password ?? fakeHash;
         const valid = await argon2.verify(hash, password);
         if (!credential || !valid) {
-            throw new UnauthorizedException("Invalid credentials");
+            if (credential) {
+                const failedLoginAttempts = (credential.failedLoginAttempts ?? 0) + 1;
+                credential.failedLoginAttempts = failedLoginAttempts;
+
+                if (failedLoginAttempts >= this.maxLoginAttempts) {
+                    credential.loginLockedUntil = new Date(Date.now() + this.loginLockoutMinutes * 60_000);
+                }
+
+                await this.authRepo.save(credential);
+
+                if (credential.loginLockedUntil) {
+                    throw new UnauthorizedException(copy.tooManyAttempts(this.loginLockoutMinutes));
+                }
+            }
+
+            throw new UnauthorizedException(copy.invalidCredentials);
         }
 
-        return {
-            user: credential.user,
-            token: this.issueAccessToken(credential.user),
-            emailVerified: credential.user.emailVerified
-        };
+        if ((credential.failedLoginAttempts ?? 0) !== 0 || credential.loginLockedUntil) {
+            credential.failedLoginAttempts = 0;
+            credential.loginLockedUntil = null;
+            await this.authRepo.save(credential);
+        }
+
+        return this.issueAuthPayload(credential.user);
     }
 
     //------------------------------------------------
@@ -271,19 +311,42 @@ export class AuthService {
     // RESEND
     //------------------------------------------------
 
-    async resendVerification(userId: number): Promise<EmailSendResult> {
+    async resendVerification(userId: number, language?: string): Promise<EmailSendResult> {
         const user = await this.userRepo.findOne({ where: { id: userId } });
         if (!user) throw new BadRequestException("User not found");
         if (user.emailVerified) return EmailSendResult.ALREADY_VERIFIED;
 
-        const result = await this.issueVerificationTokenAndSendEmail(user);
+        const result = await this.issueVerificationTokenAndSendEmail(user, language);
         return result;
+    }
+
+    async refreshAuth(refreshToken: string): Promise<AuthPayload> {
+        let payload: { sub: number; type?: string };
+
+        try {
+            payload = this.jwt.verify<{ sub: number; type?: string }>(refreshToken, {
+                secret: this.config.getOrThrow<string>("JWT_SECRET"),
+            });
+        } catch {
+            throw new UnauthorizedException("Invalid or expired refresh token");
+        }
+
+        if (payload.type !== "refresh") {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        const user = await this.userRepo.findOne({ where: { id: payload.sub } });
+        if (!user) {
+            throw new UnauthorizedException("User not found");
+        }
+
+        return this.issueAuthPayload(user);
     }
 
     //------------------------------------------------
     // CHANGE EMAIL
     //------------------------------------------------
-    async changeMyEmail(userId: number, newEmail: string, password: string) {
+    async changeMyEmail(userId: number, newEmail: string, password: string, language?: string) {
         const normalized = this.normalizeEmail(newEmail);
         const auth = await this.authRepo.findOne({
             where: { user: { id: userId } },
@@ -310,7 +373,7 @@ export class AuthService {
             throw err;
         }
 
-        const result = await this.issueVerificationTokenAndSendEmail(auth.user);
+        const result = await this.issueVerificationTokenAndSendEmail(auth.user, language);
         if (result === EmailSendResult.FAILED) {
             this.logger.warn(`[changeMyEmail] Email delivery failed after email change userId=${auth.user.id}`);
         }
@@ -357,6 +420,60 @@ export class AuthService {
         return true;
     }
 
+    async deleteMyAccount(userId: number, currentPassword: string) {
+        const auth = await this.authRepo.findOne({
+            where: { user: { id: userId } },
+        });
+
+        if (!auth) {
+            throw new UnauthorizedException();
+        }
+
+        const valid = await argon2.verify(auth.password, currentPassword);
+        if (!valid) {
+            throw new UnauthorizedException("Invalid password");
+        }
+
+        await this.dataSource.transaction(async (manager) => {
+            const postRows = await manager
+                .getRepository(Post)
+                .createQueryBuilder("post")
+                .select("post.id", "id")
+                .where("post.userId = :userId", { userId })
+                .getRawMany<{ id: number }>();
+
+            const commentRows = await manager
+                .getRepository(Comment)
+                .createQueryBuilder("comment")
+                .select("comment.id", "id")
+                .where("comment.userId = :userId", { userId })
+                .getRawMany<{ id: number }>();
+
+            const postIds = postRows.map(row => row.id);
+            const commentIds = commentRows.map(row => row.id);
+
+            const likeRepo = manager.getRepository(Like);
+
+            if (postIds.length > 0) {
+                await likeRepo.delete({
+                    targetType: LIKE_TYPE.POST,
+                    targetId: In(postIds),
+                });
+            }
+
+            if (commentIds.length > 0) {
+                await likeRepo.delete({
+                    targetType: LIKE_TYPE.COMMENT,
+                    targetId: In(commentIds),
+                });
+            }
+
+            await manager.delete(User, { id: userId });
+        });
+
+        return true;
+    }
+
     //------------------------------------------------
     // TOKEN ISSUANCE
     //------------------------------------------------
@@ -368,7 +485,7 @@ export class AuthService {
      * No rollback on delivery failure: the orphaned token is inert
      * without the email and will be invalidated on the next resend.
      */
-    private async issueVerificationTokenAndSendEmail(user: User): Promise<EmailSendResult> {
+    private async issueVerificationTokenAndSendEmail(user: User, language?: string): Promise<EmailSendResult> {
         const throttled = await this.isThrottled(user.id);
         if (throttled) {
             return EmailSendResult.THROTTLED;
@@ -400,7 +517,8 @@ export class AuthService {
             await this.emailService.sendVerificationEmail(
                 user.email,
                 rawToken,
-                user.username
+                user.username,
+                language
             );
             return EmailSendResult.SENT;
         } catch (err) {
@@ -448,6 +566,10 @@ export class AuthService {
         if (!username?.trim()) {
             throw new BadRequestException("Username required");
         }
+
+        if (username.length > USERNAME_MAX_LENGTH) {
+            throw new BadRequestException(`Username must be at most ${USERNAME_MAX_LENGTH} characters`);
+        }
     }
 
     private validatePassword(password: string) {
@@ -455,6 +577,10 @@ export class AuthService {
             throw new BadRequestException(
                 `Password must be at least ${this.minPasswordLength} characters`
             );
+        }
+
+        if (password.length > PASSWORD_MAX_LENGTH) {
+            throw new BadRequestException(`Password must be at most ${PASSWORD_MAX_LENGTH} characters`);
         }
     }
 
@@ -466,6 +592,10 @@ export class AuthService {
         const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!regex.test(normalized)) {
             throw new BadRequestException("Invalid email");
+        }
+
+        if (normalized.length > EMAIL_MAX_LENGTH) {
+            throw new BadRequestException(`Email must be at most ${EMAIL_MAX_LENGTH} characters`);
         }
 
         return normalized;
@@ -482,8 +612,31 @@ export class AuthService {
     private issueAccessToken(user: User): string {
         return this.jwt.sign({
             sub: user.id,
-            username: user.username
+            username: user.username,
+            type: "access",
         });
+    }
+
+    private issueRefreshToken(user: User): string {
+        const expiresIn = this.config.get<string>("JWT_REFRESH_EXPIRES_IN") ?? "30d";
+
+        return this.jwt.sign(
+            {
+                sub: user.id,
+                username: user.username,
+                type: "refresh",
+            },
+            { expiresIn: expiresIn as any },
+        );
+    }
+
+    private issueAuthPayload(user: User): AuthPayload {
+        return {
+            user,
+            token: this.issueAccessToken(user),
+            refreshToken: this.issueRefreshToken(user),
+            emailVerified: user.emailVerified ?? false,
+        };
     }
 
     //------------------------------------------------

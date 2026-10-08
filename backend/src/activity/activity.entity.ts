@@ -30,13 +30,13 @@ export class Activity {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => User)
+    @ManyToOne(() => User, { onDelete: 'CASCADE' })
     actor: User;
 
     @Column()
     actorId: number;
 
-    @ManyToOne(() => User, { nullable: true })
+    @ManyToOne(() => User, { nullable: true, onDelete: 'CASCADE' })
     targetUser?: User;
 
     @Column({ nullable: true })

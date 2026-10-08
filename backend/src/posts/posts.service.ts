@@ -1,6 +1,7 @@
 // Posts business logic for feed, post CRUD, and likes.
 import {
     Injectable,
+    BadRequestException,
     NotFoundException,
     ForbiddenException,
     Logger,
@@ -14,6 +15,7 @@ import { ActivityService } from 'src/activity/activity.service';
 import { LIKE_TYPE } from 'src/likes/likes.constants';
 import { LikesService } from 'src/likes/likes.service';
 import { lockEntityByIdOrThrow } from 'src/common/row-lock';
+import { POST_CONTENT_MAX_LENGTH } from 'src/common/validation/input-limits';
 
 @Injectable()
 export class PostsService {
@@ -91,12 +93,20 @@ export class PostsService {
     // POST CREATION (TRANSACTIONAL)
     // ------------------------
     async addPost(userId: number, content: string) {
+        const normalizedContent = content?.trim() ?? '';
+        if (!normalizedContent) {
+            throw new BadRequestException('content must not be empty');
+        }
+        if (normalizedContent.length > POST_CONTENT_MAX_LENGTH) {
+            throw new BadRequestException(`content must be at most ${POST_CONTENT_MAX_LENGTH} characters`);
+        }
+
         try {
             const post = await this.postsRepo.manager.transaction(async manager => {
                 const user = await manager.findOne(User, { where: { id: userId } });
                 if (!user) throw new NotFoundException('User not found');
 
-                const post = await manager.save(Post, { content, user });
+                const post = await manager.save(Post, { content: normalizedContent, user });
 
                 await this.activityService.logActivity(
                     { type: 'post', actor: user, targetPost: post },

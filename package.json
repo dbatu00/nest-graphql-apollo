@@ -8,6 +8,11 @@
   "scripts": {
     "dev:backend": "cd backend && npm run start:dev",
     "dev:mobile": "cd mobile && npx expo start",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\""
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:mobile\"",
+    "test": "npm run test:backend && npm run test:mobile",
+    "test:backend": "npm --prefix backend test",
+    "test:mobile": "npm --prefix mobile test -- --runInBand",
+    "test:watch": "npm --prefix backend run test:watch",
+    "test:cov": "npm --prefix backend run test:cov && npm --prefix mobile test -- --coverage --runInBand"
   }
 }

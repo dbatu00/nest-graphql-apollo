@@ -1,52 +1,42 @@
 import { NotFoundException } from '@nestjs/common';
+
 import { lockEntityByIdOrThrow } from './row-lock';
 
 describe('lockEntityByIdOrThrow', () => {
-    it('locks only the root alias when left-joining relations', async () => {
-        const row = { id: 1, user: { id: 2 } };
-        const qb = {
-            where: jest.fn(),
-            leftJoinAndSelect: jest.fn(),
-            setLock: jest.fn(),
-            getOne: jest.fn().mockResolvedValue(row),
-        };
-
-        qb.where.mockReturnValue(qb);
-        qb.leftJoinAndSelect.mockReturnValue(qb);
-        qb.setLock.mockReturnValue(qb);
+    it('locks the target row and returns it when found', async () => {
+        const where = jest.fn().mockReturnThis();
+        const leftJoinAndSelect = jest.fn().mockReturnThis();
+        const setLock = jest.fn().mockReturnThis();
+        const getOne = jest.fn().mockResolvedValue({ id: 7, name: 'row-7' });
 
         const manager = {
-            createQueryBuilder: jest.fn().mockReturnValue(qb),
-        };
+            createQueryBuilder: jest.fn().mockReturnValue({
+                where,
+                leftJoinAndSelect,
+                setLock,
+                getOne,
+            }),
+        } as any;
 
-        await expect(
-            lockEntityByIdOrThrow(manager as any, class TestEntity { }, 'post', 1, ['user'], 'Post not found'),
-        ).resolves.toBe(row);
+        const result = await lockEntityByIdOrThrow(manager, Object, 'row', 7, ['owner']);
 
-        expect(manager.createQueryBuilder).toHaveBeenCalledWith(expect.any(Function), 'post');
-        expect(qb.where).toHaveBeenCalledWith('post.id = :id', { id: 1 });
-        expect(qb.leftJoinAndSelect).toHaveBeenCalledWith('post.user', 'user');
-        expect(qb.setLock).toHaveBeenCalledWith('pessimistic_write', undefined, ['post']);
+        expect(result).toEqual({ id: 7, name: 'row-7' });
+        expect(manager.createQueryBuilder).toHaveBeenCalledWith(Object, 'row');
+        expect(where).toHaveBeenCalledWith('row.id = :id', { id: 7 });
+        expect(leftJoinAndSelect).toHaveBeenCalledWith('row.owner', 'owner');
+        expect(setLock).toHaveBeenCalledWith('pessimistic_write', undefined, ['row']);
     });
 
-    it('throws a not found error when the row does not exist', async () => {
-        const qb = {
-            where: jest.fn(),
-            leftJoinAndSelect: jest.fn(),
-            setLock: jest.fn(),
-            getOne: jest.fn().mockResolvedValue(null),
-        };
-
-        qb.where.mockReturnValue(qb);
-        qb.leftJoinAndSelect.mockReturnValue(qb);
-        qb.setLock.mockReturnValue(qb);
-
+    it('throws NotFoundException when the row does not exist', async () => {
         const manager = {
-            createQueryBuilder: jest.fn().mockReturnValue(qb),
-        };
+            createQueryBuilder: jest.fn().mockReturnValue({
+                where: jest.fn().mockReturnThis(),
+                leftJoinAndSelect: jest.fn().mockReturnThis(),
+                setLock: jest.fn().mockReturnThis(),
+                getOne: jest.fn().mockResolvedValue(null),
+            }),
+        } as any;
 
-        await expect(
-            lockEntityByIdOrThrow(manager as any, class TestEntity { }, 'comment', 99, ['user'], 'Comment not found'),
-        ).rejects.toThrow(new NotFoundException('Comment not found'));
+        await expect(lockEntityByIdOrThrow(manager, Object, 'row', 99, [], 'missing row')).rejects.toBeInstanceOf(NotFoundException);
     });
 });

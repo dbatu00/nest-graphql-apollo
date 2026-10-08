@@ -1,6 +1,7 @@
 import {
     Injectable,
     Logger,
+    BadRequestException,
     NotFoundException,
     ForbiddenException,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { LIKE_TYPE } from '../likes/likes.constants';
 import { LikesService } from '../likes/likes.service';
 import { ActivityService } from '../activity/activity.service';
 import { lockEntityByIdOrThrow } from 'src/common/row-lock';
+import { COMMENT_CONTENT_MAX_LENGTH } from 'src/common/validation/input-limits';
 
 @Injectable()
 export class CommentsService {
@@ -44,6 +46,14 @@ export class CommentsService {
     }
 
     async addComment(userId: number, postId: number, content: string): Promise<Comment> {
+        const normalizedContent = content?.trim() ?? '';
+        if (!normalizedContent) {
+            throw new BadRequestException('content must not be empty');
+        }
+        if (normalizedContent.length > COMMENT_CONTENT_MAX_LENGTH) {
+            throw new BadRequestException(`content must be at most ${COMMENT_CONTENT_MAX_LENGTH} characters`);
+        }
+
         try {
             const comment = await this.commentsRepo.manager.transaction(async (manager) => {
                 const user = await manager.findOne(User, { where: { id: userId } });
@@ -53,7 +63,7 @@ export class CommentsService {
                 if (!post) throw new NotFoundException('Post not found');
 
                 const comment = await manager.save(Comment, {
-                    content,
+                    content: normalizedContent,
                     user,
                     userId,
                     post,
@@ -122,10 +132,8 @@ export class CommentsService {
             return await this.commentsRepo.manager.transaction(async manager => {
                 const userExists = await manager.exists(User, { where: { id: userId } });
                 const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const postExists = await manager.exists(Post, { where: { id: comment?.postId } });
 
                 if (!userExists) throw new NotFoundException('User not found');
-                if (!postExists) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.like(
                     userId,
@@ -165,10 +173,8 @@ export class CommentsService {
             return await this.commentsRepo.manager.transaction(async manager => {
                 const userExists = await manager.exists(User, { where: { id: userId } }); //not a required check but allows for a good error message instead of raw db error
                 const comment = await lockEntityByIdOrThrow(manager, Comment, 'comment', commentId, ['user'], 'Comment not found');
-                const postExists = await manager.exists(Post, { where: { id: comment?.postId } }); //since comments get locked, its parent gets locked due to FK, redundant
 
                 if (!userExists) throw new NotFoundException('User not found');
-                if (!postExists) throw new NotFoundException('Post not found');
 
                 const { changed } = await this.likesService.unlike(
                     userId,

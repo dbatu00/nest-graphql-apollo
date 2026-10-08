@@ -4,6 +4,8 @@ const tsconfig = require("./tsconfig.json");
 module.exports = {
   preset: 'jest-expo',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testMatch: ['**/?(*.)+(spec|test).[jt]s?(x)'],
+  testPathIgnorePatterns: ['<rootDir>/__tests__/test-utils/'],
 
   transform: {
     '^.+\\.[jt]sx?$': 'babel-jest',

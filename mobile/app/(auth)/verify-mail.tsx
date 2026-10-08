@@ -3,9 +3,16 @@ import { View, Text, Pressable } from "react-native";
 import { router } from "expo-router";
 import { resendMyVerificationLink } from "@/graphql/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useI18n } from "@/hooks/useI18n";
 import { EmailSendResult } from "@/types/Auth";
 import { AppLogo } from "@/components/common/AppLogo";
-import { commonStyles } from "@/styles/common";
+import { PageShell } from "@/components/layout/PageShell";
+import {
+  authFormStyles as authStyles,
+  commonStyles,
+  verifyMailStatusColorStyle,
+  verifyMailStyles as styles,
+} from "@/styles";
 
 const MIN_ACTION_MS = 900;
 
@@ -14,10 +21,11 @@ function sleep(ms: number) {
 }
 
 export default function VerifyMail() {
-  const { user, refreshAuth } = useAuth();
+  const { user, refreshAuth, logout } = useAuth();
+  const { t } = useI18n();
 
   const resendSuccessMessage =
-    "Verification link sent. Please check your email.";
+    t("auth.verify.info.sent");
 
   const [checking, setChecking] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -78,14 +86,14 @@ export default function VerifyMail() {
       }
 
       setInfo(
-        "Not verified yet. Open the email link first, then tap continue."
+        t("auth.verify.info.notVerifiedYet")
       );
     } catch (err: unknown) {
       if (!mountedRef.current) return;
       setError(
         err instanceof Error
           ? err.message
-          : "Could not check verification status"
+          : t("auth.verify.error.couldNotCheck")
       );
     } finally {
       if (mountedRef.current) {
@@ -105,10 +113,10 @@ export default function VerifyMail() {
       const resendStatus = await resendMyVerificationLink();
 
       const messages: Record<EmailSendResult, string> = {
-        SENT: "Verification link sent. Please check your email.",
-        THROTTLED: "Please wait before requesting another email.",
-        FAILED: "Could not deliver email right now. Try again later.",
-        ALREADY_VERIFIED: "Your email is already verified",
+        SENT: t("auth.verify.info.sent"),
+        THROTTLED: t("auth.verify.info.throttled"),
+        FAILED: t("auth.verify.info.failed"),
+        ALREADY_VERIFIED: t("auth.verify.info.alreadyVerified"),
       };
 
       const elapsed = Date.now() - startTime;
@@ -118,14 +126,14 @@ export default function VerifyMail() {
 
       if (!mountedRef.current) return;
 
-      setInfo(messages[resendStatus] ?? "Unknown status");
+      setInfo(messages[resendStatus] ?? t("auth.verify.info.unknown"));
     } catch (err: unknown) {
       if (!mountedRef.current) return;
 
       setError(
         err instanceof Error
           ? err.message
-          : "Could not resend verification email"
+          : t("auth.verify.error.couldNotResend")
       );
     } finally {
       if (mountedRef.current) {
@@ -134,102 +142,76 @@ export default function VerifyMail() {
     }
   };
 
-  return (
-    <View
-      style={[
-        commonStyles.container,
-        commonStyles.pageGutter,
-        { backgroundColor: "#f3f4f6", justifyContent: "center" },
-      ]}
-    >
-      <View style={{ alignSelf: "center", width: "100%", maxWidth: 520 }}>
-        <AppLogo subtitle="One more step" />
+  const handleLogout = async () => {
+    await logout();
+  };
 
-        <Text
-          style={{
-            fontSize: 42,
-            fontWeight: "800",
-            color: "#0f172a",
-            marginBottom: 10,
-          }}
-        >
-          Verify your email
+  return (
+    <PageShell header={<View />} contentContainerStyle={{ justifyContent: 'center', flexGrow: 1 }}>
+      <View
+        style={[
+          commonStyles.container,
+          styles.containerTone,
+        ]}
+      >
+        <View style={styles.inner}>
+        <AppLogo subtitle={t("auth.verify.subtitle")} />
+
+        <Text style={styles.title}>
+          {t("auth.verify.title")}
         </Text>
 
-        <Text
-          style={{
-            fontSize: 17,
-            color: "#111827",
-            marginBottom: 28,
-            lineHeight: 24,
-          }}
-        >
-          Open the verification link we sent to your email. We’ll move you to
-          feed once your account is verified.
+        <Text style={styles.description}>
+          {t("auth.verify.description")}
         </Text>
 
         <Pressable
           onPress={checkVerificationStatus}
           disabled={checking}
-          style={{
-            height: 58,
-            borderRadius: 999,
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "#1665d8",
-            marginBottom: 14,
-          }}
+          style={styles.primaryButton}
         >
-          <Text style={{ color: "#fff", fontSize: 26, fontWeight: "700" }}>
-            {checking ? "Checking..." : "I verified, continue"}
+          <Text style={styles.primaryButtonText}>
+            {checking ? t("auth.verify.checking") : t("auth.verify.verifiedContinue")}
           </Text>
         </Pressable>
 
         <Pressable
           onPress={handleResend}
           disabled={resendLoading}
-          style={{
-            height: 58,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: "#cbd5e1",
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: "#fff",
-          }}
+          style={styles.secondaryButton}
         >
-          <Text style={{ color: "#111827", fontSize: 26, fontWeight: "500" }}>
-            {resendLoading ? "Sending..." : "I didn’t get the code"}
+          <Text style={styles.secondaryButtonText}>
+            {resendLoading ? t("auth.verify.sending") : t("auth.verify.missingCode")}
+          </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={handleLogout}
+          style={authStyles.navLinkWrap}
+        >
+          <Text style={authStyles.navLinkText}>
+            {t("auth.verify.backToLogin")}
           </Text>
         </Pressable>
 
         {error ? (
-          <Text
-            style={{
-              color: "#dc2626",
-              marginTop: 12,
-              textAlign: "center",
-              fontSize: 16,
-            }}
-          >
+          <Text style={[styles.statusText, { color: "#dc2626" }]}>
             {error}
           </Text>
         ) : null}
 
         {info ? (
           <Text
-            style={{
-              color:
-                info === resendSuccessMessage ? "#059669" : "#d97706",
-              marginTop: 12,
-              textAlign: "center",
-              fontSize: 16,
-            }}
+            style={[
+              styles.statusText,
+              verifyMailStatusColorStyle(info === resendSuccessMessage),
+            ]}
           >
             {info}
           </Text>
         ) : null}
+        </View>
       </View>
-    </View>
+    </PageShell>
   );
 }

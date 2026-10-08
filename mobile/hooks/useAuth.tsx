@@ -43,19 +43,6 @@ setUser()
 Context updates
       ↓
 Consumers rerender
-
-TODO: 
-- Wrap clearToken() in try/catch in logout() and refreshAuth()'s !currentUser branch so setUser(null) still runs if storage fails 
-- Confirm whether refreshAuth()'s !currentUser branch is actually reachable given backend auth guards; remove it or document it as defensive-only 
-- Move logout navigation into AuthGate by reacting to user becoming null, instead of relying on callers to redirect 
-- Consider blocking authenticated route rendering in AuthGate until loading resolves to eliminate the cold-start flash
-- Cold-start transient-failure gap: if getCurrentUser() fails on the very
-  first refreshAuth() call (app launch), userRef.current is still null
-  (no prior session in memory), so a valid stored token gets treated as
-  "logged out" even though nothing about the session was actually invalid.
-  Add a retry (e.g. on regaining network connectivity, or a bounded
-  retry/backoff before giving up) instead of silently falling through to
-  logged-out state on the very first failure.
 */
 
 import {
@@ -71,7 +58,9 @@ import {
 } from "react";
 
 import { getCurrentUser } from "@/utils/currentUser";
-import { clearToken, getToken, saveToken } from "@/utils/token";
+import { clearToken, getRefreshToken, getToken, saveRefreshToken, saveToken } from "@/utils/token";
+import { registerAuthFailureHandler } from "@/utils/graphqlFetch";
+import { refreshAuth as refreshAuthMutation } from "@/graphql/client";
 import type { MeData } from "@/graphql/client";
 
 //AuthUser is the shape this app uses internally to represent an authenticated user.
@@ -109,6 +98,7 @@ type AuthContextValue = {
 
   setSession: (args: {
     token: string;
+    refreshToken?: string;
     user: RawAuthUser;
     emailVerified: boolean;
   }) => Promise<void>;
@@ -230,9 +220,28 @@ means this callback never needs to be recreated because it doesn't capture any c
     try {
       //check local storage
       const token = await getToken();
+      const refreshToken = await getRefreshToken();
+
       if (!token) {
-        setUser(null);
-        return null;
+        if (!refreshToken) {
+          setUser(null);
+          return null;
+        }
+
+        try {
+          const refreshed = await refreshAuthMutation(refreshToken);
+          await saveToken(refreshed.token);
+          await saveRefreshToken(refreshed.refreshToken);
+
+          const nextUser: AuthUser = toAuthUser(refreshed.user, refreshed.emailVerified);
+          setUser(nextUser);
+          return nextUser;
+        } catch (err: unknown) {
+          console.warn("[useAuth] refresh token renew failed", err);
+          await clearToken();
+          setUser(null);
+          return null;
+        }
       }
 
       /*
@@ -243,21 +252,22 @@ means this callback never needs to be recreated because it doesn't capture any c
       */
       let currentUser: Awaited<ReturnType<typeof getCurrentUser>>;
       try {
-
         //Validate the stored token by asking the backend who the current user is. 
         currentUser = await getCurrentUser();
       } catch (err: unknown) {
-
         /*
         err type is unknown because it is safer than "any".
         TypeScript forces us to inspect the value before assuming what it contains.
 
-        Backend returns proper response when current user's info doesn't pass its checks thus, an error here means its a transient(network etc.) failure
+        getCurrentUser() converts authentication failures into null.
+        Any error reaching this catch is therefore an unexpected/transient
+        failure such as a network or server error.
+
+        Keep the last known authenticated user rather than logging them out
+        when authentication status cannot be determined.
         */
-        console.warn(
-          "[useAuth] refreshAuth transient failure",
-          err
-        );
+
+        console.warn("[useAuth] refreshAuth transient failure", err);
 
         /*
         Return the last known authenticated user and do not log the user out because of a temporary network/server problem.
@@ -270,11 +280,27 @@ means this callback never needs to be recreated because it doesn't capture any c
       }
 
       //backend responded and did not authenticate the user, clear token and logout(setuser(null))
-      //await should be in a try catch: its in todo
       if (!currentUser) {
-        await clearToken();
-        setUser(null);
-        return null;
+        if (!refreshToken) {
+          await clearToken();
+          setUser(null);
+          return null;
+        }
+
+        try {
+          const refreshed = await refreshAuthMutation(refreshToken);
+          await saveToken(refreshed.token);
+          await saveRefreshToken(refreshed.refreshToken);
+
+          const nextUser: AuthUser = toAuthUser(refreshed.user, refreshed.emailVerified);
+          setUser(nextUser);
+          return nextUser;
+        } catch (err: unknown) {
+          console.warn("[useAuth] refresh token renew failed", err);
+          await clearToken();
+          setUser(null);
+          return null;
+        }
       }
 
       //Convert the backend's user shape into the application'sAuthUser shape.
@@ -301,16 +327,27 @@ means this callback never needs to be recreated because it doesn't capture any c
 
   /*
   Called after a successful login or signup.
-  1. Persists the token.
-  2. Updates global auth state.
+  1. Updates global auth state.
+  2. Persists tokens asynchronously.
   */
   const setSession = useCallback(async (args: {
     token: string;
+    refreshToken?: string;
     user: RawAuthUser;
     emailVerified: boolean;
   }) => {
-    await saveToken(args.token);
     setUser(toAuthUser(args.user, args.emailVerified));
+
+    void (async () => {
+      try {
+        await saveToken(args.token);
+        if (args.refreshToken) {
+          await saveRefreshToken(args.refreshToken);
+        }
+      } catch (err: unknown) {
+        console.warn("[useAuth] token persistence failed after setSession", err);
+      }
+    })();
   }, []);
 
   /*
@@ -318,7 +355,7 @@ means this callback never needs to be recreated because it doesn't capture any c
   - Removes stored token.
   - Clears global auth state.
   It intentionally does NOT decide where the app should navigate afterwards.
-  Instead, the routing layer (AuthGate) should observe user becoming null and redirect appropriately.
+  Instead, the routing layer (app/_layout AppNavigator) observes user becoming null and redirects appropriately.
   */
   const logout = useCallback(async () => {
     //Remove the persisted token so that the next app launch will therefore begin unauthenticated.  
@@ -333,6 +370,12 @@ means this callback never needs to be recreated because it doesn't capture any c
     setUser(null);
 
   }, []);
+
+  useEffect(() => {
+    return registerAuthFailureHandler(() => {
+      void refreshAuth();
+    });
+  }, [refreshAuth]);
 
   /*
   Similar idea to useCallback.

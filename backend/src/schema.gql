@@ -62,6 +62,7 @@ type Activity {
 type AuthPayload {
   user: User!
   token: String!
+  refreshToken: String!
   emailVerified: Boolean!
 }
 
@@ -75,7 +76,7 @@ type Query {
   posts: [Post!]!
   likedPosts(username: String!): [Post!]!
   post(id: Int!): Post!
-  feed(username: String, types: [String!]): [Activity!]!
+  feed(username: String, types: [ActivityType!]): [Activity!]!
   comment(id: Int!): Comment!
   me: User!
   isEmailUsed(email: String!): Boolean!
@@ -83,6 +84,14 @@ type Query {
   following(username: String!): [User!]!
   getProfileFollowersView(username: String!): [FollowerView!]!
   getProfileFollowingView(username: String!): [FollowerView!]!
+}
+
+enum ActivityType {
+  POST
+  FOLLOW
+  LIKE
+  SHARE
+  COMMENT
 }
 
 type Mutation {
@@ -97,8 +106,10 @@ type Mutation {
   unlikeComment(commentId: Int!): Boolean!
   signUp(username: String!, email: String!, password: String!): AuthPayload!
   login(identifier: String!, password: String!): AuthPayload!
+  refreshAuth(refreshToken: String!): AuthPayload!
   changeMyPassword(currentPassword: String!, newPassword: String!): Boolean!
   changeMyEmail(currentPassword: String!, newEmail: String!): Boolean!
+  deleteMyAccount(currentPassword: String!): Boolean!
   resendMyVerificationLink: EmailSendResult!
   followUser(username: String!): Boolean!
   unfollowUser(username: String!): Boolean!

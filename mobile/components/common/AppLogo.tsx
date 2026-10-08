@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { appLogoStyles as styles } from "@/styles";
 
 type Props = {
     subtitle?: string;
@@ -6,26 +7,16 @@ type Props = {
 
 export function AppLogo({ subtitle }: Props) {
     return (
-        <View style={{ alignItems: "center", marginBottom: 24 }}>
-            <View
-                style={{
-                    width: 68,
-                    height: 68,
-                    borderRadius: 34,
-                    backgroundColor: "#2563eb",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 10,
-                }}
-            >
-                <Text style={{ color: "#fff", fontSize: 24, fontWeight: "800", letterSpacing: 0.6 }}>
+        <View style={styles.container}>
+            <View style={styles.badge}>
+                <Text style={styles.badgeText}>
                     BB
                 </Text>
             </View>
 
-            <Text style={{ fontSize: 22, fontWeight: "800", color: "#0f172a" }}>BookBook</Text>
+            <Text style={styles.title}>BookBook</Text>
             {subtitle ? (
-                <Text style={{ marginTop: 4, color: "#64748b", fontSize: 13 }}>{subtitle}</Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
             ) : null}
         </View>
     );
