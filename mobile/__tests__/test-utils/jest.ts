@@ -27,3 +27,7 @@ export function mockFetchHttpError(status = 500, payload: unknown = {}): void {
 export function asMock<T extends (...args: any[]) => any>(value: T): jest.MockedFunction<T> {
   return value as jest.MockedFunction<T>;
 }
+
+export function silenceConsole(method: 'warn' | 'error' = 'warn'): jest.SpyInstance {
+  return jest.spyOn(console, method).mockImplementation(() => undefined);
+}

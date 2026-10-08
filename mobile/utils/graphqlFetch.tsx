@@ -2,34 +2,34 @@ import { getToken } from "@/utils/token";
 import { env } from "@/utils/env";
 
 type GraphQLErrorItem = {
-  message?: string;
-  extensions?: {
-    code?: string;
+    message?: string;
+    extensions?: {
+        code?: string;
+        [key: string]: unknown;
+    };
     [key: string]: unknown;
-  };
-  [key: string]: unknown;
 };
 
 type GraphQLResponse<T> = {
-  data?: T;
-  errors?: GraphQLErrorItem[];
+    data?: T;
+    errors?: GraphQLErrorItem[];
 };
 
 type GraphqlFetchOptions = {
-  skipAuthFailureHandler?: boolean;
-  headers?: Record<string, string>;
+    skipAuthFailureHandler?: boolean;
+    headers?: Record<string, string>;
 };
 
 export class GraphQLRequestError extends Error {
-  readonly errors: GraphQLErrorItem[];
-  readonly status: number;
+    readonly errors: GraphQLErrorItem[];
+    readonly status: number;
 
-  constructor(message: string, errors: GraphQLErrorItem[] = [], status = 200) {
-    super(message);
-    this.name = "GraphQLRequestError";
-    this.errors = errors;
-    this.status = status;
-  }
+    constructor(message: string, errors: GraphQLErrorItem[] = [], status = 200) {
+        super(message);
+        this.name = "GraphQLRequestError";
+        this.errors = errors;
+        this.status = status;
+    }
 }
 
 type AuthFailureHandler = (error: unknown) => void | Promise<void>;
@@ -37,117 +37,116 @@ type AuthFailureHandler = (error: unknown) => void | Promise<void>;
 let authFailureHandler: AuthFailureHandler | null = null;
 
 export function registerAuthFailureHandler(handler: AuthFailureHandler | null): () => void {
-  authFailureHandler = handler;
+    authFailureHandler = handler;
 
-  return () => {
-    if (authFailureHandler === handler) {
-      authFailureHandler = null;
-    }
-  };
+    return () => {
+        if (authFailureHandler === handler) {
+            authFailureHandler = null;
+        }
+    };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+    return typeof value === "object" && value !== null;
 }
 
 function parseGraphQLResponse<T>(payload: unknown): GraphQLResponse<T> {
-  if (!isRecord(payload)) {
-    throw new GraphQLRequestError("Invalid GraphQL response format");
-  }
+    if (!isRecord(payload)) {
+        throw new GraphQLRequestError("Invalid GraphQL response format");
+    }
 
-  const errors = Array.isArray(payload.errors)
-    ? (payload.errors as GraphQLErrorItem[])
-    : undefined;
+    const errors = Array.isArray(payload.errors)
+        ? (payload.errors as GraphQLErrorItem[])
+        : undefined;
 
-  return {
-    data: payload.data as T | undefined,
-    errors,
-  };
+    return {
+        data: payload.data as T | undefined,
+        errors,
+    };
 }
 
 function normalizeErrorCode(code: unknown): string {
-  if (typeof code !== "string") {
-    return "";
-  }
+    if (typeof code !== "string") {
+        return "";
+    }
 
-  return code.trim().toUpperCase();
+    return code.trim().toUpperCase();
 }
 
 function includesAuthMessage(message: unknown): boolean {
-  if (typeof message !== "string") {
-    return false;
-  }
+    if (typeof message !== "string") {
+        return false;
+    }
 
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("unauthorized") ||
-    normalized.includes("forbidden") ||
-    normalized.includes("invalid token") ||
-    normalized.includes("jwt")
-  );
+    const normalized = message.toLowerCase();
+    return (
+        normalized.includes("unauthorized") ||
+        normalized.includes("forbidden") ||
+        normalized.includes("invalid token") ||
+        normalized.includes("jwt")
+    );
 }
 
 export function isAuthGraphQLError(error: unknown): boolean {
-  if (error instanceof GraphQLRequestError) {
-    if (error.status === 401 || error.status === 403) {
-      return true;
+    if (error instanceof GraphQLRequestError) {
+        if (error.status === 401 || error.status === 403) {
+            return true;
+        }
+
+        return error.errors.some((item) => {
+            const code = normalizeErrorCode(item.extensions?.code);
+            return code === "UNAUTHENTICATED" || code === "FORBIDDEN" || includesAuthMessage(item.message);
+        });
     }
 
-    return error.errors.some((item) => {
-      const code = normalizeErrorCode(item.extensions?.code);
-      return code === "UNAUTHENTICATED" || code === "FORBIDDEN" || includesAuthMessage(item.message);
-    });
-  }
-
-  return error instanceof Error && includesAuthMessage(error.message);
+    return error instanceof Error && includesAuthMessage(error.message);
 }
 
 export async function graphqlFetch<T>(
-  query: string,
-  variables: Record<string, unknown> = {},
-  options: GraphqlFetchOptions = {}
+    query: string,
+    variables: Record<string, unknown> = {},
+    options: GraphqlFetchOptions = {}
 ): Promise<T> {
-  const url = env.API_URL;
+    const url = env.API_URL;
 
-  const token = await getToken();
+    const token = await getToken();
 
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.headers ?? {}),
-      },
-      body: JSON.stringify({ query, variables }),
-    });
+    try {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(options.headers ?? {}),
+            },
+            body: JSON.stringify({ query, variables }),
+        });
 
-    const status = res.status;
+        const status = res.status;
 
-    if (!res.ok) {
-      throw new GraphQLRequestError(`HTTP request failed (${status})`, [], status);
+        if (!res.ok) {
+            throw new GraphQLRequestError(`HTTP request failed (${status})`, [], status);
+        }
+
+        const rawPayload = await res.json();
+        const response = parseGraphQLResponse<T>(rawPayload);
+
+        if (response.errors?.length) {
+            const firstMessage = response.errors[0]?.message;
+            throw new GraphQLRequestError(firstMessage || "GraphQL request failed", response.errors, status);
+        }
+
+        if (response.data === undefined) {
+            throw new GraphQLRequestError("GraphQL response did not include data", [], status);
+        }
+
+        return response.data;
+    } catch (err: unknown) {
+        if (!options.skipAuthFailureHandler && isAuthGraphQLError(err) && authFailureHandler) {
+            await authFailureHandler(err);
+        }
+
+        console.error("[graphqlFetch] request failed", err);
+        throw err;
     }
-
-    const rawPayload = await res.json();
-    const response = parseGraphQLResponse<T>(rawPayload);
-
-    // GraphQL can return HTTP 200 while still carrying resolver errors.
-    if (response.errors?.length) {
-      const firstMessage = response.errors[0]?.message;
-      throw new GraphQLRequestError(firstMessage || "GraphQL request failed", response.errors, status);
-    }
-
-    if (response.data === undefined) {
-      throw new GraphQLRequestError("GraphQL response did not include data", [], status);
-    }
-
-    return response.data;
-  } catch (err: unknown) {
-    if (!options.skipAuthFailureHandler && isAuthGraphQLError(err) && authFailureHandler) {
-      await authFailureHandler(err);
-    }
-
-    console.error("[graphqlFetch] request failed", err);
-    throw err;
-  }
 }

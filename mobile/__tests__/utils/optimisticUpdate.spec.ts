@@ -1,4 +1,4 @@
-import { optimisticToggle, optimisticDelete, optimisticCreate } from '../utils/optimisticUpdate';
+import { optimisticToggle, optimisticDelete, optimisticCreate } from '../../utils/optimisticUpdate';
 
 describe('optimisticUpdate helpers', () => {
     it('rolls back optimistic toggle on mutation failure', async () => {

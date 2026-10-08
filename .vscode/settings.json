@@ -16,13 +16,7 @@
 		"**/*.test.ts": true,
 		"**/*.test.tsx": true
 	},
-	"files.exclude": {
-		"**/__tests__": true,
-		"**/*.spec.ts": true,
-		"**/*.spec.tsx": true,
-		"**/*.test.ts": true,
-		"**/*.test.tsx": true
-	},
+	"files.exclude": {},
 	"jest.virtualFolders": [
 		{
 			"name": "backend",

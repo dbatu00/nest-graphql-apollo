@@ -127,16 +127,15 @@ export function useFollow(args: UseFollowArgs) {
 
     const toggleFollow = useCallback(
         async (username: string, shouldFollow: boolean) => {
-            let previousUsers: FollowUser[] = [];
+            const previousUsers = users;
 
-            setUsers(prev => {
-                previousUsers = prev;
-                return prev.map(user =>
+            setUsers(prev =>
+                prev.map(user =>
                     user.username === username
                         ? { ...user, followedByMe: shouldFollow }
                         : user
-                );
-            });
+                )
+            );
 
             try {
                 if (shouldFollow) {
@@ -149,7 +148,7 @@ export function useFollow(args: UseFollowArgs) {
                 setUsers(previousUsers);
             }
         },
-        []
+        [users]
     );
 
     return { users, loading, error, toggleFollow, refresh };
